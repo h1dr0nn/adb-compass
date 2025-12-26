@@ -9,6 +9,8 @@ interface UseApkReturn {
     error: string | null;
     selectApk: (path: string) => Promise<void>;
     clearApk: () => void;
+    scanFolder: (path: string) => Promise<ApkInfo[]>;
+    setApkFromList: (info: ApkInfo) => void;
 }
 
 export function useApk(): UseApkReturn {
@@ -37,11 +39,30 @@ export function useApk(): UseApkReturn {
             setLoading(false);
         }
     }, []);
+    const scanFolder = useCallback(async (path: string) => {
+        setLoading(true);
+        setError(null);
+        try {
+            const apks = await invoke<ApkInfo[]>('scan_apks_in_folder', { path });
+            return apks;
+        } catch (err) {
+            setError('Failed to scan folder');
+            return [];
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
     const clearApk = useCallback(() => {
         setApkInfo(null);
         setError(null);
     }, []);
+
+    const setApkFromList = useCallback((info: ApkInfo) => {
+        setApkInfo(info);
+        setError(null);
+    }, []);
+
 
     return {
         apkInfo,
@@ -49,5 +70,7 @@ export function useApk(): UseApkReturn {
         error,
         selectApk,
         clearApk,
+        scanFolder,
+        setApkFromList
     };
 }

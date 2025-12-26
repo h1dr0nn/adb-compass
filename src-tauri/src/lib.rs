@@ -10,7 +10,7 @@ pub mod requirements;
 use adb::start_device_tracker;
 use commands::{
     check_adb_status, check_device_requirements, get_device_property, get_devices, install_apk,
-    kill_adb_server, refresh_devices, start_adb_server, validate_apk,
+    kill_adb_server, refresh_devices, scan_apks_in_folder, start_adb_server, validate_apk,
 };
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -32,7 +32,8 @@ pub fn run() {
             kill_adb_server,
             check_device_requirements,
             validate_apk,
-            install_apk
+            install_apk,
+            scan_apks_in_folder
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -94,7 +94,7 @@ export function ApkDropzone({ apkInfo, onApkSelected, onApkClear }: ApkDropzoneP
             </AnimatePresence>
 
             {/* Compact APK Section */}
-            <div className="flex items-center px-6 py-3 bg-surface-card border-b border-border">
+            <div className="flex items-center w-full">
                 {apkInfo ? (
                     <motion.div
                         className="flex items-center justify-between w-full px-3 py-2 bg-surface-elevated border border-accent rounded-xl"
@@ -122,13 +122,11 @@ export function ApkDropzone({ apkInfo, onApkSelected, onApkClear }: ApkDropzoneP
                 ) : (
                     <button
                         onClick={handleSelectFile}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-surface-elevated border border-border rounded-xl
-                                   text-text-secondary text-sm font-medium
-                                   hover:bg-gradient-to-br hover:from-accent hover:to-accent-secondary 
-                                   hover:border-accent hover:text-white hover:shadow-lg hover:shadow-accent/30
-                                   transition-all duration-200"
+                        className="flex-1 flex items-center justify-center gap-2 px-3 py-2 
+                                   bg-surface-elevated border border-border rounded-lg 
+                                   text-xs font-medium text-text-primary hover:border-accent transition-all w-full"
                     >
-                        <FolderOpen size={18} />
+                        <FolderOpen size={14} />
                         <span>{t.selectApk}</span>
                     </button>
                 )}

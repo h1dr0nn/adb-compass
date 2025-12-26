@@ -11,6 +11,7 @@ pub struct ApkInfo {
     pub file_name: String,
     pub size_bytes: u64,
     pub valid: bool,
+    pub last_modified: Option<u128>,
 }
 
 impl ApkInfo {
@@ -27,7 +28,14 @@ impl ApkInfo {
             .unwrap_or("unknown.apk")
             .to_string();
 
-        let size_bytes = std::fs::metadata(path).ok()?.len();
+        let metadata = std::fs::metadata(path).ok()?;
+        let size_bytes = metadata.len();
+
+        let last_modified = metadata
+            .modified()
+            .ok()
+            .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+            .map(|d| d.as_millis());
 
         let valid = path_obj
             .extension()
@@ -40,6 +48,7 @@ impl ApkInfo {
             file_name,
             size_bytes,
             valid,
+            last_modified,
         })
     }
 }

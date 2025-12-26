@@ -80,11 +80,20 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 ---
 
-## Phase 6 — Polish & Distribution
+## Phase 6 — Advanced Device Actions
+
+**Goal:** Expand device management capabilities with quick actions and advanced tools.
+
+- [ ] Device Card Action Grid (Info, Uninstall, Reboot, Input, Files)
+- [ ] Advanced Tools Tab (Wireless Connect, Logcat, Terminal)
+
+---
+
+## Phase 7 — Polish & Distribution
 
 **Goal:** Prepare the application for broader usage and distribution.
 
-- [ ] UI and interaction polish
+- [x] UI and interaction polish
 - [ ] Application icon and branding
 - [ ] Platform-specific packaging and signing
 - [ ] Performance optimizations

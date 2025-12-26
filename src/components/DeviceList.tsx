@@ -1,7 +1,7 @@
 // DeviceList Component - Displays connected Android devices
 import { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Smartphone, Loader2, AlertTriangle } from 'lucide-react';
+import { Smartphone, Loader2, AlertTriangle, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import type { DeviceInfo, ApkInfo } from '../types';
 import { getDeviceStatusText } from '../types';
@@ -14,9 +14,10 @@ interface DeviceListProps {
     loading: boolean;
     error: string | null;
     apkInfo: ApkInfo | null;
+    onRefresh: () => void;
 }
 
-export function DeviceList({ devices, loading, error, apkInfo }: DeviceListProps) {
+export function DeviceList({ devices, loading, error, apkInfo, onRefresh }: DeviceListProps) {
     const prevDevicesRef = useRef<DeviceInfo[]>([]);
     const { t } = useLanguage();
 
@@ -50,6 +51,12 @@ export function DeviceList({ devices, loading, error, apkInfo }: DeviceListProps
                     <AlertTriangle size={64} className="mb-4 opacity-50" />
                     <h3 className="text-xl font-semibold mb-2">{t.connectionError}</h3>
                     <p className="text-text-secondary">{error}</p>
+                    <button
+                        onClick={onRefresh}
+                        className="mt-4 px-4 py-2 bg-surface-elevated hover:bg-surface-card rounded-lg border border-border transition-colors text-sm font-medium"
+                    >
+                        Retry
+                    </button>
                 </motion.div>
             </div>
         );
@@ -105,17 +112,28 @@ export function DeviceList({ devices, loading, error, apkInfo }: DeviceListProps
     return (
         <div>
             <motion.div
-                className="flex items-center gap-3 mb-4"
+                className="flex items-center justify-between mb-4"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
             >
-                <h2 className="text-lg font-semibold text-text-primary">{t.connectedDevices}</h2>
-                <span className="px-2.5 py-1 bg-accent/20 text-accent text-sm font-semibold rounded-full">
-                    {devices.length}
-                </span>
+                <div className="flex items-center gap-3">
+                    <h2 className="text-lg font-semibold text-text-primary">{t.connectedDevices}</h2>
+                    <span className="w-6 h-6 rounded-full bg-accent/20 text-accent text-sm font-semibold flex items-center justify-center">
+                        {devices.length}
+                    </span>
+                </div>
+
+                <button
+                    onClick={onRefresh}
+                    className="p-2 bg-surface-elevated border border-border text-text-secondary hover:text-accent hover:border-accent rounded-lg transition-all"
+                    title="Refresh Devices"
+                    disabled={loading}
+                >
+                    <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                </button>
             </motion.div>
 
-            <div className="grid gap-4 max-w-lg">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
                 <AnimatePresence mode="popLayout">
                     {devices.map((device) => (
                         <DeviceCard key={device.id} device={device} apkInfo={apkInfo} />

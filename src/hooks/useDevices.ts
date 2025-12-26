@@ -14,7 +14,7 @@ interface UseDevicesReturn {
     loading: boolean;
     error: string | null;
     refreshDevices: () => Promise<void>;
-    checkAdb: () => Promise<void>;
+    checkAdb: () => Promise<AdbStatus | null>;
 }
 
 export function useDevices(): UseDevicesReturn {
@@ -38,7 +38,11 @@ export function useDevices(): UseDevicesReturn {
         setLoading(true);
         setError(null);
         try {
-            const deviceList = await invoke<DeviceInfo[]>('refresh_devices');
+            // Enforce minimum 500ms loading time for better UX
+            const [deviceList] = await Promise.all([
+                invoke<DeviceInfo[]>('refresh_devices'),
+                new Promise(resolve => setTimeout(resolve, 500))
+            ]);
             setDevices(deviceList);
         } catch (err: unknown) {
             const errorMessage = err instanceof Error ? err.message : 'Failed to get devices';

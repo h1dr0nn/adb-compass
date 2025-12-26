@@ -65,6 +65,7 @@ export interface ApkInfo {
   file_name: string;
   size_bytes: number;
   valid: boolean;
+  last_modified?: number;
 }
 
 // APK installation result
