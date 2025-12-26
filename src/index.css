@@ -1,0 +1,62 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Base layer - global styles */
+@layer base {
+    :root {
+        /* Light Theme Variables - Improved Contrast & Less Glare */
+        --color-surface-bg: 241 245 249;
+        /* slate-100 */
+        --color-surface-card: 255 255 255;
+        /* white */
+        --color-surface-elevated: 226 232 240;
+        /* slate-200 */
+        --color-surface-hover: 203 213 225;
+        /* slate-300 */
+
+        --color-border: 203 213 225;
+        /* slate-300 */
+
+        --color-text-primary: 15 23 42;
+        /* slate-900 */
+        --color-text-secondary: 51 65 85;
+        /* slate-700 */
+        --color-text-muted: 100 116 139;
+        /* slate-500 */
+    }
+
+    .dark {
+        /* Dark Theme Variables */
+        --color-surface-bg: 10 10 15;
+        --color-surface-card: 20 20 30;
+        --color-surface-elevated: 30 30 45;
+        --color-surface-hover: 40 40 60;
+
+        --color-border: 100 116 139;
+        /* slate-500 */
+
+        --color-text-primary: 248 250 252;
+        --color-text-secondary: 148 163 184;
+        --color-text-muted: 100 116 139;
+    }
+
+    body {
+        @apply bg-surface-bg text-text-primary font-sans antialiased transition-colors duration-300;
+    }
+}
+
+/* Component layer - reusable component classes */
+@layer components {
+    .btn-primary {
+        @apply flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-br from-accent to-accent-secondary text-white font-semibold rounded-lg shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 transition-all duration-200;
+    }
+
+    .card {
+        @apply bg-surface-card border border-border rounded-2xl p-5 transition-all duration-300;
+    }
+
+    .card-hover {
+        @apply hover:-translate-y-1 hover:shadow-xl hover:border-accent;
+    }
+}

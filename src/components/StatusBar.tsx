@@ -1,6 +1,9 @@
 // StatusBar Component - Shows ADB status and quick actions
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+import { RefreshCw, Circle, CheckCircle2, XCircle } from 'lucide-react';
 import type { AdbStatus } from '../types';
-import './StatusBar.css';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface StatusBarProps {
     adbStatus: AdbStatus | null;
@@ -9,23 +12,42 @@ interface StatusBarProps {
 }
 
 export function StatusBar({ adbStatus, loading, onRefresh }: StatusBarProps) {
+    const { t } = useLanguage();
+
     const getStatusIcon = () => {
-        if (!adbStatus) return '○';
-        return adbStatus.available ? '●' : '○';
+        if (!adbStatus) return <Circle size={10} className="text-text-muted" />;
+        return adbStatus.available
+            ? <CheckCircle2 size={14} className="text-success" />
+            : <XCircle size={14} className="text-error" />;
     };
 
-    const getStatusClass = () => {
-        if (!adbStatus) return 'status-unknown';
-        return adbStatus.available ? 'status-ok' : 'status-error';
+    const getStatusColor = () => {
+        if (!adbStatus) return 'text-text-muted';
+        return adbStatus.available ? 'text-success' : 'text-error';
     };
+
+    const [minSpinning, setMinSpinning] = useState(false);
+
+    const handleRefresh = () => {
+        setMinSpinning(true);
+        onRefresh();
+        setTimeout(() => setMinSpinning(false), 500);
+    };
+
+    const isSpinning = loading || minSpinning;
 
     return (
-        <div className="status-bar">
-            <div className="status-left">
-                <span className={`status-indicator ${getStatusClass()}`}>
+        <motion.div
+            className="flex items-center justify-between px-6 py-3 bg-surface-card/50 border-b border-border"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+        >
+            <div className="flex items-center gap-3">
+                <span className={`flex items-center gap-2 ${getStatusColor()}`}>
                     {getStatusIcon()}
                 </span>
-                <span className="status-text">
+                <span className="text-sm text-text-secondary">
                     {!adbStatus ? 'Checking ADB...' :
                         adbStatus.available
                             ? adbStatus.version || 'ADB Ready'
@@ -33,24 +55,18 @@ export function StatusBar({ adbStatus, loading, onRefresh }: StatusBarProps) {
                 </span>
             </div>
 
-            <div className="status-right">
+            <div>
                 <button
-                    className={`refresh-btn ${loading ? 'loading' : ''}`}
-                    onClick={onRefresh}
-                    disabled={loading}
-                    title="Refresh devices"
+                    className={`p-2 rounded-lg bg-surface-elevated hover:bg-surface-hover
+                               text-text-secondary hover:text-accent
+                               transition-all duration-200 disabled:opacity-50`}
+                    onClick={handleRefresh}
+                    disabled={isSpinning}
+                    title={t.refresh}
                 >
-                    <svg
-                        className="refresh-icon"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
-                    >
-                        <path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                    </svg>
+                    <RefreshCw size={18} className={isSpinning ? 'animate-spin' : ''} />
                 </button>
             </div>
-        </div>
+        </motion.div>
     );
 }

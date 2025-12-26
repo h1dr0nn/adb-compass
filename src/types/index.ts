@@ -49,3 +49,30 @@ export function getStatusColorClass(status: DeviceStatus): string {
   if (status === 'Unauthorized') return 'status-warning';
   return 'status-unknown';
 }
+
+// Requirement check result from backend
+export interface RequirementCheck {
+  id: string;
+  name: string;
+  description: string;
+  passed: boolean;
+  hint: string | null;
+}
+
+// APK file information
+export interface ApkInfo {
+  path: string;
+  file_name: string;
+  size_bytes: number;
+  valid: boolean;
+}
+
+// APK installation result
+export interface InstallResult {
+  success: boolean;
+  device_id: string;
+  message: string;
+  error_code: string | null;
+}
+
+

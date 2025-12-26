@@ -1,7 +1,12 @@
 // Hook for managing device state
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import type { DeviceInfo, AdbStatus } from '../types';
+
+interface DeviceChangedPayload {
+    devices: DeviceInfo[];
+}
 
 interface UseDevicesReturn {
     devices: DeviceInfo[];
@@ -53,11 +58,23 @@ export function useDevices(): UseDevicesReturn {
         init();
     }, [checkAdb, refreshDevices]);
 
-    // Poll for devices every 3 seconds
+    // Listen for real-time device changes from backend
+    useEffect(() => {
+        const unlisten = listen<DeviceChangedPayload>('device-changed', (event) => {
+            setDevices(event.payload.devices);
+            setLoading(false);
+        });
+
+        return () => {
+            unlisten.then(fn => fn());
+        };
+    }, []);
+
+    // Backup polling every 10 seconds (reduced from 3s since we have real-time events)
     useEffect(() => {
         const interval = setInterval(() => {
             refreshDevices();
-        }, 3000);
+        }, 10000);
 
         return () => clearInterval(interval);
     }, [refreshDevices]);
@@ -71,3 +88,4 @@ export function useDevices(): UseDevicesReturn {
         checkAdb,
     };
 }
+

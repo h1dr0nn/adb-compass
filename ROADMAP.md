@@ -9,11 +9,11 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 **Goal:** Establish a stable technical base and development workflow.
 
-- [ ] Project initialization (Tauri + Rust + React)
-- [ ] Repository structure and build setup
+- [x] Project initialization (Tauri + Rust + React)
+- [x] Repository structure and build setup
 - [ ] Cross-platform build validation (Windows / macOS / Linux)
-- [ ] Android platform-tools integration strategy
-- [ ] Basic logging and error handling framework
+- [x] Android platform-tools integration strategy
+- [x] Basic logging and error handling framework
 
 ---
 
@@ -21,11 +21,12 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 **Goal:** Reliably detect Android devices and track their connection state in real time.
 
-- [ ] Integrate adb as an external process
-- [ ] Implement real-time device tracking using adb track-devices
-- [ ] Device model definition (id, status, metadata)
-- [ ] Device state machine (offline, unauthorized, authorized, ready)
-- [ ] Emit device connection / disconnection events to frontend
+- [x] Integrate adb as an external process
+- [x] Implement real-time device tracking using adb track-devices
+- [x] Device model definition (id, status, metadata)
+- [x] Device state machine (offline, unauthorized, authorized, ready)
+- [x] Emit device connection / disconnection events to frontend
+
 
 ---
 
@@ -33,12 +34,12 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 **Goal:** Identify missing developer settings and guide the user to resolve them.
 
-- [ ] Define standardized requirement checklist
-- [ ] Detect Developer Mode status
-- [ ] Detect USB Debugging authorization state
-- [ ] Detect installation-related restrictions
-- [ ] Map detection results into structured requirement status
-- [ ] Provide actionable hints for each failed requirement
+- [x] Define standardized requirement checklist
+- [x] Detect Developer Mode status
+- [x] Detect USB Debugging authorization state
+- [x] Detect installation-related restrictions
+- [x] Map detection results into structured requirement status
+- [x] Provide actionable hints for each failed requirement
 
 ---
 
@@ -46,12 +47,12 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 **Goal:** Enable safe and transparent APK installation onto selected devices.
 
-- [ ] APK file selection handling
-- [ ] APK validation (file existence, basic integrity)
-- [ ] Pre-install compatibility checks (SDK level, device readiness)
-- [ ] APK installation via adb
-- [ ] Parse adb install output and map errors to user-friendly messages
-- [ ] Installation progress and result reporting
+- [x] APK file selection handling
+- [x] APK validation (file existence, basic integrity)
+- [x] Pre-install compatibility checks (SDK level, device readiness)
+- [x] APK installation via adb
+- [x] Parse adb install output and map errors to user-friendly messages
+- [x] Installation progress and result reporting
 
 ---
 
@@ -59,11 +60,11 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 **Goal:** Deliver a clear, responsive, and user-friendly experience.
 
-- [ ] Device list and selection UI
-- [ ] Requirement checklist UI with pass/fail indicators
-- [ ] Guided flow from device detection to installation
-- [ ] Installation progress feedback
-- [ ] Error display with clear explanations and suggested actions
+- [x] Device list and selection UI
+- [x] Requirement checklist UI with pass/fail indicators
+- [x] Guided flow from device detection to installation
+- [x] Installation progress feedback
+- [x] Error display with clear explanations and suggested actions
 
 ---
 
@@ -71,11 +72,11 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 **Goal:** Improve robustness and handle real-world usage scenarios.
 
-- [ ] Multi-device support improvements
-- [ ] adb version compatibility checks
-- [ ] Timeout and retry strategy for adb commands
-- [ ] Graceful handling of disconnected devices during operations
-- [ ] Defensive parsing of adb output
+- [x] Multi-device support improvements
+- [x] adb version compatibility checks
+- [x] Timeout and retry strategy for adb commands
+- [x] Graceful handling of disconnected devices during operations
+- [x] Defensive parsing of adb output
 
 ---
 
