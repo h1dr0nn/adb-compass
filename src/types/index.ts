@@ -1,0 +1,51 @@
+// TypeScript types for ADB Compass
+
+// Device status enum
+export type DeviceStatus =
+  | 'Device'
+  | 'Offline'
+  | 'Unauthorized'
+  | { Unknown: string };
+
+// Device information from backend
+export interface DeviceInfo {
+  id: string;
+  status: DeviceStatus;
+  model: string | null;
+  product: string | null;
+}
+
+// ADB status response
+export interface AdbStatus {
+  available: boolean;
+  version: string | null;
+  error: string | null;
+  adb_path: string | null;
+  is_bundled: boolean;
+}
+
+// Application error from backend
+export interface AppError {
+  code: string;
+  message: string;
+  details: string | null;
+}
+
+// Helper function to get device status display text
+export function getDeviceStatusText(status: DeviceStatus): string {
+  if (status === 'Device') return 'Connected';
+  if (status === 'Offline') return 'Offline';
+  if (status === 'Unauthorized') return 'Unauthorized';
+  if (typeof status === 'object' && 'Unknown' in status) {
+    return status.Unknown;
+  }
+  return 'Unknown';
+}
+
+// Helper function to get status color class
+export function getStatusColorClass(status: DeviceStatus): string {
+  if (status === 'Device') return 'status-connected';
+  if (status === 'Offline') return 'status-offline';
+  if (status === 'Unauthorized') return 'status-warning';
+  return 'status-unknown';
+}

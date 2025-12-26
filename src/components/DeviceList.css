@@ -1,0 +1,269 @@
+.device-list {
+    flex: 1;
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.device-list-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.device-list-header h2 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.device-count {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 8px;
+    border-radius: 12px;
+    background: var(--accent);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Device Grid */
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+/* Device Card */
+.device-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    background: var(--surface-card);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    transition: all 0.3s ease;
+    overflow: hidden;
+}
+
+.device-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-secondary));
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.device-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border-color: var(--accent);
+}
+
+.device-card:hover::before {
+    opacity: 1;
+}
+
+.device-card.status-connected::before {
+    background: linear-gradient(90deg, var(--success), #10b981);
+}
+
+.device-card.status-warning::before {
+    background: linear-gradient(90deg, var(--warning), #f59e0b);
+}
+
+.device-card.status-offline::before {
+    background: linear-gradient(90deg, var(--error), #f43f5e);
+}
+
+/* Device Icon */
+.device-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    background: var(--surface-elevated);
+    color: var(--accent);
+}
+
+.device-icon svg {
+    width: 28px;
+    height: 28px;
+}
+
+/* Device Info */
+.device-info {
+    flex: 1;
+}
+
+.device-model {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+}
+
+.device-id {
+    font-size: 12px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    margin: 0;
+}
+
+/* Device Status */
+.device-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: var(--surface-elevated);
+    width: fit-content;
+}
+
+.status-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.device-status.status-connected {
+    color: var(--success);
+}
+
+.device-status.status-warning {
+    color: var(--warning);
+}
+
+.device-status.status-offline {
+    color: var(--error);
+}
+
+.device-status.status-unknown {
+    color: var(--text-muted);
+}
+
+.status-label {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Device Warning */
+.device-warning {
+    padding: 12px;
+    border-radius: 8px;
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    color: var(--warning);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* Empty State */
+.empty-state,
+.loading-state,
+.error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 40px;
+    text-align: center;
+}
+
+.empty-icon,
+.error-icon {
+    font-size: 64px;
+    margin-bottom: 20px;
+    opacity: 0.8;
+}
+
+.empty-state h3,
+.error-state h3 {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.empty-state p,
+.loading-state p,
+.error-state p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0 0 24px 0;
+    max-width: 300px;
+}
+
+/* Hint List */
+.hint-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-align: left;
+    width: 100%;
+    max-width: 320px;
+}
+
+.hint-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--surface-card);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+}
+
+.hint-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: var(--accent);
+    color: white;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.hint-item span:last-child {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* Loading State */
+.loading-spinner {
+    width: 48px;
+    height: 48px;
+    border: 3px solid var(--border-color);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}

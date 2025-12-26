@@ -63,18 +63,57 @@ Android Device(s)
 ## 4. Technology Stack
 
 - **Frontend**: React + TypeScript
-- **Desktop Framework**: Tauri
+- **Desktop Framework**: Tauri v2
 - **Backend**: Rust
 - **Android Tooling**: Android platform-tools (adb)
 - **Target OS**: Windows, macOS, Linux
 
 ---
 
-## 5. Design Principles
+## 5. Getting Started
+
+### Prerequisites
+- Node.js 18+
+- Rust 1.70+
+- Android platform-tools (adb) in PATH
+
+### Development
+
+```bash
+# Install dependencies
+npm install
+
+# Run in development mode
+npm run tauri dev
+
+# Build for production
+npm run tauri build
+```
+
+---
+
+## 6. Project Structure
+
+```
+adb-compass/
+├── src/                    # React frontend
+│   ├── components/         # UI components
+│   ├── hooks/              # React hooks
+│   └── types/              # TypeScript types
+├── src-tauri/              # Rust backend
+│   └── src/
+│       ├── adb/            # ADB wrapper module
+│       ├── commands/       # Tauri commands
+│       └── error.rs        # Error types
+└── public/                 # Static assets
+```
+
+---
+
+## 7. Design Principles
 
 - Clear separation between UI and system-level logic
 - No direct adb calls from the frontend
 - Defensive parsing of adb output
 - Event-driven device state updates
 - Human-readable guidance instead of raw error logs
-
