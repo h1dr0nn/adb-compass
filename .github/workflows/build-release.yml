@@ -110,7 +110,7 @@ jobs:
       - name: Rename and Prepare Artifacts
         shell: bash
         env:
-          VERSION: ${{ needs.version-update.outputs.version }}
+          VERSION: ${{ steps.get_version.outputs.version }}
           PLATFORM: ${{ matrix.platform }}
           ARCH: ${{ matrix.arch }}
           TARGET: ${{ matrix.target }}
