@@ -3,6 +3,14 @@
 
 pub mod apk;
 pub mod device;
+pub mod device_actions;
+pub mod file_transfer;
+pub mod shell;
+pub mod wireless;
 
 pub use apk::*;
 pub use device::*;
+pub use device_actions::*;
+pub use file_transfer::*;
+pub use shell::*;
+pub use wireless::*;

@@ -475,6 +475,56 @@ impl AdbExecutor {
         checks
     }
 
+    /// Check advanced requirements for action buttons (Input Text, etc.)
+    pub fn check_action_requirements(
+        &self,
+        device_id: &str,
+    ) -> Vec<crate::requirements::RequirementCheck> {
+        use crate::requirements::RequirementCheck;
+
+        let mut checks = Vec::new();
+
+        // 1. USB Debugging (Security Settings) - Required for Input Text
+        // This is a Xiaomi/MIUI specific setting, but we check if input works
+        let usb_security = RequirementCheck::new(
+            "usb_debug_security",
+            "USB Debugging (Security)",
+            "Required for Input Text and some advanced actions",
+        );
+
+        // Try to send a test input to check if it works
+        let test_result = std::process::Command::new(self.get_adb_path())
+            .args(["-s", device_id, "shell", "input", "keyevent", "0"])
+            .output();
+
+        match test_result {
+            Ok(output) => {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let combined = format!("{}{}", stdout, stderr);
+
+                if combined.contains("INJECT_EVENTS") || combined.contains("SecurityException") {
+                    checks.push(
+                        usb_security.fail(
+                            "Enable 'USB debugging (Security settings)' in Developer Options",
+                        ),
+                    );
+                } else if combined.contains("Exception") || combined.contains("error") {
+                    checks.push(usb_security.fail(
+                        "Enable 'USB debugging (Security settings)' or 'Disable permission monitoring'"
+                    ));
+                } else {
+                    checks.push(usb_security.pass());
+                }
+            }
+            Err(_) => {
+                checks.push(usb_security.fail("Unable to test input capability"));
+            }
+        }
+
+        checks
+    }
+
     /// Install APK on device
     pub fn install_apk(&self, device_id: &str, apk_path: &str) -> crate::apk::InstallResult {
         use crate::apk::{map_install_error, InstallResult};

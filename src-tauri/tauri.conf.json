@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "ADB Compass",
   "version": "0.1.0",
-  "identifier": "com.adbcompass.app",
+  "identifier": "com.h1dr0n.adbcompass",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://localhost:1420",

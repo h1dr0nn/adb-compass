@@ -1,21 +1,22 @@
-// RequirementChecklist Component - Shows device requirement status
+// ActionRequirementsChecklist Component - Shows requirements for advanced actions
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, XCircle, ChevronDown, Info } from 'lucide-react';
+import { CheckCircle2, XCircle, ChevronDown, Zap } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import type { RequirementCheck } from '../types';
 import { useLanguage } from '../contexts/LanguageContext';
 
-interface RequirementChecklistProps {
+interface ActionRequirementsChecklistProps {
     deviceId: string;
     isAuthorized: boolean;
     expanded: boolean;
     onToggle: () => void;
 }
 
-export function RequirementChecklist({ deviceId, isAuthorized, expanded, onToggle }: RequirementChecklistProps) {
+export function ActionRequirementsChecklist({ deviceId, isAuthorized, expanded, onToggle }: ActionRequirementsChecklistProps) {
     const [requirements, setRequirements] = useState<RequirementCheck[]>([]);
-    const [loading, setLoading] = useState(false);
+    const [loading, setLoading] = useState(true); // Start true to prevent flash
+    const [hasChecked, setHasChecked] = useState(false);
     const { t } = useLanguage();
 
     useEffect(() => {
@@ -27,39 +28,30 @@ export function RequirementChecklist({ deviceId, isAuthorized, expanded, onToggl
     const checkRequirements = async () => {
         setLoading(true);
         try {
-            const checks = await invoke<RequirementCheck[]>('check_device_requirements', { deviceId });
+            const checks = await invoke<RequirementCheck[]>('check_action_requirements', { deviceId });
             setRequirements(checks);
         } catch (error) {
-            console.error('Failed to check requirements:', error);
+            console.error('Failed to check action requirements:', error);
         } finally {
             setLoading(false);
+            setHasChecked(true);
         }
     };
 
     if (!isAuthorized) return null;
 
-    const allPassed = requirements.every(r => r.passed);
+    // Calculate failed count for display
     const failedCount = requirements.filter(r => !r.passed).length;
+    const allPassed = hasChecked && failedCount === 0;
 
-    // Pluralization logic for "issue/issues"
-    const issueText = failedCount === 1 ? t.issue : t.issues;
-
-    // Helper to translate requirement name based on ID
-    // We assume backend returns specific IDs like 'developer_options', 'usb_debugging'
-    // If not, we fall back to the name from backend.
+    // Helper to translate requirement name
     const getTranslatedReqName = (req: RequirementCheck) => {
-        // Map backend IDs to translation keys
-        // IDs must match src-tauri/src/adb/executor.rs
-        if (req.id === 'developer_options') return t.req_developer_options;
-        if (req.id === 'usb_debugging') return t.req_usb_debugging;
-        if (req.id === 'unknown_sources') return t.req_unknown_sources;
-        if (req.id === 'device_authorization') return t.req_auth;
-
+        if (req.id === 'usb_debug_security') return t.req_usb_debug_security;
         return req.name; // Fallback
     };
 
     return (
-        <div className="mt-4 pt-4 pb-1 border-t border-border relative z-20">
+        <div className="mt-2 relative z-10">
             <button
                 className={`flex items-center justify-between w-full px-3 py-2 
                            ${allPassed
@@ -73,13 +65,16 @@ export function RequirementChecklist({ deviceId, isAuthorized, expanded, onToggl
                     {allPassed ? (
                         <CheckCircle2 size={16} className="text-success" />
                     ) : (
-                        <Info size={16} className="text-warning" />
+                        <Zap size={16} className="text-warning" />
                     )}
                     <span className="text-text-primary">
-                        {loading ? t.checking :
-                            allPassed ? t.readyToInstall :
-                                `${failedCount} ${issueText} found`}
+                        {loading ? t.checking : t.advancedActions}
                     </span>
+                    {!loading && failedCount > 0 && (
+                        <span className="text-xs text-warning bg-warning/20 px-1.5 py-0.5 rounded">
+                            {failedCount} {failedCount === 1 ? t.issue : t.issues}
+                        </span>
+                    )}
                 </div>
                 <div className={`transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`}>
                     <ChevronDown size={16} className="text-text-muted" />

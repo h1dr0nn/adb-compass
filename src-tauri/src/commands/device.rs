@@ -85,3 +85,10 @@ pub fn check_device_requirements(device_id: String) -> Vec<crate::requirements::
     let executor = AdbExecutor::new();
     executor.check_device_requirements(&device_id)
 }
+
+/// Check advanced requirements for action buttons (Input Text, etc.)
+#[tauri::command]
+pub fn check_action_requirements(device_id: String) -> Vec<crate::requirements::RequirementCheck> {
+    let executor = AdbExecutor::new();
+    executor.check_action_requirements(&device_id)
+}

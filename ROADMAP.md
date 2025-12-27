@@ -84,8 +84,8 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 **Goal:** Expand device management capabilities with quick actions and advanced tools.
 
-- [ ] Device Card Action Grid (Info, Uninstall, Reboot, Input, Files)
-- [ ] Advanced Tools Tab (Wireless Connect, Logcat, Terminal)
+- [x] Device Card Action Grid (Info, Uninstall, Reboot, Input, Files)
+- [x] Advanced Tools Tab (Wireless Connect, Logcat, Terminal)
 
 ---
 

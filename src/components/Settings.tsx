@@ -1,7 +1,7 @@
 // Settings Component
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Moon, Sun, Monitor, FolderOpen, Globe, Info, FileText } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Monitor, FolderOpen, Globe, Info, FileText, Settings as SettingsIcon } from 'lucide-react';
 import { toast } from 'sonner';
 // import { open } from '@tauri-apps/plugin-dialog';
 // import { open as openUrl } from '@tauri-apps/plugin-opener';
@@ -109,25 +109,31 @@ export function Settings({ onBack }: SettingsProps) {
 
     return (
         <motion.div
-            className="flex flex-col h-full w-full max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6"
+            className="flex flex-col h-full"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
         >
-            <div className="flex items-center gap-4 mb-8">
+            {/* Header - Synced with LogcatView/TerminalView style */}
+            <div className="flex items-center gap-4 mb-4">
                 <button
                     onClick={onBack}
                     className="p-2.5 rounded-xl hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-all duration-200 border border-transparent hover:border-border"
                 >
                     <ArrowLeft size={22} />
                 </button>
-                <div className="flex flex-col">
-                    <h2 className="text-2xl font-bold text-text-primary">{t.settings}</h2>
-                    <p className="text-sm text-text-secondary">{t.managePrefs}</p>
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                        <SettingsIcon className="text-accent" size={20} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-bold text-text-primary">{t.settings}</h2>
+                        <p className="text-sm text-text-muted">{t.managePrefs}</p>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid gap-6 pb-8 overflow-y-auto no-scrollbar" style={{ scrollbarWidth: 'none' }}>
+            <div className="flex-1 grid gap-6 overflow-y-auto no-scrollbar">
                 {/* Appearance Section */}
                 <section className="bg-surface-card border border-border rounded-xl p-6 shadow-sm">
                     <h3 className="text-base font-semibold text-text-primary mb-4 flex items-center gap-2">
@@ -197,7 +203,7 @@ export function Settings({ onBack }: SettingsProps) {
                         {t.general}
                     </h3>
                     <div className="space-y-5">
-                        <div className="flex items-center justify-between pb-5 border-b border-border/50">
+                        <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-text-primary">{t.language}</p>
                                 <p className="text-xs text-text-secondary mt-0.5">{t.changeLang}</p>
@@ -210,7 +216,7 @@ export function Settings({ onBack }: SettingsProps) {
                                 />
                             </div>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between pt-5 border-t border-border">
                             <div>
                                 <p className="text-sm font-medium text-text-primary">{t.notifications}</p>
                                 <p className="text-xs text-text-secondary mt-0.5">{t.showNotif}</p>
@@ -240,10 +246,11 @@ export function Settings({ onBack }: SettingsProps) {
                                 <Info size={18} className="text-accent" />
                                 {t.about}
                             </h3>
-                            <p className="text-sm text-text-secondary mb-4">{t.aboutDesc}</p>
+                            <p className="text-sm text-text-secondary mb-1">{t.aboutDesc}</p>
+                            <p className="text-sm text-text-secondary mb-1">Credit: h1dr0n</p>
                         </div>
                         <div className="flex items-center gap-2 text-xs text-text-muted bg-surface-elevated/50 p-2 rounded-lg w-fit">
-                            <span className="font-mono">Version 0.1.0</span>
+                            <span className="font-mono">{t.version}</span>
                             <span className="w-1 h-1 bg-text-muted rounded-full"></span>
                             <button
                                 onClick={() => toast.info('You are on the latest version')}

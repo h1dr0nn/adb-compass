@@ -5,6 +5,8 @@ import {
 import { open } from '@tauri-apps/plugin-dialog';
 import type { ApkInfo } from '../types';
 import { ApkDropzone } from './ApkDropzone';
+import { ToolsPanel, type ActiveToolView } from './ToolsPanel';
+import { useLanguage } from '../contexts/LanguageContext';
 
 interface ApkManagerProps {
     apkInfo: ApkInfo | null;
@@ -12,17 +14,19 @@ interface ApkManagerProps {
     onClear: () => void;
     onScan: (path: string) => Promise<ApkInfo[]>;
     onSelectFromList: (info: ApkInfo) => void;
+    onOpenToolView: (view: ActiveToolView) => void;
 }
 
 export function ApkManager({
     apkInfo,
     onClear,
     onScan,
-    onSelectFromList
+    onSelectFromList,
+    onOpenToolView
 }: ApkManagerProps) {
     // unified 'apk' tab vs 'tools' placeholder
-    // unified 'apk' tab vs 'tools' placeholder
     const [activeTab, setActiveTab] = useState<'apk' | 'tools'>('apk');
+    const { t } = useLanguage();
 
     // Folder state
     const [folderPath, setFolderPath] = useState<string | null>(null);
@@ -101,12 +105,11 @@ export function ApkManager({
                 <button
                     className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'tools'
                         ? 'bg-accent text-white shadow-sm'
-                        : 'text-text-secondary hover:text-text-primary opacity-50 cursor-not-allowed'
+                        : 'text-text-secondary hover:text-text-primary'
                         }`}
-                    // onClick={() => setActiveTab('tools')}
-                    disabled
+                    onClick={() => setActiveTab('tools')}
                 >
-                    Tools
+                    {t.tabAdvanced}
                 </button>
             </div>
 
@@ -124,7 +127,7 @@ export function ApkManager({
                                 >
                                     <FolderOpen size={14} />
                                     <span className="truncate max-w-[120px]">
-                                        {folderPath ? folderPath.split(/[\\/]/).pop() : 'Select Folder'}
+                                        {folderPath ? folderPath.split(/[\\/]/).pop() : t.selectFolder}
                                     </span>
                                 </button>
                                 {folderPath && (
@@ -167,7 +170,7 @@ export function ApkManager({
                         </div>
 
                         {/* Section 2: Manual Selection */}
-                        <div className="space-y-3 pt-4 border-t border-border/50">
+                        <div className="space-y-3 pt-6 border-t border-border">
                             <ApkDropzone
                                 apkInfo={null}
                                 onApkSelected={handleManualApkSelected}
@@ -199,6 +202,9 @@ export function ApkManager({
                             )}
                         </div>
                     </div>
+                )}
+                {activeTab === 'tools' && (
+                    <ToolsPanel onOpenToolView={onOpenToolView} />
                 )}
             </div>
         </div >

@@ -1,8 +1,8 @@
 [package]
-name = "tauri-app"
+name = "adb-compass"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "ADB Compass"
+authors = ["h1dr0n"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html

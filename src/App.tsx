@@ -1,21 +1,33 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Globe } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { useDevices } from './hooks/useDevices';
 import { useApk } from './hooks/useApk';
 import { Sidebar } from './components/Sidebar';
 import { DeviceList } from './components/DeviceList';
 import { Settings } from './components/Settings';
+import { LogcatView } from './components/LogcatView';
+import { TerminalView } from './components/TerminalView';
 import { useLanguage } from './contexts/LanguageContext';
 import { useTheme } from './contexts/ThemeContext';
+import type { ActiveToolView } from './components/ToolsPanel';
 
 function App() {
   const { devices, adbStatus, loading, error, refreshDevices } = useDevices();
   const { apkInfo, selectApk, clearApk, scanFolder, setApkFromList } = useApk();
   const [showSettings, setShowSettings] = useState(false);
+  const [activeToolView, setActiveToolView] = useState<ActiveToolView>(null);
   const { t } = useLanguage();
   const { resolvedTheme } = useTheme();
+
+  const handleOpenToolView = (view: ActiveToolView) => {
+    setShowSettings(false);
+    setActiveToolView(view);
+  };
+
+  const handleCloseToolView = () => {
+    setActiveToolView(null);
+  };
 
   return (
     <div className="flex flex-col h-screen bg-surface-bg text-text-primary font-sans transition-colors duration-300 overflow-hidden">
@@ -36,9 +48,11 @@ function App() {
       >
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-accent to-accent-secondary flex items-center justify-center text-white shadow-lg shadow-accent/20">
-              <Globe size={28} strokeWidth={1.5} />
-            </div>
+            <img
+              src="/icon.png"
+              alt="ADB Compass"
+              className="w-12 h-12 rounded-xl shadow-lg"
+            />
             <div className="mt-1">
               <h1 className="text-xl font-bold text-text-primary leading-tight">{t.appName}</h1>
               <span className="text-xs text-text-muted font-mono">{t.version}</span>
@@ -67,7 +81,8 @@ function App() {
           onClearApk={clearApk}
           onScanApk={scanFolder}
           onSelectApkFromList={setApkFromList}
-          onOpenSettings={() => setShowSettings(true)}
+          onOpenSettings={() => { setShowSettings(true); setActiveToolView(null); }}
+          onOpenToolView={handleOpenToolView}
         />
 
         {/* Main Content Area */}
@@ -85,6 +100,28 @@ function App() {
                   transition={{ duration: 0.2 }}
                 >
                   <Settings onBack={() => setShowSettings(false)} />
+                </motion.div>
+              ) : activeToolView === 'logcat' ? (
+                <motion.div
+                  key="logcat"
+                  className="h-full"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <LogcatView onBack={handleCloseToolView} />
+                </motion.div>
+              ) : activeToolView === 'terminal' ? (
+                <motion.div
+                  key="terminal"
+                  className="h-full"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <TerminalView onBack={handleCloseToolView} />
                 </motion.div>
               ) : (
                 <motion.div
@@ -120,3 +157,4 @@ function App() {
 }
 
 export default App;
+

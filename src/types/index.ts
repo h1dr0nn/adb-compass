@@ -76,4 +76,20 @@ export interface InstallResult {
   error_code: string | null;
 }
 
+// Device properties from get_device_props
+export interface DeviceProps {
+  model: string;
+  android_version: string;
+  sdk_version: string;
+  battery_level: number | null;
+  is_charging: boolean;
+}
+
+// File info from file transfer commands
+export interface FileInfo {
+  name: string;
+  is_directory: boolean;
+  size: number | null;
+  permissions: string | null;
+}
 

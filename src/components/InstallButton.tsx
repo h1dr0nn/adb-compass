@@ -11,9 +11,10 @@ interface InstallButtonProps {
     deviceId: string;
     apkPath: string;
     disabled?: boolean;
+    customRender?: (onClick: () => Promise<void>, loading: boolean) => React.ReactNode;
 }
 
-export function InstallButton({ deviceId, apkPath, disabled }: InstallButtonProps) {
+export function InstallButton({ deviceId, apkPath, disabled, customRender }: InstallButtonProps) {
     const [installing, setInstalling] = useState(false);
     const [result, setResult] = useState<'success' | 'error' | null>(null);
     const { t } = useLanguage();
@@ -42,6 +43,10 @@ export function InstallButton({ deviceId, apkPath, disabled }: InstallButtonProp
             setInstalling(false);
         }
     };
+
+    if (customRender) {
+        return <>{customRender(handleInstall, installing)}</>;
+    }
 
     const getIcon = () => {
         if (installing) return <Loader2 size={16} className="animate-spin" />;

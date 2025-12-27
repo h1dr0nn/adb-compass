@@ -59,4 +59,53 @@
     .card-hover {
         @apply hover:-translate-y-1 hover:shadow-xl hover:border-accent;
     }
+
+    /* Custom Scrollbar - Consistent across all modals */
+    .custom-scrollbar {
+        scrollbar-width: thin;
+        scrollbar-color: rgb(var(--color-border)) transparent;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 3px;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: rgb(var(--color-border));
+        border-radius: 3px;
+        transition: background 0.2s ease;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+        background: rgb(var(--color-text-muted));
+    }
+
+    /* Hide scrollbar until hover */
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        background: transparent;
+    }
+
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+        background: rgb(var(--color-border));
+    }
+
+    .custom-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+        background: rgb(var(--color-text-muted));
+    }
+
+    /* Hide scrollbar completely but keep scroll functionality */
+    .no-scrollbar {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+        display: none;
+    }
 }
