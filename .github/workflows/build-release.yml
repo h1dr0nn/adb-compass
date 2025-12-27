@@ -177,9 +177,38 @@ jobs:
         env:
           VERSION: ${{ steps.get_version.outputs.version }}
           ARCH: ${{ matrix.arch }}
+          TARGET: ${{ matrix.target }}
         run: |
           $portableExe = "release-artifacts/adbcompass-${env:VERSION}-windows-${env:ARCH}-portable.exe"
           $zipFile = "release-artifacts/adbcompass-${env:VERSION}-windows-${env:ARCH}-portable.zip"
+          
+          # Debug: List what we have
+          Write-Host "=== Contents of release-artifacts ==="
+          Get-ChildItem release-artifacts -ErrorAction SilentlyContinue | Format-Table Name, Length
+          
+          # If portable exe doesn't exist, try to find and copy it
+          if (-not (Test-Path $portableExe)) {
+            Write-Host "Portable exe not found at expected path, searching..."
+            $releaseDir = "src-tauri/target/${env:TARGET}/release"
+            
+            # List all exes to debug
+            Write-Host "=== EXEs in release folder ==="
+            Get-ChildItem "$releaseDir/*.exe" -ErrorAction SilentlyContinue | Format-Table Name, Length
+            
+            # Try finding the main app exe
+            $candidates = @(
+              "$releaseDir/ADB Compass.exe",
+              "$releaseDir/adb-compass.exe", 
+              "$releaseDir/adbcompass.exe"
+            )
+            foreach ($candidate in $candidates) {
+              if (Test-Path $candidate) {
+                Copy-Item $candidate -Destination $portableExe
+                Write-Host "Found and copied: $candidate"
+                break
+              }
+            }
+          }
           
           if (Test-Path $portableExe) {
             # Create temp folder and copy files
@@ -187,9 +216,19 @@ jobs:
             Copy-Item $portableExe -Destination "portable-temp/adbcompass.exe"
             
             # Check for WebView2Loader.dll
-            $webviewDll = "src-tauri/target/${{ matrix.target }}/release/WebView2Loader.dll"
+            $webviewDll = "src-tauri/target/${env:TARGET}/release/WebView2Loader.dll"
             if (Test-Path $webviewDll) {
               Copy-Item $webviewDll -Destination "portable-temp/"
+              Write-Host "Bundled WebView2Loader.dll"
+            }
+            
+            # Bundle ADB for portable version
+            $adbExe = "src-tauri/binaries/adb.exe"
+            if (Test-Path $adbExe) {
+              Copy-Item $adbExe -Destination "portable-temp/"
+              Write-Host "Bundled adb.exe"
+            } else {
+              Write-Host "WARNING: adb.exe not found at $adbExe"
             }
             
             # Create ZIP
@@ -197,8 +236,14 @@ jobs:
             Remove-Item -Recurse -Force "portable-temp"
             
             Write-Host "Created portable ZIP: $zipFile"
+            Write-Host "=== ZIP Contents ==="
+            # Show contents
+            Expand-Archive -Path $zipFile -DestinationPath "zip-check" -Force
+            Get-ChildItem "zip-check" | Format-Table Name, Length
+            Remove-Item -Recurse -Force "zip-check"
           } else {
-            Write-Host "WARNING: Portable exe not found, skipping ZIP creation"
+            Write-Host "ERROR: Portable exe not found, skipping ZIP creation"
+            Write-Host "This may indicate a build issue - check previous steps"
           }
 
       - name: Upload Build Artifacts

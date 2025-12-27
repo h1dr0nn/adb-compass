@@ -254,7 +254,7 @@ impl AdbExecutor {
     pub fn list_devices(&self) -> Result<Vec<DeviceInfo>, AppError> {
         let output = self.run_with_retry(
             || {
-                let mut cmd = Command::new(&self.adb_path);
+                let mut cmd = hidden_command(&self.adb_path);
                 cmd.arg("devices").arg("-l");
                 cmd
             },
@@ -347,7 +347,7 @@ impl AdbExecutor {
     pub fn start_server(&self) -> Result<(), AppError> {
         let output = self.run_with_retry(
             || {
-                let mut cmd = Command::new(&self.adb_path);
+                let mut cmd = hidden_command(&self.adb_path);
                 cmd.arg("start-server");
                 cmd
             },
@@ -369,7 +369,7 @@ impl AdbExecutor {
     pub fn kill_server(&self) -> Result<(), AppError> {
         let output = self.run_with_retry(
             || {
-                let mut cmd = Command::new(&self.adb_path);
+                let mut cmd = hidden_command(&self.adb_path);
                 cmd.arg("kill-server");
                 cmd
             },
@@ -537,7 +537,7 @@ impl AdbExecutor {
 
         let output = self.run_with_retry(
             || {
-                let mut cmd = Command::new(&self.adb_path);
+                let mut cmd = hidden_command(&self.adb_path);
                 cmd.args(["-s", device_id, "install", "-r", apk_path]);
                 cmd
             },

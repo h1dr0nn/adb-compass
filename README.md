@@ -1,119 +1,64 @@
 # ADB Compass
 
-A cross-platform desktop application for detecting Android devices, validating required system settings, and installing APKs through a guided, user-friendly workflow.
+A simple desktop app to install APK files on your Android devices.
 
-The application is built with a **Rust backend**, **Tauri IPC layer**, and a **React frontend**, using **Android platform-tools (adb)** as an external system dependency.
-
----
-
-## 1. Project Goals
-
-This project aims to:
-
-- Automatically detect connected Android devices via USB
-- Identify missing or misconfigured developer settings required for ADB operations
-- Provide clear, actionable guidance for resolving device authorization and setup issues
-- Install APK files onto selected devices in a safe and transparent manner
-- Offer a clean, responsive desktop UI suitable for both developers and non-technical users
+![ADB Compass](https://img.shields.io/badge/Platform-Windows%20|%20macOS%20|%20Linux-blue)
 
 ---
 
-## 2. Core Features
+## Features
 
-### Device Detection
-- Real-time device connection and disconnection detection
-- Support for multiple devices
-- Device state tracking (offline, unauthorized, authorized, ready)
-
-### Requirement & Permission Validation
-- Developer Mode status detection
-- USB Debugging authorization check
-- Installation permission validation
-- Structured checklist with pass/fail indicators
-
-### APK Installation
-- APK file selection and validation
-- Pre-install compatibility checks (SDK level, device availability)
-- Installation status and error reporting
-- Friendly error messages mapped from adb output
+- **Auto-detect devices** - Plug in your phone and it appears automatically
+- **Requirement checklist** - Shows what settings you need to enable
+- **Easy APK install** - Drag & drop or browse to install apps
+- **Multi-device support** - Manage multiple phones at once
+- **Wireless ADB** - Connect over WiFi without USB cable
+- **Device tools** - Reboot, input text, file transfer, and more
 
 ---
 
-## 3. Architecture Overview
+## Download
 
-```
-React Frontend
-└─ Device UI / Checklist / Install Flow
-       ▲
-       │ Tauri IPC (invoke / events)
-       ▼
-Rust Backend
-├─ ADB process wrapper
-├─ Device state machine
-├─ Requirement detector
-└─ APK installer
-       ▼
-Android platform-tools (adb)
-       ▼
-Android Device(s)
-```
+Download the latest version from the [Releases](https://github.com/user/adb-compass/releases) page:
+
+| Platform | Installer | Portable |
+|----------|-----------|----------|
+| Windows  | `.exe` or `.msi` | `.zip` (no install needed) |
+| macOS    | `.dmg` | - |
+| Linux    | `.deb` | `.AppImage` |
 
 ---
 
-## 4. Technology Stack
+## Quick Start
 
-- **Frontend**: React + TypeScript
-- **Desktop Framework**: Tauri v2
-- **Backend**: Rust
-- **Android Tooling**: Android platform-tools (adb)
-- **Target OS**: Windows, macOS, Linux
+1. **Enable Developer Options** on your phone
+   - Go to Settings > About Phone > Tap "Build Number" 7 times
 
----
+2. **Enable USB Debugging**
+   - Go to Settings > Developer Options > Enable "USB Debugging"
 
-## 5. Getting Started
+3. **Connect your phone** via USB cable
 
-### Prerequisites
-- Node.js 18+
-- Rust 1.70+
-- Android platform-tools (adb) in PATH
+4. **Accept the prompt** on your phone to allow USB debugging
 
-### Development
-
-```bash
-# Install dependencies
-npm install
-
-# Run in development mode
-npm run tauri dev
-
-# Build for production
-npm run tauri build
-```
+5. **Install your APK** - Select the file and click Install!
 
 ---
 
-## 6. Project Structure
+## Troubleshooting
 
-```
-adb-compass/
-├── src/                    # React frontend
-│   ├── components/         # UI components
-│   ├── hooks/              # React hooks
-│   └── types/              # TypeScript types
-├── src-tauri/              # Rust backend
-│   └── src/
-│       ├── adb/            # ADB wrapper module
-│       ├── commands/       # Tauri commands
-│       └── error.rs        # Error types
-└── public/                 # Static assets
-```
+### Device not showing up?
+- Try unplugging and reconnecting the USB cable
+- Make sure USB Debugging is enabled
+- Accept the "Allow USB debugging?" prompt on your phone
+
+### Installation failed?
+- Check the error message - usually it tells you what's wrong
+- Make sure you have enough storage space
+- Try uninstalling the existing app first
 
 ---
 
-## 7. Design Principles
+## License
 
-- Clear separation between UI and system-level logic
-- No direct adb calls from the frontend
-- Defensive parsing of adb output
-- Event-driven device state updates
-- Human-readable guidance instead of raw error logs
+MIT License - Free to use and modify.

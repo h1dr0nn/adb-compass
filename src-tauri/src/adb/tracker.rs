@@ -6,10 +6,14 @@ use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
+use std::time::{Duration, Instant};
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::adb::executor::{AdbExecutor, DeviceInfo};
 use crate::command_utils::hidden_command;
+
+/// Debounce delay to avoid rapid successive device list fetches
+const DEBOUNCE_MS: u64 = 500;
 
 /// Event payload for device changes
 #[derive(Clone, serde::Serialize)]
@@ -39,6 +43,7 @@ pub struct DeviceTrackerState {
 fn run_tracker(app: AppHandle, running: Arc<AtomicBool>) {
     let executor = AdbExecutor::new();
     let adb_path = executor.get_adb_path().clone();
+    let mut last_emit_time = Instant::now() - Duration::from_secs(10); // Allow immediate first emit
 
     loop {
         if !running.load(Ordering::Relaxed) {
@@ -69,12 +74,19 @@ fn run_tracker(app: AppHandle, running: Arc<AtomicBool>) {
                                 // track-devices outputs length-prefixed messages
                                 // but we can also just refresh device list on any output
                                 if !text.trim().is_empty() {
-                                    // Fetch full device info and emit event
-                                    if let Ok(devices) = executor.list_devices() {
-                                        let _ = app.emit(
-                                            "device-changed",
-                                            DeviceChangedPayload { devices },
-                                        );
+                                    // Debounce: only emit if enough time has passed
+                                    let now = Instant::now();
+                                    if now.duration_since(last_emit_time)
+                                        >= Duration::from_millis(DEBOUNCE_MS)
+                                    {
+                                        // Fetch full device info and emit event
+                                        if let Ok(devices) = executor.list_devices() {
+                                            let _ = app.emit(
+                                                "device-changed",
+                                                DeviceChangedPayload { devices },
+                                            );
+                                            last_emit_time = now;
+                                        }
                                     }
                                 }
                             }
@@ -85,13 +97,13 @@ fn run_tracker(app: AppHandle, running: Arc<AtomicBool>) {
 
                 // Wait a bit before restarting if the process ended
                 if running.load(Ordering::Relaxed) {
-                    thread::sleep(std::time::Duration::from_secs(1));
+                    thread::sleep(Duration::from_secs(1));
                 }
             }
             Err(e) => {
                 eprintln!("Failed to start track-devices: {}", e);
                 // Wait before retrying
-                thread::sleep(std::time::Duration::from_secs(5));
+                thread::sleep(Duration::from_secs(5));
             }
         }
     }

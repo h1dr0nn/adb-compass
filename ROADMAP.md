@@ -94,9 +94,9 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 **Goal:** Prepare the application for broader usage and distribution.
 
 - [x] UI and interaction polish
-- [ ] Application icon and branding
-- [ ] Platform-specific packaging and signing
-- [ ] Performance optimizations
+- [x] Application icon and branding
+- [x] Platform-specific packaging and signing
+- [x] Performance optimizations
 - [ ] Documentation updates (README, usage guides)
 
 ---
