@@ -97,7 +97,7 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 - [x] Application icon and branding
 - [x] Platform-specific packaging and signing
 - [x] Performance optimizations
-- [ ] Documentation updates (README, usage guides)
+- [x] Documentation updates (README, usage guides)
 
 ---
 

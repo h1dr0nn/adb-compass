@@ -215,11 +215,12 @@ jobs:
             New-Item -ItemType Directory -Force -Path "portable-temp" | Out-Null
             Copy-Item $portableExe -Destination "portable-temp/adbcompass.exe"
             
-            # Check for WebView2Loader.dll
-            $webviewDll = "src-tauri/target/${env:TARGET}/release/WebView2Loader.dll"
-            if (Test-Path $webviewDll) {
-              Copy-Item $webviewDll -Destination "portable-temp/"
-              Write-Host "Bundled WebView2Loader.dll"
+            # Bundle ALL DLLs from release folder (WebView2Loader.dll, etc.)
+            $releaseDir = "src-tauri/target/${env:TARGET}/release"
+            $dlls = Get-ChildItem "$releaseDir/*.dll" -ErrorAction SilentlyContinue
+            foreach ($dll in $dlls) {
+              Copy-Item $dll.FullName -Destination "portable-temp/"
+              Write-Host "Bundled DLL: $($dll.Name)"
             }
             
             # Bundle ADB for portable version
@@ -229,6 +230,16 @@ jobs:
               Write-Host "Bundled adb.exe"
             } else {
               Write-Host "WARNING: adb.exe not found at $adbExe"
+            }
+            
+            # Also bundle ADB dependencies if they exist
+            $adbDeps = @("AdbWinApi.dll", "AdbWinUsbApi.dll")
+            foreach ($dep in $adbDeps) {
+              $depPath = "src-tauri/binaries/$dep"
+              if (Test-Path $depPath) {
+                Copy-Item $depPath -Destination "portable-temp/"
+                Write-Host "Bundled ADB dependency: $dep"
+              }
             }
             
             # Create ZIP

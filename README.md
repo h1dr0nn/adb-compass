@@ -23,7 +23,7 @@ Download the latest version from the [Releases](https://github.com/user/adb-comp
 
 | Platform | Installer | Portable |
 |----------|-----------|----------|
-| Windows  | `.exe` or `.msi` | `.zip` (no install needed) |
+| Windows  | `.exe` or `.msi` | `.zip` |
 | macOS    | `.dmg` | - |
 | Linux    | `.deb` | `.AppImage` |
 
