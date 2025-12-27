@@ -195,7 +195,6 @@ jobs:
   create-release:
     name: Create Release
     needs: [version-update, build]
-    if: startsWith(github.ref, 'refs/tags/release-v')
     runs-on: ubuntu-latest
     steps:
       - name: Download All Artifacts
@@ -210,14 +209,27 @@ jobs:
           echo "All artifacts:"
           ls -laR artifacts/
 
+      - name: Determine Release Type
+        id: release_type
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/release-v* ]]; then
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+            echo "release_name=ADB Compass ${{ needs.version-update.outputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+            echo "release_name=Development Build ${{ needs.version-update.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          name: ADB Compass ${{ needs.version-update.outputs.version }}
+          name: ${{ steps.release_type.outputs.release_name }}
           tag_name: ${{ github.ref_name }}
           draft: false
-          prerelease: false
+          prerelease: ${{ steps.release_type.outputs.is_prerelease }}
           files: artifacts/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
