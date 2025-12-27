@@ -6,6 +6,9 @@ on:
       - 'develop-v*'
       - 'release-v*'
 
+permissions:
+  contents: write
+
 jobs:
   version-update:
     name: Sync Version
@@ -54,22 +57,33 @@ jobs:
           retention-days: 1
 
   build:
-    name: Build - ${{ matrix.platform }}
+    name: Build - ${{ matrix.platform }}-${{ matrix.arch }}
     needs: version-update
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         include:
+          # Windows - x64
           - os: windows-latest
             platform: windows
-            ext: exe
+            arch: x64
+            target: x86_64-pc-windows-msvc
+          # Linux - x64
           - os: ubuntu-22.04
             platform: linux
-            ext: AppImage
+            arch: x64
+            target: x86_64-unknown-linux-gnu
+          # macOS - Intel (x64)
+          - os: macos-13
+            platform: macos
+            arch: x64
+            target: x86_64-apple-darwin
+          # macOS - Apple Silicon (arm64)
           - os: macos-latest
             platform: macos
-            ext: dmg
+            arch: arm64
+            target: aarch64-apple-darwin
 
     steps:
       - name: Checkout repository
@@ -80,65 +94,103 @@ jobs:
         with:
           name: config-files
           path: .
-          # Artifacts are downloaded to current dir. 
-          # package.json overwrites root. 
-          # src-tauri/tauri.conf.json should be placed correctly if structure was preserved.
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: 'npm'
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: ${{ matrix.platform == 'macos' && 'x86_64-apple-darwin,aarch64-apple-darwin' || '' }}
+          targets: ${{ matrix.target }}
+
+      - name: Setup Rust Cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+          cache-on-failure: true
 
       - name: Install Dependencies (Linux)
         if: matrix.platform == 'linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.0-dev build-essential curl wget file libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev patchelf libsoup-3.0-dev libjavascriptcoregtk-4.1-dev
 
       - name: Install Frontend Dependencies
-        run: npm install
+        run: npm ci
 
       - name: Build Tauri App
-        run: npm run tauri build
+        run: npm run tauri build -- --target ${{ matrix.target }}
 
       - name: Rename and Prepare Artifacts
         shell: bash
         env:
           VERSION: ${{ needs.version-update.outputs.version }}
           PLATFORM: ${{ matrix.platform }}
-          EXT: ${{ matrix.ext }}
+          ARCH: ${{ matrix.arch }}
+          TARGET: ${{ matrix.target }}
         run: |
-          mkdir release-artifacts
+          mkdir -p release-artifacts
           
           # Windows
           if [ "$PLATFORM" == "windows" ]; then
-            # Tauri 1.x output structure: src-tauri/target/release/bundle/nsis/
-            # Check for .msi or .exe setup
-            cp src-tauri/target/release/bundle/nsis/*.exe "release-artifacts/adbcompass-${VERSION}-windows.exe" 2>/dev/null || echo "Windows exe not found"
+            # NSIS installer (.exe)
+            if [ -f "src-tauri/target/$TARGET/release/bundle/nsis/"*.exe ]; then
+              cp src-tauri/target/$TARGET/release/bundle/nsis/*.exe "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-setup.exe" 2>/dev/null || true
+            fi
+            
+            # MSI installer
+            if [ -f "src-tauri/target/$TARGET/release/bundle/msi/"*.msi ]; then
+              cp src-tauri/target/$TARGET/release/bundle/msi/*.msi "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}.msi" 2>/dev/null || true
+            fi
+            
+            # Portable executable (raw .exe from target/release)
+            if [ -f "src-tauri/target/$TARGET/release/"*.exe ]; then
+              # Find the main exe (not the uninstaller or other tools)
+              for exe in src-tauri/target/$TARGET/release/*.exe; do
+                if [[ ! "$exe" == *"uninstall"* ]] && [[ ! "$exe" == *"-"* ]]; then
+                  cp "$exe" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.exe" 2>/dev/null || true
+                  break
+                fi
+              done
+            fi
+            
+            # Portable ZIP (exe + WebView2Loader.dll if exists)
+            mkdir -p portable-temp
+            cp "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.exe" portable-temp/ 2>/dev/null || true
+            if [ -f "src-tauri/target/$TARGET/release/WebView2Loader.dll" ]; then
+              cp "src-tauri/target/$TARGET/release/WebView2Loader.dll" portable-temp/
+            fi
+            cd portable-temp
+            7z a "../release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.zip" * 2>/dev/null || zip -r "../release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.zip" * 2>/dev/null || true
+            cd ..
+            rm -rf portable-temp
           
           # Linux
           elif [ "$PLATFORM" == "linux" ]; then
-            cp src-tauri/target/release/bundle/appimage/*.AppImage "release-artifacts/adbcompass-${VERSION}-linux.AppImage" 2>/dev/null || echo "AppImage not found"
+            # AppImage
+            cp src-tauri/target/$TARGET/release/bundle/appimage/*.AppImage "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.AppImage" 2>/dev/null || true
+            
+            # Deb package
+            cp src-tauri/target/$TARGET/release/bundle/deb/*.deb "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.deb" 2>/dev/null || true
           
           # macOS
           elif [ "$PLATFORM" == "macos" ]; then
-             cp src-tauri/target/release/bundle/dmg/*.dmg "release-artifacts/adbcompass-${VERSION}-macos.dmg" 2>/dev/null || echo "DMG not found"
+            cp src-tauri/target/$TARGET/release/bundle/dmg/*.dmg "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}.dmg" 2>/dev/null || true
           fi
           
           echo "Artifacts prepared:"
-          ls -R release-artifacts
+          ls -la release-artifacts/
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: artifacts-${{ matrix.platform }}
+          name: artifacts-${{ matrix.platform }}-${{ matrix.arch }}
           path: release-artifacts/*
-          retention-days: 1
+          retention-days: 7
+          if-no-files-found: warn
 
   create-release:
     name: Create Release
@@ -154,7 +206,9 @@ jobs:
           merge-multiple: true
 
       - name: Display Artifacts
-        run: ls -R artifacts
+        run: |
+          echo "All artifacts:"
+          ls -laR artifacts/
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -165,3 +219,5 @@ jobs:
           prerelease: false
           files: artifacts/*
           generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
