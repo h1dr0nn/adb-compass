@@ -10,55 +10,8 @@ permissions:
   contents: write
 
 jobs:
-  version-update:
-    name: Sync Version
-    runs-on: ubuntu-latest
-    outputs:
-      version: ${{ steps.get_version.outputs.version }}
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Extract Version from Tag
-        id: get_version
-        run: |
-          if [[ $GITHUB_REF == refs/tags/release-v* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/release-v}
-            echo "IS_RELEASE=true" >> $GITHUB_ENV
-          elif [[ $GITHUB_REF == refs/tags/develop-v* ]]; then
-            VERSION=${GITHUB_REF#refs/tags/develop-v}
-            echo "IS_RELEASE=false" >> $GITHUB_ENV
-          else
-            VERSION="0.0.0"
-          fi
-          echo "Detected version: $VERSION"
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Update Configuration Files
-        env:
-          VERSION: ${{ steps.get_version.outputs.version }}
-        run: |
-          # Update package.json
-          jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
-          
-          # Update src-tauri/tauri.conf.json
-          jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > src-tauri/tauri.conf.json.tmp && mv src-tauri/tauri.conf.json.tmp src-tauri/tauri.conf.json
-          
-          echo "Updated package.json version:"
-          jq '.version' package.json
-
-      - name: Upload Config Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: config-files
-          path: |
-            package.json
-            src-tauri/tauri.conf.json
-          retention-days: 1
-
   build:
     name: Build - ${{ matrix.platform }}-${{ matrix.arch }}
-    needs: version-update
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -85,15 +38,45 @@ jobs:
             arch: arm64
             target: aarch64-apple-darwin
 
+    outputs:
+      version: ${{ steps.get_version.outputs.version }}
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Download Config Artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: config-files
-          path: .
+      - name: Extract Version from Tag
+        id: get_version
+        shell: bash
+        run: |
+          if [[ $GITHUB_REF == refs/tags/release-v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/release-v}
+          elif [[ $GITHUB_REF == refs/tags/develop-v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/develop-v}
+          else
+            VERSION="0.0.0"
+          fi
+          echo "Detected version: $VERSION"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update Configuration Files
+        shell: bash
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+        run: |
+          # Update package.json
+          if command -v jq &> /dev/null; then
+            jq --arg v "$VERSION" '.version = $v' package.json > package.json.tmp && mv package.json.tmp package.json
+            jq --arg v "$VERSION" '.version = $v' src-tauri/tauri.conf.json > src-tauri/tauri.conf.json.tmp && mv src-tauri/tauri.conf.json.tmp src-tauri/tauri.conf.json
+          else
+            # Fallback for systems without jq - use node
+            node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json')); p.version='$VERSION'; fs.writeFileSync('package.json', JSON.stringify(p, null, 2));"
+            node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); p.version='$VERSION'; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(p, null, 2));"
+          fi
+          
+          echo "Updated versions to: $VERSION"
+          cat package.json | grep version || true
+          cat src-tauri/tauri.conf.json | grep version || true
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -194,9 +177,21 @@ jobs:
 
   create-release:
     name: Create Release
-    needs: [version-update, build]
+    needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Extract Version from Tag
+        id: get_version
+        run: |
+          if [[ $GITHUB_REF == refs/tags/release-v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/release-v}
+          elif [[ $GITHUB_REF == refs/tags/develop-v* ]]; then
+            VERSION=${GITHUB_REF#refs/tags/develop-v}
+          else
+            VERSION="0.0.0"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Download All Artifacts
         uses: actions/download-artifact@v4
         with:
@@ -214,10 +209,10 @@ jobs:
         run: |
           if [[ "${{ github.ref }}" == refs/tags/release-v* ]]; then
             echo "is_prerelease=false" >> $GITHUB_OUTPUT
-            echo "release_name=ADB Compass ${{ needs.version-update.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "release_name=ADB Compass ${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
           else
             echo "is_prerelease=true" >> $GITHUB_OUTPUT
-            echo "release_name=Development Build ${{ needs.version-update.outputs.version }}" >> $GITHUB_OUTPUT
+            echo "release_name=Development Build ${{ steps.get_version.outputs.version }}" >> $GITHUB_OUTPUT
           fi
 
       - name: Create Release
@@ -231,5 +226,3 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
