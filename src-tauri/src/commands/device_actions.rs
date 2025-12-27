@@ -2,6 +2,7 @@
 // Provides reboot, input, uninstall, and info commands
 
 use crate::adb::AdbExecutor;
+use crate::command_utils::hidden_command;
 use crate::error::AppError;
 use serde::Serialize;
 use std::process::Stdio;
@@ -21,7 +22,7 @@ pub fn reboot_device(device_id: String, mode: Option<String>) -> Result<(), AppE
     let executor = AdbExecutor::new();
     let adb_path = executor.get_adb_path();
 
-    let mut cmd = std::process::Command::new(adb_path);
+    let mut cmd = hidden_command(adb_path);
     cmd.args(["-s", &device_id, "reboot"]);
 
     if let Some(m) = &mode {
@@ -59,7 +60,7 @@ pub fn input_text(device_id: String, text: String) -> Result<(), AppError> {
         .replace('<', "\\<")
         .replace('>', "\\>");
 
-    let output = std::process::Command::new(adb_path)
+    let output = hidden_command(adb_path)
         .args(["-s", &device_id, "shell", "input", "text", &escaped_text])
         .output()
         .map_err(|e| AppError::new("INPUT_FAILED", &format!("Failed to input text: {}", e)))?;
@@ -100,7 +101,7 @@ pub fn uninstall_app(device_id: String, package_name: String) -> Result<String, 
     let executor = AdbExecutor::new();
     let adb_path = executor.get_adb_path();
 
-    let output = std::process::Command::new(adb_path)
+    let output = hidden_command(adb_path)
         .args(["-s", &device_id, "uninstall", &package_name])
         .output()
         .map_err(|e| AppError::new("UNINSTALL_FAILED", &format!("Failed to uninstall: {}", e)))?;
@@ -130,15 +131,12 @@ pub fn list_packages(device_id: String, include_system: bool) -> Result<Vec<Stri
         args.push("-3");
     }
 
-    let output = std::process::Command::new(adb_path)
-        .args(&args)
-        .output()
-        .map_err(|e| {
-            AppError::new(
-                "LIST_PACKAGES_FAILED",
-                &format!("Failed to list packages: {}", e),
-            )
-        })?;
+    let output = hidden_command(adb_path).args(&args).output().map_err(|e| {
+        AppError::new(
+            "LIST_PACKAGES_FAILED",
+            &format!("Failed to list packages: {}", e),
+        )
+    })?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -164,7 +162,7 @@ pub fn get_device_props(device_id: String) -> Result<DeviceProps, AppError> {
     let adb_path = executor.get_adb_path();
 
     // Get properties
-    let props_output = std::process::Command::new(adb_path)
+    let props_output = hidden_command(adb_path)
         .args(["-s", &device_id, "shell", "getprop"])
         .output()
         .map_err(|e| AppError::new("GET_PROPS_FAILED", &format!("Failed to get props: {}", e)))?;
@@ -179,7 +177,7 @@ pub fn get_device_props(device_id: String) -> Result<DeviceProps, AppError> {
         extract_prop(&props_str, "ro.build.version.sdk").unwrap_or_else(|| "Unknown".to_string());
 
     // Get battery info
-    let battery_output = std::process::Command::new(adb_path)
+    let battery_output = hidden_command(adb_path)
         .args(["-s", &device_id, "shell", "dumpsys", "battery"])
         .output()
         .ok();

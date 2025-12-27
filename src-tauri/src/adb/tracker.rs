@@ -2,13 +2,14 @@
 // Spawns adb track-devices as background process and emits events on device changes
 
 use std::io::{BufRead, BufReader};
-use std::process::{Command, Stdio};
+use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::thread;
 use tauri::{AppHandle, Emitter, Manager};
 
 use crate::adb::executor::{AdbExecutor, DeviceInfo};
+use crate::command_utils::hidden_command;
 
 /// Event payload for device changes
 #[derive(Clone, serde::Serialize)]
@@ -44,8 +45,8 @@ fn run_tracker(app: AppHandle, running: Arc<AtomicBool>) {
             break;
         }
 
-        // Spawn adb track-devices
-        let child = Command::new(&adb_path)
+        // Spawn adb track-devices with hidden window on Windows
+        let child = hidden_command(&adb_path)
             .arg("track-devices")
             .stdout(Stdio::piped())
             .stderr(Stdio::null())

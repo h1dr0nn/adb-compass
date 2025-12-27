@@ -2,13 +2,14 @@
 // Execute shell commands on connected devices
 
 use crate::adb::AdbExecutor;
+use crate::command_utils::hidden_command;
 
 /// Execute a shell command on the device
 #[tauri::command]
 pub async fn execute_shell(device_id: String, command: String) -> Result<String, String> {
     let adb = AdbExecutor::new();
 
-    let output = std::process::Command::new(adb.get_adb_path())
+    let output = hidden_command(adb.get_adb_path())
         .args(["-s", &device_id, "shell", &command])
         .output()
         .map_err(|e| format!("Shell command failed: {}", e))?;
@@ -46,7 +47,7 @@ pub async fn get_logcat(
         args.push(f);
     }
 
-    let output = std::process::Command::new(adb.get_adb_path())
+    let output = hidden_command(adb.get_adb_path())
         .args(&args)
         .output()
         .map_err(|e| format!("Logcat failed: {}", e))?;
@@ -60,7 +61,7 @@ pub async fn get_logcat(
 pub async fn clear_logcat(device_id: String) -> Result<(), String> {
     let adb = AdbExecutor::new();
 
-    let output = std::process::Command::new(adb.get_adb_path())
+    let output = hidden_command(adb.get_adb_path())
         .args(["-s", &device_id, "logcat", "-c"])
         .output()
         .map_err(|e| format!("Failed to clear logcat: {}", e))?;

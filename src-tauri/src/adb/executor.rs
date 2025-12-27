@@ -1,6 +1,7 @@
 // ADB Executor - Wraps adb command execution
 // Provides safe, typed interface for running adb commands
 
+use crate::command_utils::hidden_command;
 use crate::error::{AdbError, AppError};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
@@ -191,7 +192,7 @@ impl AdbExecutor {
     pub fn check_available(&self) -> Result<String, AppError> {
         let output = self.run_with_retry(
             || {
-                let mut cmd = Command::new(&self.adb_path);
+                let mut cmd = hidden_command(&self.adb_path);
                 cmd.arg("version");
                 cmd
             },
@@ -213,7 +214,7 @@ impl AdbExecutor {
     fn get_device_model_info(&self, device_id: &str) -> Option<String> {
         // Helper to run getprop
         let get_prop = |prop: &str| -> Option<String> {
-            Command::new(&self.adb_path)
+            hidden_command(&self.adb_path)
                 .args(["-s", device_id, "shell", "getprop", prop])
                 .output()
                 .ok()
@@ -328,7 +329,7 @@ impl AdbExecutor {
 
     /// Get device property
     pub fn get_device_prop(&self, device_id: &str, prop: &str) -> Result<String, AppError> {
-        let output = Command::new(&self.adb_path)
+        let output = hidden_command(&self.adb_path)
             .args(["-s", device_id, "shell", "getprop", prop])
             .output()
             .map_err(|e| AppError::from(AdbError::ExecutionFailed(e.to_string())))?;
@@ -388,7 +389,7 @@ impl AdbExecutor {
 
     /// Get Android setting value
     pub fn get_setting(&self, device_id: &str, namespace: &str, key: &str) -> Option<String> {
-        let output = Command::new(&self.adb_path)
+        let output = hidden_command(&self.adb_path)
             .args(["-s", device_id, "shell", "settings", "get", namespace, key])
             .output()
             .ok()?;
@@ -493,7 +494,7 @@ impl AdbExecutor {
         );
 
         // Try to send a test input to check if it works
-        let test_result = std::process::Command::new(self.get_adb_path())
+        let test_result = hidden_command(self.get_adb_path())
             .args(["-s", device_id, "shell", "input", "keyevent", "0"])
             .output();
 

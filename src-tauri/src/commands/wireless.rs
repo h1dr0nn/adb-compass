@@ -2,6 +2,7 @@
 // Handles wireless ADB connection/disconnection
 
 use crate::adb::AdbExecutor;
+use crate::command_utils::hidden_command;
 
 /// Enable TCP/IP mode on a USB-connected device
 #[tauri::command]
@@ -9,7 +10,7 @@ pub async fn enable_tcpip(device_id: String, port: String) -> Result<String, Str
     let adb = AdbExecutor::new();
     let port_num: u16 = port.parse().unwrap_or(5555);
 
-    let output = std::process::Command::new(adb.get_adb_path())
+    let output = hidden_command(adb.get_adb_path())
         .args(["-s", &device_id, "tcpip", &port_num.to_string()])
         .output()
         .map_err(|e| format!("Failed to enable tcpip: {}", e))?;
@@ -28,7 +29,7 @@ pub async fn connect_wireless(ip: String, port: String) -> Result<String, String
     let adb = AdbExecutor::new();
     let address = format!("{}:{}", ip, port);
 
-    let output = std::process::Command::new(adb.get_adb_path())
+    let output = hidden_command(adb.get_adb_path())
         .args(["connect", &address])
         .output()
         .map_err(|e| format!("Connection failed: {}", e))?;
@@ -53,7 +54,7 @@ pub async fn disconnect_wireless(ip: String, port: String) -> Result<String, Str
     let adb = AdbExecutor::new();
     let address = format!("{}:{}", ip, port);
 
-    let output = std::process::Command::new(adb.get_adb_path())
+    let output = hidden_command(adb.get_adb_path())
         .args(["disconnect", &address])
         .output()
         .map_err(|e| format!("Disconnect failed: {}", e))?;
@@ -70,7 +71,7 @@ pub async fn get_device_ip(device_id: String) -> Result<String, String> {
 
     // Strategy 1: Try to find the interface route to the internet (most reliable for active connection)
     // Run: adb shell ip route get 8.8.8.8
-    let output = std::process::Command::new(adb.get_adb_path())
+    let output = hidden_command(adb.get_adb_path())
         .args(["-s", &device_id, "shell", "ip", "route", "get", "8.8.8.8"])
         .output();
 
@@ -87,7 +88,7 @@ pub async fn get_device_ip(device_id: String) -> Result<String, String> {
 
     // Strategy 2: Fallback to listing specific interfaces (wlan0, eth0)
     for interface in ["wlan0", "eth0", "wlan1"] {
-        let output = std::process::Command::new(adb.get_adb_path())
+        let output = hidden_command(adb.get_adb_path())
             .args(["-s", &device_id, "shell", "ip", "addr", "show", interface])
             .output();
 
@@ -106,7 +107,7 @@ pub async fn get_device_ip(device_id: String) -> Result<String, String> {
     }
 
     // Strategy 3: Gross fallback to 'ifconfig' (older devices)
-    let output = std::process::Command::new(adb.get_adb_path())
+    let output = hidden_command(adb.get_adb_path())
         .args(["-s", &device_id, "shell", "ifconfig", "wlan0"])
         .output();
 
@@ -122,7 +123,7 @@ pub async fn get_device_ip(device_id: String) -> Result<String, String> {
     }
 
     // Strategy 4: Broad scan of ALL interfaces (ignoring loopback)
-    let output = std::process::Command::new(adb.get_adb_path())
+    let output = hidden_command(adb.get_adb_path())
         .args(["-s", &device_id, "shell", "ip", "addr", "show"])
         .output();
 

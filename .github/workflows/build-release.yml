@@ -119,37 +119,41 @@ jobs:
           
           # Windows
           if [ "$PLATFORM" == "windows" ]; then
+            # Debug: List all files in release folder
+            echo "=== Files in target/$TARGET/release/ ==="
+            ls -la "src-tauri/target/$TARGET/release/" || true
+            echo "=== Files in bundle/nsis/ ==="
+            ls -la "src-tauri/target/$TARGET/release/bundle/nsis/" 2>/dev/null || true
+            echo "=== Files in bundle/msi/ ==="
+            ls -la "src-tauri/target/$TARGET/release/bundle/msi/" 2>/dev/null || true
+            
             # NSIS installer (.exe)
-            if [ -f "src-tauri/target/$TARGET/release/bundle/nsis/"*.exe ]; then
-              cp src-tauri/target/$TARGET/release/bundle/nsis/*.exe "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-setup.exe" 2>/dev/null || true
-            fi
+            cp src-tauri/target/$TARGET/release/bundle/nsis/*.exe "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-setup.exe" 2>/dev/null || true
             
             # MSI installer
-            if [ -f "src-tauri/target/$TARGET/release/bundle/msi/"*.msi ]; then
-              cp src-tauri/target/$TARGET/release/bundle/msi/*.msi "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}.msi" 2>/dev/null || true
-            fi
+            cp src-tauri/target/$TARGET/release/bundle/msi/*.msi "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}.msi" 2>/dev/null || true
             
-            # Portable executable (raw .exe from target/release)
-            if [ -f "src-tauri/target/$TARGET/release/"*.exe ]; then
-              # Find the main exe (not the uninstaller or other tools)
-              for exe in src-tauri/target/$TARGET/release/*.exe; do
-                if [[ ! "$exe" == *"uninstall"* ]] && [[ ! "$exe" == *"-"* ]]; then
-                  cp "$exe" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.exe" 2>/dev/null || true
-                  break
-                fi
-              done
-            fi
+            # Portable executable - the main app exe (ADB Compass.exe or similar)
+            # Find exe that matches the app name (without spaces it could be adb-compass.exe or similar)
+            PORTABLE_EXE=""
+            for exe in "src-tauri/target/$TARGET/release/ADB Compass.exe" \
+                       "src-tauri/target/$TARGET/release/adb-compass.exe" \
+                       "src-tauri/target/$TARGET/release/adbcompass.exe" \
+                       "src-tauri/target/$TARGET/release/ADB-Compass.exe"; do
+              if [ -f "$exe" ]; then
+                PORTABLE_EXE="$exe"
+                break
+              fi
+            done
             
-            # Portable ZIP (exe + WebView2Loader.dll if exists)
-            mkdir -p portable-temp
-            cp "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.exe" portable-temp/ 2>/dev/null || true
-            if [ -f "src-tauri/target/$TARGET/release/WebView2Loader.dll" ]; then
-              cp "src-tauri/target/$TARGET/release/WebView2Loader.dll" portable-temp/
+            if [ -n "$PORTABLE_EXE" ]; then
+              cp "$PORTABLE_EXE" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.exe"
+              echo "Found portable exe: $PORTABLE_EXE"
+            else
+              echo "WARNING: Could not find portable exe!"
+              # Fallback: find any .exe that's not a dll or installer-related
+              ls -la "src-tauri/target/$TARGET/release/"*.exe 2>/dev/null || true
             fi
-            cd portable-temp
-            7z a "../release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.zip" * 2>/dev/null || zip -r "../release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.zip" * 2>/dev/null || true
-            cd ..
-            rm -rf portable-temp
           
           # Linux
           elif [ "$PLATFORM" == "linux" ]; then
@@ -166,6 +170,36 @@ jobs:
           
           echo "Artifacts prepared:"
           ls -la release-artifacts/
+
+      - name: Create Windows Portable ZIP
+        if: matrix.platform == 'windows'
+        shell: pwsh
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          $portableExe = "release-artifacts/adbcompass-${env:VERSION}-windows-${env:ARCH}-portable.exe"
+          $zipFile = "release-artifacts/adbcompass-${env:VERSION}-windows-${env:ARCH}-portable.zip"
+          
+          if (Test-Path $portableExe) {
+            # Create temp folder and copy files
+            New-Item -ItemType Directory -Force -Path "portable-temp" | Out-Null
+            Copy-Item $portableExe -Destination "portable-temp/adbcompass.exe"
+            
+            # Check for WebView2Loader.dll
+            $webviewDll = "src-tauri/target/${{ matrix.target }}/release/WebView2Loader.dll"
+            if (Test-Path $webviewDll) {
+              Copy-Item $webviewDll -Destination "portable-temp/"
+            }
+            
+            # Create ZIP
+            Compress-Archive -Path "portable-temp/*" -DestinationPath $zipFile -Force
+            Remove-Item -Recurse -Force "portable-temp"
+            
+            Write-Host "Created portable ZIP: $zipFile"
+          } else {
+            Write-Host "WARNING: Portable exe not found, skipping ZIP creation"
+          }
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4

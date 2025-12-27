@@ -2,6 +2,7 @@
 // Provides file management capabilities via ADB
 
 use crate::adb::AdbExecutor;
+use crate::command_utils::hidden_command;
 use crate::error::AppError;
 use serde::Serialize;
 
@@ -20,7 +21,7 @@ pub fn list_files(device_id: String, path: String) -> Result<Vec<FileInfo>, AppE
     let adb_path = executor.get_adb_path();
 
     // Use ls -la to get detailed file listing
-    let output = std::process::Command::new(adb_path)
+    let output = hidden_command(adb_path)
         .args(["-s", &device_id, "shell", "ls", "-la", &path])
         .output()
         .map_err(|e| AppError::new("LIST_FILES_FAILED", &format!("Failed to list files: {}", e)))?;
@@ -105,7 +106,7 @@ pub fn push_file(
     let executor = AdbExecutor::new();
     let adb_path = executor.get_adb_path();
 
-    let output = std::process::Command::new(adb_path)
+    let output = hidden_command(adb_path)
         .args(["-s", &device_id, "push", &local_path, &remote_path])
         .output()
         .map_err(|e| AppError::new("PUSH_FAILED", &format!("Failed to push file: {}", e)))?;
@@ -132,7 +133,7 @@ pub fn pull_file(
     let executor = AdbExecutor::new();
     let adb_path = executor.get_adb_path();
 
-    let output = std::process::Command::new(adb_path)
+    let output = hidden_command(adb_path)
         .args(["-s", &device_id, "pull", &remote_path, &local_path])
         .output()
         .map_err(|e| AppError::new("PULL_FAILED", &format!("Failed to pull file: {}", e)))?;
@@ -156,7 +157,7 @@ pub fn delete_remote_file(device_id: String, remote_path: String) -> Result<(), 
     let adb_path = executor.get_adb_path();
 
     // Try rm -rf to handle both files and directories
-    let output = std::process::Command::new(adb_path)
+    let output = hidden_command(adb_path)
         .args(["-s", &device_id, "shell", "rm", "-rf", &remote_path])
         .output()
         .map_err(|e| AppError::new("DELETE_FAILED", &format!("Failed to delete: {}", e)))?;
@@ -178,7 +179,7 @@ pub fn create_remote_directory(device_id: String, remote_path: String) -> Result
     let executor = AdbExecutor::new();
     let adb_path = executor.get_adb_path();
 
-    let output = std::process::Command::new(adb_path)
+    let output = hidden_command(adb_path)
         .args(["-s", &device_id, "shell", "mkdir", "-p", &remote_path])
         .output()
         .map_err(|e| {

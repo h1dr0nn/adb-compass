@@ -3,6 +3,7 @@
 
 pub mod adb;
 pub mod apk;
+pub mod command_utils;
 pub mod commands;
 pub mod error;
 pub mod requirements;
