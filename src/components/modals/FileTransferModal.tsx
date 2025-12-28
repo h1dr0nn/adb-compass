@@ -8,6 +8,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { toast } from 'sonner';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { modalBackdrop, modalContent } from '../../lib/animations';
 
 interface FileInfo {
     name: string;
@@ -170,9 +171,10 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
             {/* Backdrop */}
             <motion.div
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                variants={modalBackdrop}
+                initial="initial"
+                animate="animate"
+                exit="exit"
                 onClick={onClose}
             />
 
@@ -180,10 +182,10 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
             <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl pointer-events-auto flex flex-col max-h-[85vh]"
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    transition={{ duration: 0.2 }}
+                    variants={modalContent}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                     onClick={(e) => e.stopPropagation()}
                 >
                     {/* Header */}

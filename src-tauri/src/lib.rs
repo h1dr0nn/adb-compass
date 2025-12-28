@@ -27,6 +27,8 @@ use commands::{
     get_device_props,
     get_devices,
     get_logcat,
+    // Screen Capture
+    get_screen_frame,
     input_text,
     install_apk,
     kill_adb_server,
@@ -40,6 +42,9 @@ use commands::{
     refresh_devices,
     scan_apks_in_folder,
     start_adb_server,
+    start_screen_recording,
+    stop_screen_recording,
+    take_screenshot,
     uninstall_app,
     validate_apk,
 };
@@ -87,7 +92,12 @@ pub fn run() {
             // Shell
             execute_shell,
             get_logcat,
-            clear_logcat
+            clear_logcat,
+            // Screen Capture
+            take_screenshot,
+            start_screen_recording,
+            stop_screen_recording,
+            get_screen_frame
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import Apple-style design tokens */
+@import './styles/tokens.css';
+
 /* Base layer - global styles */
 @layer base {
     :root {

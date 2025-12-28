@@ -8,25 +8,39 @@ import { DeviceList } from './components/DeviceList';
 import { Settings } from './components/Settings';
 import { LogcatView } from './components/LogcatView';
 import { TerminalView } from './components/TerminalView';
+import { DeviceDetailView } from './components/DeviceDetailView';
 import { useLanguage } from './contexts/LanguageContext';
 import { useTheme } from './contexts/ThemeContext';
 import type { ActiveToolView } from './components/ToolsPanel';
+import type { DeviceInfo } from './types';
 
 function App() {
   const { devices, adbStatus, loading, error, refreshDevices } = useDevices();
   const { apkInfo, selectApk, clearApk, scanFolder, setApkFromList } = useApk();
   const [showSettings, setShowSettings] = useState(false);
   const [activeToolView, setActiveToolView] = useState<ActiveToolView>(null);
+  const [selectedDevice, setSelectedDevice] = useState<DeviceInfo | null>(null);
   const { t } = useLanguage();
   const { resolvedTheme } = useTheme();
 
   const handleOpenToolView = (view: ActiveToolView) => {
     setShowSettings(false);
+    setSelectedDevice(null);
     setActiveToolView(view);
   };
 
   const handleCloseToolView = () => {
     setActiveToolView(null);
+  };
+
+  const handleDeviceSelect = (device: DeviceInfo) => {
+    setShowSettings(false);
+    setActiveToolView(null);
+    setSelectedDevice(device);
+  };
+
+  const handleDeviceDetailBack = () => {
+    setSelectedDevice(null);
   };
 
   return (
@@ -81,7 +95,7 @@ function App() {
           onClearApk={clearApk}
           onScanApk={scanFolder}
           onSelectApkFromList={setApkFromList}
-          onOpenSettings={() => { setShowSettings(true); setActiveToolView(null); }}
+          onOpenSettings={() => { setShowSettings(true); setActiveToolView(null); setSelectedDevice(null); }}
           onOpenToolView={handleOpenToolView}
         />
 
@@ -123,6 +137,17 @@ function App() {
                 >
                   <TerminalView onBack={handleCloseToolView} />
                 </motion.div>
+              ) : selectedDevice ? (
+                <motion.div
+                  key="device-detail"
+                  className="h-full"
+                  initial={{ opacity: 0, scale: 0.98 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <DeviceDetailView device={selectedDevice} onBack={handleDeviceDetailBack} />
+                </motion.div>
               ) : (
                 <motion.div
                   key="main"
@@ -139,6 +164,7 @@ function App() {
                       error={error}
                       apkInfo={apkInfo}
                       onRefresh={refreshDevices}
+                      onDeviceSelect={handleDeviceSelect}
                     />
                   </div>
 
@@ -157,4 +183,3 @@ function App() {
 }
 
 export default App;
-

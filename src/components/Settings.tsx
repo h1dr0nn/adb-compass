@@ -1,9 +1,9 @@
 // Settings Component
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { ArrowLeft, Moon, Sun, Monitor, FolderOpen, Globe, Info, FileText, Settings as SettingsIcon } from 'lucide-react';
+import { ArrowLeft, Moon, Sun, Monitor, FolderOpen, Globe, Info, FileText, Settings as SettingsIcon, Camera } from 'lucide-react';
 import { toast } from 'sonner';
-// import { open } from '@tauri-apps/plugin-dialog';
+import { open } from '@tauri-apps/plugin-dialog';
 // import { open as openUrl } from '@tauri-apps/plugin-opener';
 // import { appLogDir } from '@tauri-apps/api/path';
 import { Select } from './ui/Select';
@@ -21,6 +21,7 @@ export function Settings({ onBack }: SettingsProps) {
     // const [theme, setTheme] = useState<ThemeMode>('dark'); // Removed local state
     const [notifications, setNotifications] = useState(true);
     const [adbPath, setAdbPath] = useState('');
+    const [captureSavePath, setCaptureSavePath] = useState('');
 
     // consume context
     const { language, setLanguage, t } = useLanguage();
@@ -30,10 +31,12 @@ export function Settings({ onBack }: SettingsProps) {
         // Theme init is now in ThemeContext
         const storedNotif = localStorage.getItem('notifications');
         const storedAdbPath = localStorage.getItem('adbPath');
+        const storedCapturePath = localStorage.getItem('captureSavePath');
 
         // if (storedTheme) setTheme(storedTheme);
         if (storedNotif) setNotifications(storedNotif === 'true');
         if (storedAdbPath) setAdbPath(storedAdbPath);
+        if (storedCapturePath) setCaptureSavePath(storedCapturePath);
     }, []);
 
     const languages = [
@@ -82,6 +85,25 @@ export function Settings({ onBack }: SettingsProps) {
         //     toast.info("Browser feature not available in web mode");
         // }
         toast.info("Browser unavailable in debug mode");
+    };
+
+    const handleBrowseCapturePath = async () => {
+        try {
+            const selected = await open({
+                directory: true,
+                multiple: false,
+                title: 'Select Capture Save Location',
+            });
+
+            if (selected && typeof selected === 'string') {
+                setCaptureSavePath(selected);
+                localStorage.setItem('captureSavePath', selected);
+                toast.success('Capture save path updated');
+            }
+        } catch (err) {
+            console.error('Failed to browse', err);
+            toast.info("Browser feature not available");
+        }
     };
 
     const handleViewLogs = async () => {
@@ -173,7 +195,8 @@ export function Settings({ onBack }: SettingsProps) {
                         <FolderOpen size={18} className="text-accent" />
                         {t.adbConfig}
                     </h3>
-                    <div className="space-y-4">
+                    <div className="space-y-5">
+                        {/* ADB Path */}
                         <div>
                             <label className="block text-sm font-medium text-text-primary mb-1.5">{t.customPath}</label>
                             <div className="flex gap-2">
@@ -192,6 +215,30 @@ export function Settings({ onBack }: SettingsProps) {
                                 </button>
                             </div>
                             <p className="text-xs text-text-muted mt-2 ml-1">{t.leaveEmpty}</p>
+                        </div>
+
+                        {/* Capture Save Path */}
+                        <div className="pt-4 border-t border-border">
+                            <label className="text-sm font-medium text-text-primary mb-1.5 flex items-center gap-2">
+                                <Camera size={14} className="text-accent" />
+                                Capture Save Path
+                            </label>
+                            <div className="flex gap-2 mt-2">
+                                <input
+                                    type="text"
+                                    placeholder="~/Pictures/ADB Compass"
+                                    value={captureSavePath}
+                                    className="flex-1 bg-surface-elevated border border-border rounded-lg px-3.5 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/20 transition-all placeholder:text-text-muted/50"
+                                    readOnly
+                                />
+                                <button
+                                    onClick={handleBrowseCapturePath}
+                                    className="px-4 py-2 bg-surface-elevated border border-border rounded-lg text-text-secondary hover:text-text-primary hover:border-text-secondary transition-all hover:bg-surface-hover"
+                                >
+                                    {t.browse}
+                                </button>
+                            </div>
+                            <p className="text-xs text-text-muted mt-2 ml-1">Default: ~/Pictures/ADB Compass</p>
                         </div>
                     </div>
                 </section>

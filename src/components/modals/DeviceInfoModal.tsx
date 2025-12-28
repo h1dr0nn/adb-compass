@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Smartphone, Battery, BatteryCharging, Cpu, Hash, Loader2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { modalBackdrop, modalContent } from '../../lib/animations';
 
 interface DeviceProps {
     model: string;
@@ -49,9 +50,10 @@ export function DeviceInfoModal({ deviceId, onClose }: DeviceInfoModalProps) {
             {/* Backdrop */}
             <motion.div
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                variants={modalBackdrop}
+                initial="initial"
+                animate="animate"
+                exit="exit"
                 onClick={onClose}
             />
 
@@ -59,10 +61,10 @@ export function DeviceInfoModal({ deviceId, onClose }: DeviceInfoModalProps) {
             <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto"
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    transition={{ duration: 0.2 }}
+                    variants={modalContent}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-border">

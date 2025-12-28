@@ -16,6 +16,7 @@ import { InputTextModal } from './modals/InputTextModal';
 import { UninstallModal } from './modals/UninstallModal';
 import { FileTransferModal } from './modals/FileTransferModal';
 import { useLanguage } from '../contexts/LanguageContext';
+import { listContainer, listItem } from '../lib/animations';
 
 interface DeviceListProps {
     devices: DeviceInfo[];
@@ -23,9 +24,10 @@ interface DeviceListProps {
     error: string | null;
     apkInfo: ApkInfo | null;
     onRefresh: () => void;
+    onDeviceSelect?: (device: DeviceInfo) => void;
 }
 
-export function DeviceList({ devices, loading, error, apkInfo, onRefresh }: DeviceListProps) {
+export function DeviceList({ devices, loading, error, apkInfo, onRefresh, onDeviceSelect }: DeviceListProps) {
     const prevDevicesRef = useRef<DeviceInfo[]>([]);
     const { t } = useLanguage();
 
@@ -141,13 +143,18 @@ export function DeviceList({ devices, loading, error, apkInfo, onRefresh }: Devi
                 </button>
             </motion.div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full">
+            <motion.div
+                className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full"
+                variants={listContainer}
+                initial="initial"
+                animate="animate"
+            >
                 <AnimatePresence mode="popLayout">
                     {devices.map((device) => (
-                        <DeviceCard key={device.id} device={device} apkInfo={apkInfo} />
+                        <DeviceCard key={device.id} device={device} apkInfo={apkInfo} onSelect={onDeviceSelect} />
                     ))}
                 </AnimatePresence>
-            </div>
+            </motion.div>
         </div>
     );
 }
@@ -155,12 +162,13 @@ export function DeviceList({ devices, loading, error, apkInfo, onRefresh }: Devi
 interface DeviceCardProps {
     device: DeviceInfo;
     apkInfo: ApkInfo | null;
+    onSelect?: (device: DeviceInfo) => void;
 }
 
 type ActionType = 'info' | 'uninstall' | 'reboot' | 'input' | 'file' | null;
 type ChecklistType = 'requirements' | 'actions' | null;
 
-function DeviceCard({ device, apkInfo }: DeviceCardProps) {
+function DeviceCard({ device, apkInfo, onSelect }: DeviceCardProps) {
     const statusText = getDeviceStatusText(device.status);
     const { t } = useLanguage();
     const [activeAction, setActiveAction] = useState<ActionType>(null);
@@ -187,21 +195,23 @@ function DeviceCard({ device, apkInfo }: DeviceCardProps) {
     return (
         <motion.div
             className="bg-surface-card border border-border rounded-2xl p-5 
-                       hover:border-accent hover:-translate-y-1 hover:shadow-xl
+                       hover:border-accent hover:shadow-xl
                        transition-all duration-300"
             layout
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: -20 }}
-            transition={{ duration: 0.3, layout: { duration: 0.3 } }}
+            variants={listItem}
+            whileHover={{ y: -4, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}
+            transition={{ duration: 0.2, layout: { duration: 0.3 } }}
         >
-            {/* Header: Icon + Info */}
-            <div className="flex items-center gap-4 mb-4">
-                <div className="w-12 h-12 rounded-xl bg-surface-elevated flex items-center justify-center text-accent">
+            {/* Header: Icon + Info - Clickable to open detail view */}
+            <div
+                className="flex items-center gap-4 mb-4 cursor-pointer group"
+                onClick={() => onSelect?.(device)}
+            >
+                <div className="w-12 h-12 rounded-xl bg-surface-elevated flex items-center justify-center text-accent group-hover:bg-accent/10 transition-colors">
                     <Smartphone size={28} />
                 </div>
                 <div className="flex-1">
-                    <h3 className="text-base font-semibold text-text-primary">
+                    <h3 className="text-base font-semibold text-text-primary group-hover:text-accent transition-colors">
                         {device.model || device.product || 'Android Device'}
                     </h3>
                     <p className="text-xs text-text-muted font-mono">{device.id}</p>

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import {
     FolderOpen, RefreshCw, Package, FileCheck, X
 } from 'lucide-react';
@@ -91,25 +92,39 @@ export function ApkManager({
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            {/* Tab Switcher */}
-            <div className="flex p-1 mb-4 bg-surface-elevated rounded-lg">
+            {/* Tab Switcher with sliding background */}
+            <div className="flex p-1 mb-4 bg-surface-elevated rounded-xl border border-border/50">
                 <button
-                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'apk'
-                        ? 'bg-accent text-white shadow-sm'
-                        : 'text-text-secondary hover:text-text-primary'
+                    className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg transition-colors ${activeTab === 'apk'
+                            ? 'text-text-primary'
+                            : 'text-text-secondary hover:text-text-primary'
                         }`}
                     onClick={() => setActiveTab('apk')}
                 >
-                    APK
+                    {activeTab === 'apk' && (
+                        <motion.div
+                            layoutId="sidebarActiveTab"
+                            className="absolute inset-0 bg-surface-card rounded-lg shadow-sm border border-border/50"
+                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        />
+                    )}
+                    <span className="relative z-10">APK</span>
                 </button>
                 <button
-                    className={`flex-1 flex items-center justify-center gap-2 py-1.5 text-xs font-medium rounded-md transition-all ${activeTab === 'tools'
-                        ? 'bg-accent text-white shadow-sm'
-                        : 'text-text-secondary hover:text-text-primary'
+                    className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg transition-colors ${activeTab === 'tools'
+                            ? 'text-text-primary'
+                            : 'text-text-secondary hover:text-text-primary'
                         }`}
                     onClick={() => setActiveTab('tools')}
                 >
-                    {t.tabAdvanced}
+                    {activeTab === 'tools' && (
+                        <motion.div
+                            layoutId="sidebarActiveTab"
+                            className="absolute inset-0 bg-surface-card rounded-lg shadow-sm border border-border/50"
+                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+                        />
+                    )}
+                    <span className="relative z-10">{t.tabAdvanced}</span>
                 </button>
             </div>
 

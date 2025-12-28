@@ -4,6 +4,7 @@ import { X, Trash2, Search, Package, Loader2, AlertTriangle, ToggleLeft, ToggleR
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { useLanguage } from '../../contexts/LanguageContext';
+import { modalBackdrop, modalContent } from '../../lib/animations';
 
 interface UninstallModalProps {
     deviceId: string;
@@ -63,9 +64,10 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
             {/* Backdrop */}
             <motion.div
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                variants={modalBackdrop}
+                initial="initial"
+                animate="animate"
+                exit="exit"
                 onClick={onClose}
             />
 
@@ -73,10 +75,10 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
             <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-lg pointer-events-auto flex flex-col max-h-[80vh]"
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    transition={{ duration: 0.2 }}
+                    variants={modalContent}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-border shrink-0">

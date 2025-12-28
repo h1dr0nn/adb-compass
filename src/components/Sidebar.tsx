@@ -26,7 +26,7 @@ export function Sidebar({
     const { t } = useLanguage();
 
     return (
-        <aside className="w-80 border-r border-border bg-surface-card flex flex-col shadow-xl z-20">
+        <aside className="w-80 border-r border-border bg-surface-bg flex flex-col z-20">
             {/* APK Manager Section - Flexible Height */}
             <div className="flex-1 px-4 py-4 min-h-0 overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between mb-3 px-2">
@@ -41,7 +41,7 @@ export function Sidebar({
                         <Settings size={18} />
                     </button>
                 </div>
-                <div className="flex-1 min-h-0 bg-surface-bg/50 rounded-2xl border border-border/50 p-4 overflow-hidden">
+                <div className="flex-1 min-h-0 overflow-hidden">
                     <ApkManager
                         apkInfo={apkInfo}
                         onSelect={onSelectApk}

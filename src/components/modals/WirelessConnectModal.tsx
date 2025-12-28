@@ -4,7 +4,7 @@ import { X, Wifi, WifiOff, Loader2, Copy, Check, Smartphone } from 'lucide-react
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { Select } from '../ui/Select';
-
+import { modalBackdrop, modalContent } from '../../lib/animations';
 import { createPortal } from 'react-dom';
 
 interface WirelessConnectModalProps {
@@ -132,9 +132,10 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
             {/* Backdrop */}
             <motion.div
                 className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100]"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
+                variants={modalBackdrop}
+                initial="initial"
+                animate="animate"
+                exit="exit"
                 onClick={onClose}
             />
 
@@ -142,10 +143,10 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
             <div className="fixed inset-0 flex items-center justify-center z-[100] pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto"
-                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
-                    transition={{ duration: 0.2 }}
+                    variants={modalContent}
+                    initial="initial"
+                    animate="animate"
+                    exit="exit"
                 >
                     {/* Header */}
                     <div className="flex items-center justify-between px-6 py-4 border-b border-border">
