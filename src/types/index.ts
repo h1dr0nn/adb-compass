@@ -83,6 +83,14 @@ export interface DeviceProps {
   sdk_version: string;
   battery_level: number | null;
   is_charging: boolean;
+  screen_resolution: string | null;
+  storage_total: string | null;
+  storage_free: string | null;
+  ram_total: string | null;
+  manufacturer: string | null;
+  cpu: string | null;
+  build_number: string | null;
+  security_patch: string | null;
 }
 
 // File info from file transfer commands

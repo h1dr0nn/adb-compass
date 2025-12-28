@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Smartphone, Battery, BatteryCharging, Cpu, Hash, Loader2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
@@ -45,7 +46,7 @@ export function DeviceInfoModal({ deviceId, onClose }: DeviceInfoModalProps) {
         return 'text-error';
     };
 
-    return (
+    return createPortal(
         <AnimatePresence>
             {/* Backdrop */}
             <motion.div
@@ -171,6 +172,7 @@ export function DeviceInfoModal({ deviceId, onClose }: DeviceInfoModalProps) {
                     </div>
                 </motion.div>
             </div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

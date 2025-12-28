@@ -257,3 +257,58 @@ pub fn get_screen_frame(device_id: String) -> Result<Vec<u8>, AppError> {
 
     Ok(output.stdout)
 }
+
+/// Open the captures folder in the system file explorer
+#[tauri::command]
+pub fn open_captures_folder() -> Result<(), AppError> {
+    let (screenshots_dir, _) = ensure_capture_dirs().map_err(|e| {
+        AppError::new(
+            "OPEN_FOLDER_FAILED",
+            &format!("Failed to get folder: {}", e.message),
+        )
+    })?;
+
+    // Parent folder defaults to "ADB Compass"
+    let folder_to_open = screenshots_dir.parent().unwrap_or(&screenshots_dir);
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("explorer")
+            .arg(folder_to_open)
+            .spawn()
+            .map_err(|e| {
+                AppError::new(
+                    "OPEN_FOLDER_FAILED",
+                    &format!("Failed to open explorer: {}", e),
+                )
+            })?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(folder_to_open)
+            .spawn()
+            .map_err(|e| {
+                AppError::new(
+                    "OPEN_FOLDER_FAILED",
+                    &format!("Failed to open finder: {}", e),
+                )
+            })?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(folder_to_open)
+            .spawn()
+            .map_err(|e| {
+                AppError::new(
+                    "OPEN_FOLDER_FAILED",
+                    &format!("Failed to open file manager: {}", e),
+                )
+            })?;
+    }
+
+    Ok(())
+}

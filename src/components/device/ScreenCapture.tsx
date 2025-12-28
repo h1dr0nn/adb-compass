@@ -1,14 +1,15 @@
 // Screen Capture Tab - Screenshot and Screen Recording
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
     Camera, Video, VideoOff, RefreshCw,
-    FolderOpen, Image
+    FolderOpen, Image, ExternalLink, Zap, Settings
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { DeviceInfo } from '../../types';
 import { listItem } from '../../lib/animations';
+import { StreamPlayer } from './StreamPlayer';
 
 interface ScreenCaptureProps {
     device: DeviceInfo;
@@ -20,6 +21,14 @@ interface CaptureResult {
     error?: string;
 }
 
+interface ScrcpyStatus {
+    running: boolean;
+    device_id: string | null;
+    port: number | null;
+}
+
+type StreamMode = 'standard' | 'high-perf';
+
 export function ScreenCapture({ device }: ScreenCaptureProps) {
     const [isCapturing, setIsCapturing] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
@@ -27,6 +36,47 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     const [lastScreenshot, setLastScreenshot] = useState<string | null>(null);
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+    const [aspectRatio, setAspectRatio] = useState<number>(9 / 19.5); // Default modern phone ratio
+    const [isLive, setIsLive] = useState(false);
+    const [allowTouch, setAllowTouch] = useState(false);
+
+    // High-performance mode state
+    const [streamMode, setStreamMode] = useState<StreamMode>('standard');
+    const [scrcpyStatus, setScrcpyStatus] = useState<ScrcpyStatus | null>(null);
+    const [isStartingScrcpy, setIsStartingScrcpy] = useState(false);
+    const [screenWidth, setScreenWidth] = useState(1080);
+    const [screenHeight, setScreenHeight] = useState(2340);
+
+    // Fetch device aspect ratio and resolution
+    useEffect(() => {
+        const fetchProps = async () => {
+            try {
+                const props = await invoke<{ screen_resolution: string | null }>('get_device_props', { deviceId: device.id });
+                if (props.screen_resolution) {
+                    console.log('Device resolution raw:', props.screen_resolution);
+                    const [w, h] = props.screen_resolution.replace('Physical size: ', '').replace('Override size: ', '').split('x').map(Number);
+                    console.log('Parsed resolution:', w, 'x', h, '→ ratio:', w / h);
+                    if (w && h) {
+                        setAspectRatio(w / h);
+                        setScreenWidth(w);
+                        setScreenHeight(h);
+                    }
+                }
+            } catch (e) {
+                console.error('Failed to fetch device props:', e);
+            }
+        };
+        fetchProps();
+    }, [device.id]);
+
+    // Stop scrcpy when unmounting or switching modes
+    useEffect(() => {
+        return () => {
+            if (scrcpyStatus?.running) {
+                invoke('stop_scrcpy_server', { deviceId: device.id }).catch(console.error);
+            }
+        };
+    }, [device.id, scrcpyStatus?.running]);
 
     // Recording timer
     useEffect(() => {
@@ -135,131 +185,287 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         }
     };
 
-    return (
-        <div className="h-full flex gap-6">
-            {/* Left Panel - Screen Preview */}
-            <div className="flex-1 flex flex-col">
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-semibold text-text-primary">Screen Preview</h3>
-                    <button
-                        onClick={handleRefreshPreview}
-                        disabled={isLoadingPreview}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated hover:bg-surface-hover border border-border text-sm transition-colors disabled:opacity-50"
-                    >
-                        <RefreshCw size={14} className={isLoadingPreview ? 'animate-spin' : ''} />
-                        Refresh
-                    </button>
-                </div>
 
-                <div className="flex-1 bg-surface-card border border-border rounded-xl overflow-hidden flex items-center justify-center min-h-[300px]">
-                    {previewImage ? (
-                        <img
-                            src={previewImage}
-                            alt="Device Screen"
-                            className="max-h-full max-w-full object-contain"
-                        />
-                    ) : (
-                        <div className="text-center text-text-muted">
-                            <Image size={48} className="mx-auto mb-3 opacity-30" />
-                            <p className="text-sm">Click "Refresh" to capture screen preview</p>
+
+    // Live loop
+    useEffect(() => {
+        let interval: ReturnType<typeof setInterval>;
+        if (isLive) {
+            interval = setInterval(() => {
+                if (!isLoadingPreview && !isCapturing) {
+                    handleRefreshPreview();
+                }
+            }, 1000); // 1 FPS fallback for ADB
+        }
+        return () => clearInterval(interval);
+    }, [isLive, isLoadingPreview, isCapturing]);
+
+    // Touch Event Handler
+    const handleTouch = async (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!allowTouch || !previewImage) return;
+
+        const rect = e.currentTarget.getBoundingClientRect();
+        const xPercent = (e.clientX - rect.left) / rect.width;
+        const yPercent = (e.clientY - rect.top) / rect.height;
+
+        // Fetch real resolution to map coordinates
+        try {
+            const props = await invoke<{ screen_resolution: string | null }>('get_device_props', { deviceId: device.id });
+            if (props.screen_resolution) {
+                const [w, h] = props.screen_resolution.replace('Physical size: ', '').replace('Override size: ', '').split('x').map(Number);
+                if (w && h) {
+                    const tapX = Math.round(xPercent * w);
+                    const tapY = Math.round(yPercent * h);
+
+                    await invoke('input_tap', { deviceId: device.id, x: tapX, y: tapY });
+
+                    // Visual feedback
+                    toast.success(`Tap: ${tapX}, ${tapY}`, { duration: 500 });
+                }
+            }
+        } catch (error) {
+            console.error('Touch failed', error);
+        }
+    };
+
+    // Open Save Folder
+    const handleOpenFolder = async () => {
+        try {
+            await invoke('open_captures_folder');
+            toast.success('Folder opened');
+        } catch (error) {
+            toast.error('Failed to open folder', { description: String(error) });
+        }
+    };
+
+    // Toggle high-performance mode
+    const toggleHighPerfMode = async () => {
+        if (streamMode === 'standard') {
+            // Switch to high-perf mode
+            setIsStartingScrcpy(true);
+            try {
+                console.log('Starting scrcpy server for device:', device.id);
+                const status = await invoke<ScrcpyStatus>('start_scrcpy_server', {
+                    deviceId: device.id,
+                    maxSize: 1024,
+                    bitRate: 8000000,
+                    maxFps: 60,
+                });
+                console.log('Scrcpy status:', status);
+                setScrcpyStatus(status);
+                setStreamMode('high-perf');
+                setIsLive(false); // Disable standard live mode
+                toast.success('High-performance mode enabled', { description: `Streaming on port ${status.port}` });
+            } catch (error) {
+                console.error('Scrcpy start error:', error);
+                toast.error('Failed to start high-performance mode', { description: String(error) });
+            } finally {
+                setIsStartingScrcpy(false);
+            }
+        } else {
+            // Switch back to standard mode
+            try {
+                await invoke('stop_scrcpy_server', { deviceId: device.id });
+                setScrcpyStatus(null);
+                setStreamMode('standard');
+                toast.success('Switched to standard mode');
+            } catch (error) {
+                toast.error('Failed to stop high-performance mode', { description: String(error) });
+            }
+        }
+    };
+
+    // Scrcpy touch handler
+    const handleScrcpyTouch = useCallback(async (x: number, y: number, action: 'down' | 'up' | 'move') => {
+        if (!allowTouch) return;
+        const actionMap = { down: 0, up: 1, move: 2 };
+        try {
+            await invoke('scrcpy_touch', {
+                deviceId: device.id,
+                action: actionMap[action],
+                x,
+                y,
+                width: screenWidth,
+                height: screenHeight,
+            });
+        } catch (error) {
+            console.error('Touch failed:', error);
+        }
+    }, [device.id, allowTouch, screenWidth, screenHeight]);
+
+    // Scrcpy scroll handler
+    const handleScrcpyScroll = useCallback(async (x: number, y: number, deltaX: number, deltaY: number) => {
+        if (!allowTouch) return;
+        try {
+            await invoke('scrcpy_scroll', {
+                deviceId: device.id,
+                x,
+                y,
+                hScroll: Math.round(deltaX / 120) * -1,
+                vScroll: Math.round(deltaY / 120) * -1,
+                width: screenWidth,
+                height: screenHeight,
+            });
+        } catch (error) {
+            console.error('Scroll failed:', error);
+        }
+    }, [device.id, allowTouch, screenWidth, screenHeight]);
+
+    return (
+        <div className="h-full flex gap-4">
+            {/* Controls Panel - Expands */}
+            <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
+                {/* Top Row - Capture Actions */}
+                <motion.div variants={listItem} className="bg-surface-elevated border border-border rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-semibold text-text-primary flex items-center gap-2">
+                            <Camera size={16} className="text-accent" />
+                            Capture
+                        </h4>
+                        {isRecording && (
+                            <div className="flex items-center gap-1.5 text-error text-sm font-mono">
+                                <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
+                                {formatTime(recordingTime)}
+                            </div>
+                        )}
+                    </div>
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleScreenshot}
+                            disabled={isCapturing}
+                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-accent/10 hover:bg-accent/20 border border-accent/30 text-text-primary rounded-lg transition-all disabled:opacity-50"
+                        >
+                            {isCapturing ? <RefreshCw size={16} className="animate-spin" /> : <Camera size={16} />}
+                            <span className="text-sm font-medium">Screenshot</span>
+                        </button>
+                        <button
+                            onClick={handleRecordingToggle}
+                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all ${isRecording
+                                ? 'bg-error/20 text-error border border-error/30'
+                                : 'bg-surface-card hover:bg-surface-hover border border-border'
+                                }`}
+                        >
+                            {isRecording ? <VideoOff size={16} /> : <Video size={16} />}
+                            <span className="text-sm font-medium">{isRecording ? 'Stop Recording' : 'Record'}</span>
+                        </button>
+                    </div>
+                </motion.div>
+
+                {/* Bottom Row - Config & Storage side by side */}
+                <div className="flex flex-wrap gap-4">
+                    {/* Configuration */}
+                    <motion.div variants={listItem} className="flex-1 min-w-[200px] bg-surface-elevated border border-border rounded-xl p-4">
+                        <h4 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                            <Settings size={16} className="text-accent" />
+                            Configuration
+                        </h4>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-text-secondary">Live Preview</span>
+                                <button
+                                    onClick={toggleHighPerfMode}
+                                    disabled={isStartingScrcpy}
+                                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${streamMode === 'high-perf' ? 'bg-success' : 'bg-surface-card border border-border'
+                                        } disabled:opacity-50`}
+                                >
+                                    <motion.div
+                                        animate={{ x: streamMode === 'high-perf' ? 16 : 0 }}
+                                        className="w-4 h-4 rounded-full bg-white shadow-sm"
+                                    />
+                                </button>
+                            </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-text-secondary">Enable Touch</span>
+                                <button
+                                    onClick={() => setAllowTouch(!allowTouch)}
+                                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${allowTouch ? 'bg-accent' : 'bg-surface-card border border-border'
+                                        }`}
+                                >
+                                    <motion.div
+                                        animate={{ x: allowTouch ? 16 : 0 }}
+                                        className="w-4 h-4 rounded-full bg-white shadow-sm"
+                                    />
+                                </button>
+                            </div>
                         </div>
-                    )}
+                    </motion.div>
+
+                    {/* Storage */}
+                    <motion.div variants={listItem} className="flex-1 min-w-[200px] bg-surface-elevated border border-border rounded-xl p-4">
+                        <h4 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                            <FolderOpen size={16} className="text-accent" />
+                            Storage
+                        </h4>
+                        <p className="text-xs text-text-muted mb-3">Captures saved to:</p>
+                        <p className="text-sm text-text-secondary mb-4 font-mono">~/Pictures/ADB Compass/</p>
+                        <button
+                            onClick={handleOpenFolder}
+                            className="flex items-center gap-2 px-3 py-2 bg-surface-card hover:bg-surface-hover border border-border text-text-secondary hover:text-text-primary rounded-lg transition-all text-sm"
+                        >
+                            <ExternalLink size={14} />
+                            Open Folder
+                        </button>
+                    </motion.div>
                 </div>
             </div>
 
-            {/* Right Panel - Controls */}
-            <div className="w-72 flex flex-col gap-4">
-                {/* Screenshot Section */}
-                <motion.div
-                    variants={listItem}
-                    className="bg-surface-card border border-border rounded-xl p-4"
-                >
-                    <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-                        <Camera size={16} className="text-accent" />
-                        Screenshot
-                    </h4>
-
+            {/* Phone Preview - Fixed Width */}
+            <div className="w-96 h-full shrink-0 flex items-center justify-center relative bg-surface-elevated/50 rounded-xl border border-border p-4">
+                {/* Status Badge */}
+                {streamMode === 'high-perf' && (
+                    <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2 py-1 bg-success/20 text-success rounded-lg text-xs font-medium">
+                        <Zap size={12} />
+                        <span>Live</span>
+                    </div>
+                )}
+                {streamMode === 'standard' && (
                     <button
-                        onClick={handleScreenshot}
-                        disabled={isCapturing}
-                        className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-accent to-accent-secondary text-white font-medium rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50"
+                        onClick={handleRefreshPreview}
+                        disabled={isLoadingPreview}
+                        className="absolute top-2 right-2 z-10 p-1.5 bg-surface-card rounded-lg border border-border hover:text-accent disabled:opacity-50"
                     >
-                        {isCapturing ? (
-                            <>
-                                <RefreshCw size={18} className="animate-spin" />
-                                Capturing...
-                            </>
-                        ) : (
-                            <>
-                                <Camera size={18} />
-                                Take Screenshot
-                            </>
-                        )}
+                        <RefreshCw size={14} className={isLoadingPreview ? 'animate-spin' : ''} />
                     </button>
+                )}
 
-                    {lastScreenshot && (
-                        <p className="mt-3 text-xs text-text-muted truncate">
-                            Last: {lastScreenshot}
-                        </p>
-                    )}
-                </motion.div>
-
-                {/* Screen Recording Section */}
-                <motion.div
-                    variants={listItem}
-                    className="bg-surface-card border border-border rounded-xl p-4"
+                {/* Phone Frame */}
+                <div
+                    className={`bg-black border-4 border-surface-elevated rounded-[1.5rem] overflow-hidden shadow-2xl relative ${allowTouch ? 'cursor-pointer' : ''
+                        }`}
+                    style={{ height: 'calc(100% - 2rem)', width: 'auto', aspectRatio: aspectRatio }}
+                    onClick={streamMode === 'standard' ? handleTouch : undefined}
                 >
-                    <h4 className="text-sm font-semibold text-text-primary mb-3 flex items-center gap-2">
-                        <Video size={16} className="text-accent" />
-                        Screen Recording
-                    </h4>
-
-                    <button
-                        onClick={handleRecordingToggle}
-                        className={`w-full flex items-center justify-center gap-2 px-4 py-3 font-medium rounded-xl transition-all ${isRecording
-                                ? 'bg-error/20 text-error border border-error/30 hover:bg-error/30'
-                                : 'bg-surface-elevated hover:bg-surface-hover border border-border text-text-primary'
-                            }`}
-                    >
-                        {isRecording ? (
-                            <>
-                                <VideoOff size={18} />
-                                Stop Recording
-                            </>
-                        ) : (
-                            <>
-                                <Video size={18} />
-                                Start Recording
-                            </>
-                        )}
-                    </button>
-
-                    {isRecording && (
-                        <div className="mt-3 flex items-center justify-center gap-2 text-error">
-                            <span className="w-2 h-2 rounded-full bg-error animate-pulse" />
-                            <span className="font-mono text-sm">{formatTime(recordingTime)}</span>
+                    {streamMode === 'high-perf' && scrcpyStatus?.port ? (
+                        <StreamPlayer
+                            deviceId={device.id}
+                            port={scrcpyStatus.port}
+                            width={screenWidth}
+                            height={screenHeight}
+                            allowTouch={allowTouch}
+                            onTouch={handleScrcpyTouch}
+                            onScroll={handleScrcpyScroll}
+                        />
+                    ) : previewImage ? (
+                        <img src={previewImage} alt="Preview" className="w-full h-full" />
+                    ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-text-muted">
+                            <Image size={40} className="opacity-30 mb-1" />
+                            <span className="text-xs opacity-50">No Signal</span>
                         </div>
                     )}
-                </motion.div>
 
-                {/* Info Card */}
-                <motion.div
-                    variants={listItem}
-                    className="bg-surface-elevated border border-border rounded-xl p-4"
-                >
-                    <h4 className="text-sm font-semibold text-text-primary mb-2 flex items-center gap-2">
-                        <FolderOpen size={16} className="text-accent" />
-                        Save Location
-                    </h4>
-                    <p className="text-xs text-text-muted">
-                        Screenshots and recordings are saved to ~/Pictures/ADB Compass/
-                    </p>
-                    <p className="text-xs text-text-secondary mt-2">
-                        • Screenshots: /screenshots folder<br />
-                        • Recordings: /recordings folder
-                    </p>
-                </motion.div>
+                    {/* Recording Overlay */}
+                    {isRecording && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                            <div className="text-center text-white">
+                                <div className="w-3 h-3 rounded-full bg-error animate-pulse mx-auto mb-1" />
+                                <span className="text-xs">Recording</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
 }
+

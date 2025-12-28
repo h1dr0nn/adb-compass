@@ -97,121 +97,123 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
 
     const getBatteryIcon = () => {
         if (props?.is_charging) {
-            return <BatteryCharging className="text-success" size={20} />;
+            return <BatteryCharging className="text-accent" size={20} />;
         }
         return <Battery className="text-accent" size={20} />;
     };
 
     return (
-        <div className="h-full overflow-y-auto custom-scrollbar pr-2">
-            <motion.div
-                variants={listContainer}
-                initial="initial"
-                animate="animate"
-                className="grid grid-cols-2 lg:grid-cols-3 gap-4"
-            >
-                {/* Row 1: Identity */}
-                <InfoCard
-                    icon={<Smartphone className="text-accent" size={20} />}
-                    label="Device ID"
-                    value={device.id}
-                />
+        <div className="h-full overflow-hidden">
+            <div className="h-full overflow-y-auto custom-scrollbar pr-2">
+                <motion.div
+                    variants={listContainer}
+                    initial="initial"
+                    animate="animate"
+                    className="grid grid-cols-2 lg:grid-cols-3 gap-4"
+                >
+                    {/* Row 1: Identity */}
+                    <InfoCard
+                        icon={<Smartphone className="text-accent" size={20} />}
+                        label="Device ID"
+                        value={device.id}
+                    />
 
-                <InfoCard
-                    icon={<Building2 className="text-accent" size={20} />}
-                    label="Manufacturer"
-                    value={props?.manufacturer}
-                    loading={loading}
-                />
+                    <InfoCard
+                        icon={<Building2 className="text-accent" size={20} />}
+                        label="Manufacturer"
+                        value={props?.manufacturer}
+                        loading={loading}
+                    />
 
-                <InfoCard
-                    icon={<Cpu className="text-accent" size={20} />}
-                    label="Model"
-                    value={
-                        <ValueWithSub
-                            main={props?.model || device.model}
-                            sub={props?.android_version ? `Android ${props.android_version}` : null}
-                        />
-                    }
-                    loading={loading}
-                />
+                    <InfoCard
+                        icon={<Cpu className="text-accent" size={20} />}
+                        label="Model"
+                        value={
+                            <ValueWithSub
+                                main={props?.model || device.model}
+                                sub={props?.android_version ? `Android ${props.android_version}` : null}
+                            />
+                        }
+                        loading={loading}
+                    />
 
-                {/* Row 2: Hardware */}
-                <InfoCard
-                    icon={<Monitor className="text-accent" size={20} />}
-                    label="Screen"
-                    value={props?.screen_resolution}
-                    loading={loading}
-                />
+                    {/* Row 2: Hardware */}
+                    <InfoCard
+                        icon={<Monitor className="text-accent" size={20} />}
+                        label="Screen"
+                        value={props?.screen_resolution}
+                        loading={loading}
+                    />
 
-                <InfoCard
-                    icon={<HardDrive className="text-accent" size={20} />}
-                    label="Storage"
-                    value={
-                        <ValueWithSub
-                            main={props?.storage_total}
-                            sub={props?.storage_free ? `${props.storage_free} free` : null}
-                        />
-                    }
-                    loading={loading}
-                />
+                    <InfoCard
+                        icon={<HardDrive className="text-accent" size={20} />}
+                        label="Storage"
+                        value={
+                            <ValueWithSub
+                                main={props?.storage_total}
+                                sub={props?.storage_free ? `${props.storage_free} free` : null}
+                            />
+                        }
+                        loading={loading}
+                    />
 
-                <InfoCard
-                    icon={<MemoryStick className="text-accent" size={20} />}
-                    label="RAM"
-                    value={props?.ram_total}
-                    loading={loading}
-                />
+                    <InfoCard
+                        icon={<MemoryStick className="text-accent" size={20} />}
+                        label="RAM"
+                        value={props?.ram_total}
+                        loading={loading}
+                    />
 
-                {/* Row 3: System */}
-                <InfoCard
-                    icon={<Cpu className="text-accent" size={20} />}
-                    label="Chipset"
-                    value={props?.cpu}
-                    loading={loading}
-                />
+                    {/* Row 3: System */}
+                    <InfoCard
+                        icon={<Cpu className="text-accent" size={20} />}
+                        label="Chipset"
+                        value={props?.cpu}
+                        loading={loading}
+                    />
 
-                <InfoCard
-                    icon={getBatteryIcon()}
-                    label="Battery"
-                    value={
-                        <ValueWithSub
-                            main={props?.battery_level !== null && props?.battery_level !== undefined
-                                ? `${props.battery_level}%`
-                                : null}
-                            sub={props?.is_charging ? 'Charging' : null}
-                        />
-                    }
-                    loading={loading}
-                />
+                    <InfoCard
+                        icon={getBatteryIcon()}
+                        label="Battery"
+                        value={
+                            <ValueWithSub
+                                main={props?.battery_level !== null && props?.battery_level !== undefined
+                                    ? `${props.battery_level}%`
+                                    : null}
+                                sub={props?.is_charging ? 'Charging' : null}
+                            />
+                        }
+                        loading={loading}
+                    />
 
-                <InfoCard
-                    icon={<Hash className="text-accent" size={20} />}
-                    label="Build"
-                    value={props?.build_number}
-                    loading={loading}
-                />
+                    <InfoCard
+                        icon={<Hash className="text-accent" size={20} />}
+                        label="Build"
+                        value={props?.build_number}
+                        loading={loading}
+                    />
 
-                {/* Row 4: Security & Connection */}
-                <InfoCard
-                    icon={<Shield className="text-accent" size={20} />}
-                    label="Security Patch"
-                    value={props?.security_patch}
-                    loading={loading}
-                />
+                    {/* Row 4: Security & Connection */}
+                    <InfoCard
+                        icon={<Shield className="text-accent" size={20} />}
+                        label="Security Patch"
+                        value={props?.security_patch}
+                        loading={loading}
+                    />
 
-                <InfoCard
-                    icon={<Signal className="text-accent" size={20} />}
-                    label="Connection"
-                    value={device.id.includes(':') ? 'Wireless' : 'USB'}
-                />
+                    <InfoCard
+                        icon={<Signal className="text-accent" size={20} />}
+                        label="Connection"
+                        value={device.id.includes(':') ? 'Wireless' : 'USB'}
+                    />
 
-                <InfoCard
-                    icon={<Wifi className="text-accent" size={20} />}
-                    label="Status"
-                    value={getDeviceStatusText(device.status)}
-                />
-            </motion.div>
+                    <InfoCard
+                        icon={<Wifi className="text-accent" size={20} />}
+                        label="Status"
+                        value={getDeviceStatusText(device.status)}
+                    />
+                </motion.div>
+            </div>
         </div>
     );
 }

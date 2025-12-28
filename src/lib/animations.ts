@@ -3,13 +3,13 @@ import { Variants } from 'framer-motion';
 
 // Page transition - slide and fade
 export const pageTransition: Variants = {
-  initial: { 
-    opacity: 0, 
+  initial: {
+    opacity: 0,
     x: 20,
-    scale: 0.98 
+    scale: 0.98
   },
-  animate: { 
-    opacity: 1, 
+  animate: {
+    opacity: 1,
     x: 0,
     scale: 1,
     transition: {
@@ -17,8 +17,8 @@ export const pageTransition: Variants = {
       ease: [0.16, 1, 0.3, 1]
     }
   },
-  exit: { 
-    opacity: 0, 
+  exit: {
+    opacity: 0,
     x: -20,
     scale: 0.98,
     transition: {
@@ -30,11 +30,11 @@ export const pageTransition: Variants = {
 
 // Card hover animation
 export const cardHover: Variants = {
-  initial: { 
+  initial: {
     scale: 1,
     y: 0,
   },
-  hover: { 
+  hover: {
     scale: 1.02,
     y: -4,
     transition: {
@@ -56,24 +56,24 @@ export const cardHover: Variants = {
 // Modal animation
 export const modalBackdrop: Variants = {
   initial: { opacity: 0 },
-  animate: { 
+  animate: {
     opacity: 1,
     transition: { duration: 0.2 }
   },
-  exit: { 
+  exit: {
     opacity: 0,
     transition: { duration: 0.15 }
   }
 };
 
 export const modalContent: Variants = {
-  initial: { 
-    opacity: 0, 
+  initial: {
+    opacity: 0,
     scale: 0.95,
     y: 10
   },
-  animate: { 
-    opacity: 1, 
+  animate: {
+    opacity: 1,
     scale: 1,
     y: 0,
     transition: {
@@ -82,8 +82,8 @@ export const modalContent: Variants = {
       damping: 30
     }
   },
-  exit: { 
-    opacity: 0, 
+  exit: {
+    opacity: 0,
     scale: 0.95,
     y: 10,
     transition: { duration: 0.15 }
@@ -102,12 +102,12 @@ export const listContainer: Variants = {
 };
 
 export const listItem: Variants = {
-  initial: { 
-    opacity: 0, 
-    y: 20 
+  initial: {
+    opacity: 0,
+    y: 8
   },
-  animate: { 
-    opacity: 1, 
+  animate: {
+    opacity: 1,
     y: 0,
     transition: {
       type: 'spring',
@@ -119,11 +119,11 @@ export const listItem: Variants = {
 
 // Tab content transition
 export const tabContent: Variants = {
-  initial: { 
+  initial: {
     opacity: 0,
     x: 10
   },
-  animate: { 
+  animate: {
     opacity: 1,
     x: 0,
     transition: {
@@ -131,7 +131,7 @@ export const tabContent: Variants = {
       ease: [0.16, 1, 0.3, 1]
     }
   },
-  exit: { 
+  exit: {
     opacity: 0,
     x: -10,
     transition: {
@@ -143,11 +143,11 @@ export const tabContent: Variants = {
 // Fade in animation
 export const fadeIn: Variants = {
   initial: { opacity: 0 },
-  animate: { 
+  animate: {
     opacity: 1,
     transition: { duration: 0.2 }
   },
-  exit: { 
+  exit: {
     opacity: 0,
     transition: { duration: 0.15 }
   }
@@ -155,12 +155,12 @@ export const fadeIn: Variants = {
 
 // Scale in animation
 export const scaleIn: Variants = {
-  initial: { 
-    opacity: 0, 
-    scale: 0.9 
+  initial: {
+    opacity: 0,
+    scale: 0.9
   },
-  animate: { 
-    opacity: 1, 
+  animate: {
+    opacity: 1,
     scale: 1,
     transition: {
       type: 'spring',
@@ -168,8 +168,8 @@ export const scaleIn: Variants = {
       damping: 25
     }
   },
-  exit: { 
-    opacity: 0, 
+  exit: {
+    opacity: 0,
     scale: 0.9,
     transition: { duration: 0.15 }
   }
@@ -177,11 +177,11 @@ export const scaleIn: Variants = {
 
 // Slide up animation for bottom sheets/panels
 export const slideUp: Variants = {
-  initial: { 
+  initial: {
     opacity: 0,
     y: '100%'
   },
-  animate: { 
+  animate: {
     opacity: 1,
     y: 0,
     transition: {
@@ -190,7 +190,7 @@ export const slideUp: Variants = {
       damping: 30
     }
   },
-  exit: { 
+  exit: {
     opacity: 0,
     y: '100%',
     transition: { duration: 0.2 }

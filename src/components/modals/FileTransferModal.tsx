@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     X, FolderOpen, File, ChevronRight, Home, RefreshCw,
@@ -166,7 +167,7 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
 
     const pathParts = currentPath.split('/').filter(Boolean);
 
-    return (
+    return createPortal(
         <AnimatePresence>
             {/* Backdrop */}
             <motion.div
@@ -411,6 +412,7 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
                     )}
                 </motion.div>
             </div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

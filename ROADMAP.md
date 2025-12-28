@@ -94,9 +94,21 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 ---
 
-### Phase 6 — (Reserved)
+### Phase 6 — Advanced Device Integration (Android Agent)
 
-**Goal:** TBD
+**Goal:** Implement a custom Android Agent (Server) to bypass ADB limitations and unlock advanced features.
+
+**Core Concept:**
+- Push a lightweight Android app/jar (Agent) to the device via ADB.
+- The Agent runs as a local server on the phone, communicating with ADB Compass via socket.
+- **Fallback Strategy:** If Agent installation fails or is rejected, fallback to standard ADB commands (Smart Mapping for names/icons).
+
+**Key Features:**
+- [ ] **Real App Icons & Labels:** Agent extracts original icons and labels from `PackageManager` and sends them to desktop.
+- [ ] **Real-time Performance Stats:** High-frequency CPU/RAM/FPS monitoring (overlay potential).
+- [ ] **File System indexing:** Faster file listing and searching than raw `ls` commands.
+- [ ] **Clipboard Sync:** Bi-directional clipboard sharing.
+- [ ] **Input Control:** Lower latency touch/keyboard injection compared to `adb shell input`.
 
 - [ ] To be planned
 
@@ -139,7 +151,7 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 Potential features not included in the initial scope:
 
 - [x] Screenshot and screen recording tools (Phase 5)
-- [ ] Touch event forwarding for screen mirroring
+- [x] Touch event forwarding for screen mirroring
 - [ ] Automation and scripting support
 - [ ] Cross-platform build validation (Windows / macOS / Linux)
 - [ ] Plugin/extension system

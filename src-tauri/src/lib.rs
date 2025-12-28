@@ -7,6 +7,7 @@ pub mod command_utils;
 pub mod commands;
 pub mod error;
 pub mod requirements;
+pub mod services;
 
 use adb::{start_device_tracker, AdbExecutor};
 use commands::{
@@ -27,22 +28,31 @@ use commands::{
     get_device_props,
     get_devices,
     get_logcat,
+    get_scrcpy_status,
     // Screen Capture
     get_screen_frame,
+    input_tap,
     input_text,
     install_apk,
     kill_adb_server,
     // File Transfer
     list_files,
     list_packages,
+    open_captures_folder,
     pull_file,
     push_file,
+    read_scrcpy_frame,
     // Device Actions
     reboot_device,
     refresh_devices,
     scan_apks_in_folder,
+    scrcpy_scroll,
+    scrcpy_touch,
     start_adb_server,
+    // Scrcpy
+    start_scrcpy_server,
     start_screen_recording,
+    stop_scrcpy_server,
     stop_screen_recording,
     take_screenshot,
     uninstall_app,
@@ -75,6 +85,7 @@ pub fn run() {
             // Device Actions
             reboot_device,
             input_text,
+            input_tap,
             uninstall_app,
             list_packages,
             get_device_props,
@@ -97,7 +108,15 @@ pub fn run() {
             take_screenshot,
             start_screen_recording,
             stop_screen_recording,
-            get_screen_frame
+            get_screen_frame,
+            open_captures_folder,
+            // Scrcpy
+            start_scrcpy_server,
+            stop_scrcpy_server,
+            get_scrcpy_status,
+            read_scrcpy_frame,
+            scrcpy_touch,
+            scrcpy_scroll
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

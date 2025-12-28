@@ -103,6 +103,37 @@ pub fn input_text(device_id: String, text: String) -> Result<(), AppError> {
     Ok(())
 }
 
+/// Input tap at specific coordinates
+#[tauri::command]
+pub fn input_tap(device_id: String, x: i32, y: i32) -> Result<(), AppError> {
+    let executor = AdbExecutor::new();
+    let adb_path = executor.get_adb_path();
+
+    let output = hidden_command(adb_path)
+        .args([
+            "-s",
+            &device_id,
+            "shell",
+            "input",
+            "tap",
+            &x.to_string(),
+            &y.to_string(),
+        ])
+        .output()
+        .map_err(|e| AppError::new("INPUT_TAP_FAILED", &format!("Failed to input tap: {}", e)))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        return Err(AppError::new(
+            "INPUT_TAP_FAILED",
+            &format!("Input tap failed: {} {}", stdout, stderr),
+        ));
+    }
+
+    Ok(())
+}
+
 /// Uninstall an app by package name
 #[tauri::command]
 pub fn uninstall_app(device_id: String, package_name: String) -> Result<String, AppError> {
@@ -126,9 +157,16 @@ pub fn uninstall_app(device_id: String, package_name: String) -> Result<String, 
     }
 }
 
+#[derive(Debug, Serialize)]
+pub struct AppPackage {
+    pub id: String,
+    pub label: Option<String>,
+    pub icon: Option<String>,
+}
+
 /// List installed packages
 #[tauri::command]
-pub fn list_packages(device_id: String, include_system: bool) -> Result<Vec<String>, AppError> {
+pub fn list_packages(device_id: String, include_system: bool) -> Result<Vec<AppPackage>, AppError> {
     let executor = AdbExecutor::new();
     let adb_path = executor.get_adb_path();
 
@@ -155,9 +193,17 @@ pub fn list_packages(device_id: String, include_system: bool) -> Result<Vec<Stri
     }
 
     let stdout = String::from_utf8_lossy(&output.stdout);
-    let packages: Vec<String> = stdout
+    let packages: Vec<AppPackage> = stdout
         .lines()
-        .filter_map(|line| line.strip_prefix("package:").map(|s| s.trim().to_string()))
+        .filter_map(|line| {
+            line.strip_prefix("package:").map(|s| {
+                AppPackage {
+                    id: s.trim().to_string(),
+                    label: None, // Placeholder for future Agent data
+                    icon: None,  // Placeholder for future Agent data
+                }
+            })
+        })
         .collect();
 
     Ok(packages)

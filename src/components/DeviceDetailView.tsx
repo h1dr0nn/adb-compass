@@ -3,12 +3,14 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft, Monitor, Smartphone, AppWindow,
-    FolderOpen, MoreHorizontal
+    FolderOpen
 } from 'lucide-react';
 import { DeviceInfo, getDeviceStatusText } from '../types';
 import { pageTransition, tabContent } from '../lib/animations';
 import { DeviceOverview } from './device/DeviceOverview';
 import { ScreenCapture } from './device/ScreenCapture';
+import { AppManager } from './device/AppManager';
+import { FileManager } from './device/FileManager';
 
 // Tab definitions
 type TabId = 'overview' | 'screen' | 'apps' | 'files';
@@ -41,9 +43,9 @@ export function DeviceDetailView({ device, onBack }: DeviceDetailViewProps) {
             case 'screen':
                 return <ScreenCapture device={device} />;
             case 'apps':
-                return <PlaceholderTab name="Apps" description="Manage installed applications" />;
+                return <AppManager device={device} />;
             case 'files':
-                return <PlaceholderTab name="Files" description="File explorer coming soon" />;
+                return <FileManager device={device} />;
             default:
                 return null;
         }
@@ -94,12 +96,12 @@ export function DeviceDetailView({ device, onBack }: DeviceDetailViewProps) {
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex gap-1 p-1 bg-surface-elevated rounded-xl border border-border mb-6">
+            <div className="flex gap-1 p-1 bg-surface-elevated rounded-xl border border-border mb-6 overflow-hidden">
                 {tabs.map((tab) => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
-                        className={`relative flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
+                        className={`relative flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${activeTab === tab.id
                             ? 'text-text-primary'
                             : 'text-text-muted hover:text-text-secondary'
                             }`}
@@ -136,17 +138,3 @@ export function DeviceDetailView({ device, onBack }: DeviceDetailViewProps) {
     );
 }
 
-// Placeholder component for tabs not yet implemented
-function PlaceholderTab({ name, description }: { name: string; description: string }) {
-    return (
-        <div className="h-full flex items-center justify-center">
-            <div className="text-center">
-                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-surface-elevated flex items-center justify-center">
-                    <MoreHorizontal className="text-text-muted" size={32} />
-                </div>
-                <h3 className="text-lg font-semibold text-text-primary mb-2">{name}</h3>
-                <p className="text-text-muted">{description}</p>
-            </div>
-        </div>
-    );
-}

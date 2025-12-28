@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Search, Package, Loader2, AlertTriangle, ToggleLeft, ToggleRight } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
@@ -59,7 +60,7 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
         }
     };
 
-    return (
+    return createPortal(
         <AnimatePresence>
             {/* Backdrop */}
             <motion.div
@@ -196,6 +197,7 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
                     </div>
                 </motion.div>
             </div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }

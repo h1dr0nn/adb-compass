@@ -157,7 +157,7 @@ function App() {
                   exit={{ opacity: 0, scale: 0.98 }}
                   transition={{ duration: 0.2 }}
                 >
-                  <div className="flex-1 overflow-y-auto pr-2">
+                  <div className="flex-1 overflow-y-auto custom-scrollbar pr-2">
                     <DeviceList
                       devices={devices}
                       loading={loading}

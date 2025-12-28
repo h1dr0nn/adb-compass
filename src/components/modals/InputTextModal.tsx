@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Keyboard, Send, Loader2 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
@@ -41,7 +42,7 @@ export function InputTextModal({ deviceId, onClose }: InputTextModalProps) {
         }
     };
 
-    return (
+    return createPortal(
         <AnimatePresence>
             {/* Backdrop */}
             <motion.div
@@ -119,6 +120,7 @@ export function InputTextModal({ deviceId, onClose }: InputTextModalProps) {
                     </div>
                 </motion.div>
             </div>
-        </AnimatePresence>
+        </AnimatePresence>,
+        document.body
     );
 }
