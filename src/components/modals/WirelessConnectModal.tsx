@@ -4,6 +4,7 @@ import { X, Wifi, WifiOff, Loader2, Copy, Check, Smartphone } from 'lucide-react
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
 import { Select } from '../ui/Select';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 import { createPortal } from 'react-dom';
 
@@ -12,6 +13,7 @@ interface WirelessConnectModalProps {
 }
 
 export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
+    const { t } = useLanguage();
     const [ip, setIp] = useState('');
     const [port, setPort] = useState('5555');
     const [loading, setLoading] = useState(false);
@@ -29,7 +31,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
 
     const handleEnableTcpip = async () => {
         if (!selectedDevice) {
-            toast.error('Please select a device first');
+            toast.error(t.selectDeviceFirst);
             return;
         }
 
@@ -56,7 +58,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                     lastError = e;
                     retries--;
                     if (retries > 0) {
-                        toast.loading(`Waiting for device... (${retries})`);
+                        toast.loading(`${t.waitingForDevice} (${retries})`);
                     }
                 }
             }
@@ -66,9 +68,9 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
             if (ip) {
                 setDeviceIp(ip);
                 setIp(ip);
-                toast.success(`Found IP: ${ip}`);
+                toast.success(`${t.foundIp}: ${ip}`);
             } else {
-                toast.error(`Could not get IP: ${lastError}`);
+                toast.error(`${t.couldNotGetIp}: ${lastError}`);
             }
 
         } catch (err) {
@@ -80,7 +82,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
 
     const handleConnect = async () => {
         if (!ip) {
-            toast.error('Please enter device IP address');
+            toast.error(t.enterIpAddress);
             return;
         }
 
@@ -154,7 +156,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                             <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center text-accent">
                                 <Wifi size={20} />
                             </div>
-                            <h3 className="text-lg font-semibold text-text-primary">Wireless ADB</h3>
+                            <h3 className="text-lg font-semibold text-text-primary">{t.wirelessAdb}</h3>
                         </div>
                         <button
                             onClick={onClose}
@@ -169,7 +171,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                         {/* Step 1: Enable on USB device */}
                         <div className="space-y-2">
                             <label className="text-sm font-medium text-text-primary">
-                                Step 1: Enable Wireless on USB Device
+                                {t.step1EnableWireless}
                             </label>
                             <div className="flex gap-2">
                                 <div className="flex-1">
@@ -177,7 +179,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                                         options={deviceOptions}
                                         value={selectedDevice}
                                         onChange={setSelectedDevice}
-                                        placeholder="Select USB device..."
+                                        placeholder={t.selectUsbDevice}
                                     />
                                 </div>
                                 <button
@@ -185,7 +187,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                                     disabled={loading || !selectedDevice}
                                     className="px-4 py-2 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                                 >
-                                    {loading ? <Loader2 size={16} className="animate-spin" /> : 'Enable'}
+                                    {loading ? <Loader2 size={16} className="animate-spin" /> : t.btnEnable}
                                 </button>
                             </div>
                             {deviceIp && (
@@ -200,7 +202,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
 
                         <div className="border-t border-border pt-4 space-y-2">
                             <label className="text-sm font-medium text-text-primary">
-                                Step 2: Connect Wirelessly
+                                {t.step2ConnectWirelessly}
                             </label>
                             <div className="flex gap-2">
                                 <input
@@ -229,7 +231,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-surface-elevated border border-border rounded-lg text-sm font-medium text-text-secondary hover:text-error hover:border-error disabled:opacity-50 transition-colors"
                         >
                             <WifiOff size={16} />
-                            Disconnect
+                            {t.btnDisconnect}
                         </button>
                         <button
                             onClick={handleConnect}
@@ -237,7 +239,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                             className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-accent text-white rounded-lg text-sm font-medium hover:bg-accent-secondary disabled:opacity-50 transition-colors"
                         >
                             {loading ? <Loader2 size={16} className="animate-spin" /> : <Wifi size={16} />}
-                            Connect
+                            {t.btnConnect}
                         </button>
                     </div>
                 </motion.div>

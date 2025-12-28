@@ -31,7 +31,7 @@ export function Sidebar({
             <div className="flex-1 px-4 py-4 min-h-0 overflow-hidden flex flex-col">
                 <div className="flex items-center justify-between mb-3 px-2">
                     <div className="text-sm font-bold text-text-muted uppercase tracking-wider">
-                        LIBRARY
+                        {t.library}
                     </div>
                     <button
                         onClick={onOpenSettings}

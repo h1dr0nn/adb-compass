@@ -1,6 +1,7 @@
 // StreamPlayer - Display H.264 stream using WebCodecs
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface StreamPlayerProps {
     deviceId: string;
@@ -32,6 +33,7 @@ export function StreamPlayer({
     const spsBufferRef = useRef<Uint8Array | null>(null);
     const ppsBufferRef = useRef<Uint8Array | null>(null);
     const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+    const { t } = useLanguage();
 
     // FPS counter
     useEffect(() => {
@@ -257,7 +259,7 @@ export function StreamPlayer({
             {!isConnected && (
                 <div className="absolute flex flex-col items-center justify-center text-text-muted pointer-events-none">
                     <div className="w-8 h-8 border-2 border-accent border-t-transparent rounded-full animate-spin mb-2" />
-                    <span className="text-sm">Connecting Stream...</span>
+                    <span className="text-sm">{t.connectingStream}</span>
                 </div>
             )}
 
@@ -268,7 +270,7 @@ export function StreamPlayer({
                         className={`w-2 h-2 rounded-full ${isConnected && fps > 0 ? 'bg-success animate-pulse' : 'bg-warning'}`}
                     />
                     <span className="text-[10px] font-mono text-white">
-                        {fps} FPS
+                        {fps} {t.fps}
                     </span>
                 </div>
             )}

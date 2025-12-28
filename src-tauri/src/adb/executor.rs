@@ -29,7 +29,7 @@ impl From<&str> for DeviceStatus {
 }
 
 /// Information about a connected Android device
-#[derive(Debug, Clone, serde::Serialize)]
+#[derive(Debug, Clone, serde::Serialize, PartialEq)]
 pub struct DeviceInfo {
     pub id: String,
     pub status: DeviceStatus,

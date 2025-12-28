@@ -96,8 +96,8 @@ export function ApkManager({
             <div className="flex p-1 mb-4 bg-surface-elevated rounded-xl border border-border/50">
                 <button
                     className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg transition-colors ${activeTab === 'apk'
-                            ? 'text-text-primary'
-                            : 'text-text-secondary hover:text-text-primary'
+                        ? 'text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary'
                         }`}
                     onClick={() => setActiveTab('apk')}
                 >
@@ -108,12 +108,12 @@ export function ApkManager({
                             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
                         />
                     )}
-                    <span className="relative z-10">APK</span>
+                    <span className="relative z-10">{t.apk}</span>
                 </button>
                 <button
                     className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg transition-colors ${activeTab === 'tools'
-                            ? 'text-text-primary'
-                            : 'text-text-secondary hover:text-text-primary'
+                        ? 'text-text-primary'
+                        : 'text-text-secondary hover:text-text-primary'
                         }`}
                     onClick={() => setActiveTab('tools')}
                 >
@@ -151,7 +151,7 @@ export function ApkManager({
                                         className="p-2 bg-surface-elevated border border-border rounded-lg 
                                                 text-text-secondary hover:text-accent disabled:cursor-not-allowed"
                                         disabled={scanning}
-                                        title="Reload Folder"
+                                        title={t.reloadFolder}
                                     >
                                         <RefreshCw size={14} className={scanning ? 'animate-spin text-accent' : ''} />
                                     </button>
@@ -163,7 +163,7 @@ export function ApkManager({
                                 <div className="space-y-2">
                                     {scannedApks.length === 0 && !scanning && (
                                         <div className="text-center text-text-muted text-xs italic">
-                                            No valid APKs in folder
+                                            {t.noValidApks}
                                         </div>
                                     )}
                                     {scannedApks.map((apk) => (
@@ -228,6 +228,7 @@ export function ApkManager({
 
 // Sub-component for list item
 function ApkListItem({ apk, isSelected, onSelect, onRemove }: { apk: ApkInfo, isSelected: boolean, onSelect: () => void, onRemove?: () => void }) {
+    const { t } = useLanguage();
     // Format date modified
     const dateStr = apk.last_modified
         ? new Date(Number(apk.last_modified)).toLocaleDateString()
@@ -271,7 +272,7 @@ function ApkListItem({ apk, isSelected, onSelect, onRemove }: { apk: ApkInfo, is
                         onRemove();
                     }}
                     className="absolute right-2 top-2 p-1 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
-                    title="Remove from list"
+                    title={t.removeFromList}
                 >
                     {/* Reuse Lucide X icon properly imported */}
                     <X size={14} />

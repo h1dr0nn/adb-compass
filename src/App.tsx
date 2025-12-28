@@ -9,15 +9,20 @@ import { Settings } from './components/Settings';
 import { LogcatView } from './components/LogcatView';
 import { TerminalView } from './components/TerminalView';
 import { DeviceDetailView } from './components/DeviceDetailView';
+import { ManualConnectModal } from './components/modals/ManualConnectModal';
 import { useLanguage } from './contexts/LanguageContext';
 import { useTheme } from './contexts/ThemeContext';
+import { DeviceProvider } from './contexts/DeviceContext';
+import { DeviceCacheProvider } from './contexts/DeviceCacheContext';
 import type { ActiveToolView } from './components/ToolsPanel';
 import type { DeviceInfo } from './types';
 
-function App() {
-  const { devices, adbStatus, loading, error, refreshDevices } = useDevices();
+// Inner App Component that uses hooks
+function AppContent() {
+  const { devices, adbStatus, loading, error, refreshDevices, removeDevice } = useDevices();
   const { apkInfo, selectApk, clearApk, scanFolder, setApkFromList } = useApk();
   const [showSettings, setShowSettings] = useState(false);
+  const [showManualConnect, setShowManualConnect] = useState(false);
   const [activeToolView, setActiveToolView] = useState<ActiveToolView>(null);
   const [selectedDevice, setSelectedDevice] = useState<DeviceInfo | null>(null);
   const { t } = useLanguage();
@@ -44,7 +49,7 @@ function App() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-surface-bg text-text-primary font-sans transition-colors duration-300 overflow-hidden">
+    <div className="flex flex-col h-screen bg-surface-bg text-text-primary font-sans overflow-hidden">
       <Toaster
         position="bottom-right"
         theme={resolvedTheme === 'dark' ? 'dark' : 'light'}
@@ -81,8 +86,6 @@ function App() {
                 {adbStatus?.available ? (adbStatus.version || 'ADB Ready') : 'ADB Not Found'}
               </span>
             </div>
-
-
           </div>
         </div>
       </motion.header>
@@ -165,6 +168,8 @@ function App() {
                       apkInfo={apkInfo}
                       onRefresh={refreshDevices}
                       onDeviceSelect={handleDeviceSelect}
+                      onRemove={removeDevice}
+                      onAddDevice={() => setShowManualConnect(true)}
                     />
                   </div>
 
@@ -178,7 +183,20 @@ function App() {
           </div>
         </div>
       </div>
+
+      {/* Modals */}
+      {showManualConnect && <ManualConnectModal onClose={() => setShowManualConnect(false)} />}
     </div>
+  );
+}
+
+function App() {
+  return (
+    <DeviceProvider>
+      <DeviceCacheProvider>
+        <AppContent />
+      </DeviceCacheProvider>
+    </DeviceProvider>
   );
 }
 

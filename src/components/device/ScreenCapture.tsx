@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { DeviceInfo } from '../../types';
 import { listItem } from '../../lib/animations';
 import { StreamPlayer } from './StreamPlayer';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface ScreenCaptureProps {
     device: DeviceInfo;
@@ -35,6 +36,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     const [isCapturing, setIsCapturing] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
+    const { t } = useLanguage();
 
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
@@ -108,16 +110,16 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             });
 
             if (result.success && result.path) {
-                toast.success('Screenshot saved', {
+                toast.success(t.screenshotSaved, {
                     description: result.path
                 });
             } else {
-                toast.error('Screenshot failed', {
-                    description: result.error || 'Unknown error'
+                toast.error(t.screenshotFailed, {
+                    description: result.error || t.unknown
                 });
             }
         } catch (error) {
-            toast.error('Screenshot failed', {
+            toast.error(t.screenshotFailed, {
                 description: String(error)
             });
         } finally {
@@ -138,12 +140,12 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 setRecordingTime(0);
 
                 if (result.success && result.path) {
-                    toast.success('Recording saved', {
+                    toast.success(t.recordingSaved, {
                         description: result.path
                     });
                 }
             } catch (error) {
-                toast.error('Failed to stop recording', {
+                toast.error(t.failedToStopRecording, {
                     description: String(error)
                 });
             }
@@ -154,9 +156,9 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                     deviceId: device.id
                 });
                 setIsRecording(true);
-                toast.info('Recording started');
+                toast.info(t.recordingStarted);
             } catch (error) {
-                toast.error('Failed to start recording', {
+                toast.error(t.failedToStartRecording, {
                     description: String(error)
                 });
             }
@@ -179,7 +181,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 setPreviewImage(url);
             }
         } catch (error) {
-            toast.error('Failed to get screen preview', {
+            toast.error(t.failedToGetScreenPreview, {
                 description: String(error)
             });
         } finally {
@@ -232,9 +234,9 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     const handleOpenFolder = async () => {
         try {
             await invoke('open_captures_folder');
-            toast.success('Folder opened');
+            toast.success(t.folderOpened);
         } catch (error) {
-            toast.error('Failed to open folder', { description: String(error) });
+            toast.error(t.failedToOpenFolder, { description: String(error) });
         }
     };
 
@@ -255,10 +257,10 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 setScrcpyStatus(status);
                 setStreamMode('high-perf');
                 setIsLive(false); // Disable standard live mode
-                toast.success('High-performance mode enabled', { description: `Streaming on port ${status.port}` });
+                toast.success(t.highPerfModeEnabled, { description: `Streaming on port ${status.port}` });
             } catch (error) {
                 console.error('Scrcpy start error:', error);
-                toast.error('Failed to start high-performance mode', { description: String(error) });
+                toast.error(t.failedToStartHighPerf, { description: String(error) });
             } finally {
                 setIsStartingScrcpy(false);
             }
@@ -268,9 +270,9 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 await invoke('stop_scrcpy_server', { deviceId: device.id });
                 setScrcpyStatus(null);
                 setStreamMode('standard');
-                toast.success('Switched to standard mode');
+                toast.success(t.switchedToStandardMode);
             } catch (error) {
-                toast.error('Failed to stop high-performance mode', { description: String(error) });
+                toast.error(t.failedToStopHighPerf, { description: String(error) });
             }
         }
     };
@@ -320,7 +322,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             });
         } catch (error) {
             console.error('Key event failed:', error);
-            toast.error('Failed to send key event');
+            toast.error(t.failedToKey);
         }
     };
 
@@ -329,11 +331,11 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             {/* Controls Panel - Expands */}
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
                 {/* Top Row - Capture Actions */}
-                <motion.div variants={listItem} className="bg-surface-elevated border border-border rounded-xl p-4">
+                <motion.div variants={listItem} className="bg-surface-card border border-border rounded-xl p-4">
                     <div className="flex items-center justify-between mb-4">
                         <h4 className="text-sm font-semibold text-text-primary flex items-center gap-2">
                             <Camera size={16} className="text-accent" />
-                            Capture
+                            {t.capture}
                         </h4>
                         {isRecording && (
                             <div className="flex items-center gap-1.5 text-error text-sm font-mono">
@@ -349,17 +351,17 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                             className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 bg-accent/10 hover:bg-accent/20 border border-accent/30 text-text-primary rounded-lg transition-all disabled:opacity-50"
                         >
                             {isCapturing ? <RefreshCw size={16} className="animate-spin" /> : <Camera size={16} />}
-                            <span className="text-sm font-medium">Screenshot</span>
+                            <span className="text-sm font-medium">{t.screenshot}</span>
                         </button>
                         <button
                             onClick={handleRecordingToggle}
                             className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all ${isRecording
                                 ? 'bg-error/20 text-error border border-error/30'
-                                : 'bg-surface-card hover:bg-surface-hover border border-border'
+                                : 'bg-surface-elevated hover:bg-surface-hover border border-border'
                                 }`}
                         >
                             {isRecording ? <VideoOff size={16} /> : <Video size={16} />}
-                            <span className="text-sm font-medium">{isRecording ? 'Stop Recording' : 'Record'}</span>
+                            <span className="text-sm font-medium">{isRecording ? t.stopRecording : t.record}</span>
                         </button>
                     </div>
                 </motion.div>
@@ -367,18 +369,18 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 {/* Bottom Row - Config & Storage side by side */}
                 <div className="flex flex-wrap gap-4">
                     {/* Configuration */}
-                    <motion.div variants={listItem} className="flex-1 min-w-[200px] bg-surface-elevated border border-border rounded-xl p-4">
+                    <motion.div variants={listItem} className="flex-1 min-w-[200px] bg-surface-card border border-border rounded-xl p-4">
                         <h4 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
                             <Settings size={16} className="text-accent" />
-                            Configuration
+                            {t.configuration}
                         </h4>
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-text-secondary">Live Preview</span>
+                                <span className="text-sm text-text-secondary">{t.livePreview}</span>
                                 <button
                                     onClick={toggleHighPerfMode}
                                     disabled={isStartingScrcpy}
-                                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${streamMode === 'high-perf' ? 'bg-success' : 'bg-surface-card border border-border'
+                                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${streamMode === 'high-perf' ? 'bg-success' : 'bg-surface-elevated border border-border'
                                         } disabled:opacity-50`}
                                 >
                                     <motion.div
@@ -388,10 +390,10 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                                 </button>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-text-secondary">Enable Touch</span>
+                                <span className="text-sm text-text-secondary">{t.enableTouch}</span>
                                 <button
                                     onClick={() => setAllowTouch(!allowTouch)}
-                                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${allowTouch ? 'bg-accent' : 'bg-surface-card border border-border'
+                                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${allowTouch ? 'bg-accent' : 'bg-surface-elevated border border-border'
                                         }`}
                                 >
                                     <motion.div
@@ -401,10 +403,10 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                                 </button>
                             </div>
                             <div className="flex items-center justify-between">
-                                <span className="text-sm text-text-secondary">Show FPS</span>
+                                <span className="text-sm text-text-secondary">{t.showFps}</span>
                                 <button
                                     onClick={() => setShowFps(!showFps)}
-                                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${showFps ? 'bg-accent' : 'bg-surface-card border border-border'
+                                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${showFps ? 'bg-accent' : 'bg-surface-elevated border border-border'
                                         }`}
                                 >
                                     <motion.div
@@ -417,70 +419,70 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                     </motion.div>
 
                     {/* Storage */}
-                    <motion.div variants={listItem} className="flex-1 min-w-[200px] bg-surface-elevated border border-border rounded-xl p-4">
+                    <motion.div variants={listItem} className="flex-1 min-w-[200px] bg-surface-card border border-border rounded-xl p-4">
                         <h4 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
                             <FolderOpen size={16} className="text-accent" />
-                            Storage
+                            {t.storage}
                         </h4>
-                        <p className="text-xs text-text-muted mb-3">Captures saved to:</p>
+                        <p className="text-xs text-text-muted mb-3">{t.storageLocation}</p>
                         <p className="text-sm text-text-secondary mb-4 font-mono">~/Pictures/ADB Compass/</p>
                         <button
                             onClick={handleOpenFolder}
-                            className="flex items-center gap-2 px-3 py-2 bg-surface-card hover:bg-surface-hover border border-border text-text-secondary hover:text-text-primary rounded-lg transition-all text-sm"
+                            className="flex items-center gap-2 px-3 py-2 bg-surface-elevated hover:bg-surface-hover border border-border text-text-secondary hover:text-text-primary rounded-lg transition-all text-sm"
                         >
                             <ExternalLink size={14} />
-                            Open Folder
+                            {t.openFolder}
                         </button>
                     </motion.div>
 
                 </div>
 
                 {/* Quick Actions - Full Width Row */}
-                <motion.div variants={listItem} className="bg-surface-elevated border border-border rounded-xl p-4">
+                <motion.div variants={listItem} className="bg-surface-card border border-border rounded-xl p-4">
                     <h4 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
                         <Zap size={16} className="text-accent" />
-                        Quick Actions
+                        {t.quickActions}
                     </h4>
                     <div className="grid grid-cols-4 gap-2">
                         {/* Row 1: Navigation */}
-                        <button onClick={() => handleKeyEvent(4)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Back">
+                        <button onClick={() => handleKeyEvent(4)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.back}>
                             <Triangle size={18} className="text-text-secondary -rotate-90" />
                         </button>
-                        <button onClick={() => handleKeyEvent(3)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Home">
+                        <button onClick={() => handleKeyEvent(3)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.home}>
                             <Home size={18} className="text-text-secondary" />
                         </button>
-                        <button onClick={() => handleKeyEvent(187)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Recents">
+                        <button onClick={() => handleKeyEvent(187)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.recents}>
                             <Square size={18} className="text-text-secondary" />
                         </button>
-                        <button onClick={() => handleKeyEvent(82)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Menu">
+                        <button onClick={() => handleKeyEvent(82)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.menu}>
                             <Menu size={18} className="text-text-secondary" />
                         </button>
 
                         {/* Row 2: Volume & Power */}
-                        <button onClick={() => handleKeyEvent(25)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Volume Down">
+                        <button onClick={() => handleKeyEvent(25)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.volumeDown}>
                             <Volume1 size={18} className="text-text-secondary" />
                         </button>
-                        <button onClick={() => handleKeyEvent(24)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Volume Up">
+                        <button onClick={() => handleKeyEvent(24)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.volumeUp}>
                             <Volume2 size={18} className="text-text-secondary" />
                         </button>
-                        <button onClick={() => handleKeyEvent(164)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Mute">
+                        <button onClick={() => handleKeyEvent(164)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.mute}>
                             <VolumeX size={18} className="text-text-secondary" />
                         </button>
-                        <button onClick={() => handleKeyEvent(26)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Power">
+                        <button onClick={() => handleKeyEvent(26)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.power}>
                             <Power size={18} className="text-error" />
                         </button>
 
                         {/* Row 3: System & Media */}
-                        <button onClick={() => handleKeyEvent(220)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Brightness Down">
+                        <button onClick={() => handleKeyEvent(220)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.brightnessDown}>
                             <Moon size={18} className="text-text-secondary" />
                         </button>
-                        <button onClick={() => handleKeyEvent(221)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Brightness Up">
+                        <button onClick={() => handleKeyEvent(221)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.brightnessUp}>
                             <Sun size={18} className="text-text-secondary" />
                         </button>
-                        <button onClick={() => handleKeyEvent(83)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Notifications">
+                        <button onClick={() => handleKeyEvent(83)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.notifications}>
                             <Bell size={18} className="text-text-secondary" />
                         </button>
-                        <button onClick={() => handleKeyEvent(85)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Play/Pause">
+                        <button onClick={() => handleKeyEvent(85)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.playPause}>
                             <Play size={18} className="text-success" />
                         </button>
                     </div>
@@ -488,14 +490,14 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             </div>
 
             {/* Phone Preview - Fixed Width */}
-            <div className="w-96 h-full shrink-0 flex items-center justify-center relative bg-surface-elevated/50 rounded-xl border border-border p-4">
+            <div className="w-96 h-full shrink-0 flex items-center justify-center relative bg-surface-card rounded-xl border border-border p-4">
                 {/* Status Badge & Controls */}
                 {streamMode === 'high-perf' && (
                     <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
 
                         <div className="flex items-center gap-1.5 px-2 py-1 bg-success/20 backdrop-blur text-success rounded-lg text-xs font-medium border border-success/20">
                             <Zap size={12} />
-                            <span>Live</span>
+                            <span>{t.live}</span>
                         </div>
                     </div>
                 )}
@@ -503,7 +505,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                     <button
                         onClick={handleRefreshPreview}
                         disabled={isLoadingPreview}
-                        className="absolute top-2 right-2 z-10 p-1.5 bg-surface-card rounded-lg border border-border hover:text-accent disabled:opacity-50"
+                        className="absolute top-2 right-2 z-10 p-1.5 bg-surface-elevated rounded-lg border border-border hover:text-accent disabled:opacity-50"
                     >
                         <RefreshCw size={14} className={isLoadingPreview ? 'animate-spin' : ''} />
                     </button>
@@ -534,7 +536,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-text-muted">
                             <Image size={40} className="opacity-30 mb-1" />
-                            <span className="text-xs opacity-50">No Signal</span>
+                            <span className="text-xs opacity-50">{t.noSignal}</span>
                         </div>
                     )}
 
@@ -543,7 +545,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                         <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                             <div className="text-center text-white">
                                 <div className="w-3 h-3 rounded-full bg-error animate-pulse mx-auto mb-1" />
-                                <span className="text-xs">Recording</span>
+                                <span className="text-xs">{t.recording}</span>
                             </div>
                         </div>
                     )}

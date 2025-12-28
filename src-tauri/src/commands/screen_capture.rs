@@ -127,7 +127,6 @@ pub fn start_screen_recording(device_id: String) -> CaptureResult {
             &device_id,
             "shell",
             "screenrecord",
-            "--bugreport",
             "/sdcard/adbcompass_recording.mp4",
         ])
         .stdout(Stdio::null())

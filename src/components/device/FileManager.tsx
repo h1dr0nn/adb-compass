@@ -11,6 +11,8 @@ import { open, save } from '@tauri-apps/plugin-dialog';
 import { toast } from 'sonner';
 import { DeviceInfo } from '../../types';
 import { listContainer, listItem } from '../../lib/animations';
+import { useDeviceCache } from '../../contexts/DeviceCacheContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface FileManagerProps {
     device: DeviceInfo;
@@ -23,14 +25,14 @@ interface FileInfo {
     permissions: string | null;
 }
 
-const QUICK_ACCESS = [
-    { name: 'Internal Storage', path: '/storage/emulated/0', icon: <Home size={18} /> },
-    { name: 'DCIM', path: '/storage/emulated/0/DCIM', icon: <Camera size={18} /> },
-    { name: 'Pictures', path: '/storage/emulated/0/Pictures', icon: <Image size={18} /> },
-    { name: 'Music', path: '/storage/emulated/0/Music', icon: <Music size={18} /> },
-    { name: 'Movies', path: '/storage/emulated/0/Movies', icon: <Film size={18} /> },
-    { name: 'Downloads', path: '/storage/emulated/0/Download', icon: <DownloadCloud size={18} /> },
-    { name: 'Root', path: '/', icon: <HardDrive size={18} /> },
+const QUICK_ACCESS_ITEMS = (t: any) => [
+    { name: t.internalStorage, path: '/storage/emulated/0', icon: <Home size={18} /> },
+    { name: t.dcim, path: '/storage/emulated/0/DCIM', icon: <Camera size={18} /> },
+    { name: t.pictures, path: '/storage/emulated/0/Pictures', icon: <Image size={18} /> },
+    { name: t.music, path: '/storage/emulated/0/Music', icon: <Music size={18} /> },
+    { name: t.movies, path: '/storage/emulated/0/Movies', icon: <Film size={18} /> },
+    { name: t.downloads, path: '/storage/emulated/0/Download', icon: <DownloadCloud size={18} /> },
+    { name: t.root, path: '/', icon: <HardDrive size={18} /> },
 ];
 
 export function FileManager({ device }: FileManagerProps) {
@@ -43,8 +45,25 @@ export function FileManager({ device }: FileManagerProps) {
     const [newFolderName, setNewFolderName] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
+    const { getCached, setData } = useDeviceCache();
+    const { t } = useLanguage();
+
     const fetchFiles = async (path: string = currentPath) => {
-        setLoading(true);
+        const cacheKey = `files_${device.id}_${path}`;
+
+        // 1. Try cache
+        const { data, isStale } = getCached<FileInfo[]>(cacheKey);
+
+        if (data) {
+            setFiles(data);
+            setCurrentPath(path);
+            if (!isStale) {
+                setLoading(false);
+                return;
+            }
+        }
+
+        if (!data) setLoading(true);
         setError(null);
         try {
             const result = await invoke<FileInfo[]>('list_files', {
@@ -53,6 +72,7 @@ export function FileManager({ device }: FileManagerProps) {
             });
             setFiles(result);
             setCurrentPath(path);
+            setData(cacheKey, result);
         } catch (e) {
             setError(String(e));
         } finally {
@@ -96,7 +116,7 @@ export function FileManager({ device }: FileManagerProps) {
         try {
             const selected = await open({
                 multiple: false,
-                title: 'Select file to upload'
+                title: t.selectFileUpload
             });
 
             if (selected && typeof selected === 'string') {
@@ -110,11 +130,11 @@ export function FileManager({ device }: FileManagerProps) {
                     remotePath
                 });
 
-                toast.success('File uploaded', { description: fileName });
+                toast.success(t.fileUploaded, { description: fileName });
                 fetchFiles();
             }
         } catch (e) {
-            toast.error('Upload failed', { description: String(e) });
+            toast.error(t.uploadFailed, { description: String(e) });
         } finally {
             setActionLoading(null);
         }
@@ -124,7 +144,7 @@ export function FileManager({ device }: FileManagerProps) {
         try {
             const localPath = await save({
                 defaultPath: file.name,
-                title: 'Save file as'
+                title: t.downloadFile
             });
 
             if (localPath) {
@@ -137,10 +157,10 @@ export function FileManager({ device }: FileManagerProps) {
                     localPath
                 });
 
-                toast.success('File downloaded', { description: file.name });
+                toast.success(t.fileDownloaded, { description: file.name });
             }
         } catch (e) {
-            toast.error('Download failed', { description: String(e) });
+            toast.error(t.downloadFailed, { description: String(e) });
         } finally {
             setActionLoading(null);
         }
@@ -155,10 +175,10 @@ export function FileManager({ device }: FileManagerProps) {
                 deviceId: device.id,
                 remotePath
             });
-            toast.success('Deleted', { description: file.name });
+            toast.success(t.deleted, { description: file.name });
             setFiles(prev => prev.filter(f => f.name !== file.name));
         } catch (e) {
-            toast.error('Delete failed', { description: String(e) });
+            toast.error(t.deleteFailed, { description: String(e) });
         } finally {
             setActionLoading(null);
         }
@@ -174,12 +194,12 @@ export function FileManager({ device }: FileManagerProps) {
                 deviceId: device.id,
                 remotePath
             });
-            toast.success('Folder created', { description: newFolderName });
+            toast.success(t.folderCreated, { description: newFolderName });
             setNewFolderMode(false);
             setNewFolderName('');
             fetchFiles();
         } catch (e) {
-            toast.error('Create folder failed', { description: String(e) });
+            toast.error(t.createFolderFailed, { description: String(e) });
         } finally {
             setActionLoading(null);
         }
@@ -190,9 +210,9 @@ export function FileManager({ device }: FileManagerProps) {
             {/* Sidebar - Quick Access */}
             <div className="w-48 shrink-0 flex flex-col gap-1 py-1 overflow-y-auto custom-scrollbar">
                 <div className="px-3 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
-                    Quick Access
+                    {t.quickAccess}
                 </div>
-                {QUICK_ACCESS.map((item) => (
+                {QUICK_ACCESS_ITEMS(t).map((item) => (
                     <button
                         key={item.path}
                         onClick={() => navigateTo(item.path)}
@@ -222,7 +242,7 @@ export function FileManager({ device }: FileManagerProps) {
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-elevated border border-border text-text-muted hover:text-text-primary hover:border-accent transition-all text-sm disabled:opacity-50"
                     >
                         {actionLoading === 'upload' ? <Loader2 size={16} className="animate-spin" /> : <Upload size={16} />}
-                        Upload
+                        {t.upload}
                     </button>
 
                     <button
@@ -231,7 +251,7 @@ export function FileManager({ device }: FileManagerProps) {
                         className="flex items-center gap-1.5 px-3 py-2 rounded-lg bg-surface-elevated border border-border text-text-muted hover:text-text-primary hover:border-accent transition-all text-sm disabled:opacity-50"
                     >
                         <FolderPlus size={16} />
-                        New Folder
+                        {t.newFolder}
                     </button>
 
                     <div className="flex-1" />
@@ -275,7 +295,7 @@ export function FileManager({ device }: FileManagerProps) {
                         <FolderPlus size={18} className="text-accent shrink-0" />
                         <input
                             type="text"
-                            placeholder="Folder name..."
+                            placeholder={t.folderNamePlaceholder}
                             value={newFolderName}
                             onChange={(e) => setNewFolderName(e.target.value)}
                             onKeyDown={(e) => e.key === 'Enter' && handleCreateFolder()}
@@ -287,13 +307,13 @@ export function FileManager({ device }: FileManagerProps) {
                             disabled={!newFolderName.trim() || actionLoading === 'newfolder'}
                             className="px-3 py-1 text-xs bg-accent text-white rounded-lg hover:bg-accent-secondary disabled:opacity-50"
                         >
-                            {actionLoading === 'newfolder' ? <Loader2 size={12} className="animate-spin" /> : 'Create'}
+                            {actionLoading === 'newfolder' ? <Loader2 size={12} className="animate-spin" /> : t.create}
                         </button>
                         <button
                             onClick={() => { setNewFolderMode(false); setNewFolderName(''); }}
                             className="px-3 py-1 text-xs bg-surface-card border border-border rounded-lg hover:bg-surface-hover text-text-secondary"
                         >
-                            Cancel
+                            {t.cancel}
                         </button>
                     </div>
                 )}
@@ -313,13 +333,13 @@ export function FileManager({ device }: FileManagerProps) {
                                     onClick={navigateUp}
                                     className="mt-4 px-4 py-2 text-sm bg-surface-elevated border border-border rounded-lg hover:bg-surface-hover text-text-secondary"
                                 >
-                                    Go Back
+                                    {t.goBack}
                                 </button>
                             </div>
                         ) : files.length === 0 ? (
                             <div className="flex flex-col items-center justify-center py-16 text-text-muted">
                                 <Folder size={32} className="mb-2 opacity-40" />
-                                <p className="text-sm">Empty folder</p>
+                                <p className="text-sm">{t.emptyFolder}</p>
                             </div>
                         ) : (
                             <motion.div
@@ -375,7 +395,7 @@ export function FileManager({ device }: FileManagerProps) {
                                                     onClick={() => handleDownload(file)}
                                                     disabled={actionLoading === file.name}
                                                     className="p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-accent/10 transition-all"
-                                                    title="Download"
+                                                    title={t.download}
                                                 >
                                                     {actionLoading === file.name ? (
                                                         <Loader2 size={14} className="animate-spin" />
@@ -391,20 +411,20 @@ export function FileManager({ device }: FileManagerProps) {
                                                         onClick={() => handleDelete(file)}
                                                         className="px-2 py-1 text-xs bg-error text-white rounded shadow-sm hover:bg-error/90"
                                                     >
-                                                        Delete
+                                                        {t.confirm}
                                                     </button>
                                                     <button
                                                         onClick={() => setConfirmDelete(null)}
                                                         className="px-2 py-1 text-xs bg-surface-elevated border border-border rounded shadow-sm hover:bg-surface-hover hover:text-text-primary text-text-secondary"
                                                     >
-                                                        Cancel
+                                                        {t.cancel}
                                                     </button>
                                                 </div>
                                             ) : (
                                                 <button
                                                     onClick={() => setConfirmDelete(file.name)}
                                                     className="p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-error/10 transition-all"
-                                                    title="Delete"
+                                                    title={t.delete}
                                                 >
                                                     <Trash2 size={14} />
                                                 </button>

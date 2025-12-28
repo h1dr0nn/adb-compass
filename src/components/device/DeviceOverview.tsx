@@ -3,12 +3,15 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     Smartphone, Cpu, HardDrive, Battery, BatteryCharging,
-    Wifi, Signal, Monitor, MemoryStick, Loader2, Building2,
+    Wifi, Signal, Monitor, MemoryStick, Building2,
     Shield, Hash
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
-import { DeviceInfo, getDeviceStatusText } from '../../types';
+import { DeviceInfo } from '../../types';
 import { listContainer, listItem } from '../../lib/animations';
+import { useDeviceCache } from '../../contexts/DeviceCacheContext';
+import { useDeviceStatus } from '../../hooks/useDeviceStatus';
+import { useLanguage } from '../../contexts/LanguageContext';
 
 interface DeviceOverviewProps {
     device: DeviceInfo;
@@ -51,12 +54,10 @@ function InfoCard({ icon, label, value, loading }: InfoCardProps) {
                     <p className="text-xs text-text-muted uppercase tracking-wide mb-1">{label}</p>
                     {loading ? (
                         <div className="flex items-center gap-2">
-                            <Loader2 size={14} className="animate-spin text-accent" />
-                            <span className="text-sm text-text-muted">Loading...</span>
                         </div>
                     ) : (
                         <p className="text-sm font-semibold text-text-primary truncate">
-                            {value || 'Unknown'}
+                            {value}
                         </p>
                     )}
                 </div>
@@ -66,8 +67,8 @@ function InfoCard({ icon, label, value, loading }: InfoCardProps) {
 }
 
 // Helper component for value with secondary text
-function ValueWithSub({ main, sub }: { main: string | null | undefined; sub?: string | null }) {
-    if (!main) return <>Unknown</>;
+function ValueWithSub({ main, sub, unknownLabel }: { main: string | null | undefined; sub?: string | null, unknownLabel: string }) {
+    if (!main) return <>{unknownLabel}</>;
     return (
         <>
             {main}
@@ -79,21 +80,40 @@ function ValueWithSub({ main, sub }: { main: string | null | undefined; sub?: st
 export function DeviceOverview({ device }: DeviceOverviewProps) {
     const [props, setProps] = useState<DeviceProps | null>(null);
     const [loading, setLoading] = useState(true);
+    const { getCached, setData } = useDeviceCache();
+    const { getStatusTranslation } = useDeviceStatus();
+    const { t } = useLanguage();
+    const cacheKey = `device_props_${device.id}`;
 
     useEffect(() => {
-        const fetchProps = async () => {
-            setLoading(true);
+        const loadProps = async () => {
+            // 1. Try cache first
+            const { data, isStale } = getCached<DeviceProps>(cacheKey);
+
+            if (data) {
+                setProps(data);
+                if (!isStale) {
+                    setLoading(false);
+                    return;
+                }
+            }
+
+            // 2. Fetch fresh data if needed (no data or stale)
+            if (!data) setLoading(true);
+
             try {
                 const result = await invoke<DeviceProps>('get_device_props', { deviceId: device.id });
                 setProps(result);
+                setData(cacheKey, result);
             } catch (e) {
                 console.error('Failed to fetch device props:', e);
             } finally {
                 setLoading(false);
             }
         };
-        fetchProps();
-    }, [device.id]);
+
+        loadProps();
+    }, [device.id, getCached, setData, cacheKey]);
 
     const getBatteryIcon = () => {
         if (props?.is_charging) {
@@ -114,24 +134,25 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
                     {/* Row 1: Identity */}
                     <InfoCard
                         icon={<Smartphone className="text-accent" size={20} />}
-                        label="Device ID"
+                        label={t.deviceId}
                         value={device.id}
                     />
 
                     <InfoCard
                         icon={<Building2 className="text-accent" size={20} />}
-                        label="Manufacturer"
+                        label={t.manufacturer}
                         value={props?.manufacturer}
                         loading={loading}
                     />
 
                     <InfoCard
                         icon={<Cpu className="text-accent" size={20} />}
-                        label="Model"
+                        label={t.model}
                         value={
                             <ValueWithSub
                                 main={props?.model || device.model}
                                 sub={props?.android_version ? `Android ${props.android_version}` : null}
+                                unknownLabel={t.unknown}
                             />
                         }
                         loading={loading}
@@ -140,18 +161,19 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
                     {/* Row 2: Hardware */}
                     <InfoCard
                         icon={<Monitor className="text-accent" size={20} />}
-                        label="Screen"
+                        label={t.screen}
                         value={props?.screen_resolution}
                         loading={loading}
                     />
 
                     <InfoCard
                         icon={<HardDrive className="text-accent" size={20} />}
-                        label="Storage"
+                        label={t.storage}
                         value={
                             <ValueWithSub
                                 main={props?.storage_total}
-                                sub={props?.storage_free ? `${props.storage_free} free` : null}
+                                sub={props?.storage_free ? `${props.storage_free} ${t.free}` : null}
+                                unknownLabel={t.unknown}
                             />
                         }
                         loading={loading}
@@ -159,7 +181,7 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
 
                     <InfoCard
                         icon={<MemoryStick className="text-accent" size={20} />}
-                        label="RAM"
+                        label={t.ram}
                         value={props?.ram_total}
                         loading={loading}
                     />
@@ -167,20 +189,21 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
                     {/* Row 3: System */}
                     <InfoCard
                         icon={<Cpu className="text-accent" size={20} />}
-                        label="Chipset"
+                        label={t.chipset}
                         value={props?.cpu}
                         loading={loading}
                     />
 
                     <InfoCard
                         icon={getBatteryIcon()}
-                        label="Battery"
+                        label={t.battery}
                         value={
                             <ValueWithSub
                                 main={props?.battery_level !== null && props?.battery_level !== undefined
                                     ? `${props.battery_level}%`
                                     : null}
-                                sub={props?.is_charging ? 'Charging' : null}
+                                sub={props?.is_charging ? t.charging : null}
+                                unknownLabel={t.unknown}
                             />
                         }
                         loading={loading}
@@ -188,7 +211,7 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
 
                     <InfoCard
                         icon={<Hash className="text-accent" size={20} />}
-                        label="Build"
+                        label={t.build}
                         value={props?.build_number}
                         loading={loading}
                     />
@@ -196,21 +219,21 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
                     {/* Row 4: Security & Connection */}
                     <InfoCard
                         icon={<Shield className="text-accent" size={20} />}
-                        label="Security Patch"
+                        label={t.securityPatch}
                         value={props?.security_patch}
                         loading={loading}
                     />
 
                     <InfoCard
                         icon={<Signal className="text-accent" size={20} />}
-                        label="Connection"
-                        value={device.id.includes(':') ? 'Wireless' : 'USB'}
+                        label={t.connection}
+                        value={device.id.includes(':') ? t.wireless : t.usb}
                     />
 
                     <InfoCard
                         icon={<Wifi className="text-accent" size={20} />}
-                        label="Status"
-                        value={getDeviceStatusText(device.status)}
+                        label={t.status}
+                        value={getStatusTranslation(device.status)}
                     />
                 </motion.div>
             </div>

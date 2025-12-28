@@ -114,6 +114,13 @@ export const listItem: Variants = {
       stiffness: 300,
       damping: 24
     }
+  },
+  exit: {
+    opacity: 0,
+    y: 8,
+    transition: {
+      duration: 0.2
+    }
   }
 };
 

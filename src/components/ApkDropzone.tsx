@@ -58,7 +58,7 @@ export function ApkDropzone({ apkInfo, onApkSelected, onApkClear }: ApkDropzoneP
         try {
             const selected = await open({
                 multiple: false,
-                filters: [{ name: 'APK Files', extensions: ['apk'] }]
+                filters: [{ name: t.apkFiles, extensions: ['apk'] }]
             });
             if (selected && typeof selected === 'string') {
                 onApkSelected(selected);
@@ -114,7 +114,7 @@ export function ApkDropzone({ apkInfo, onApkSelected, onApkClear }: ApkDropzoneP
                         <button
                             className="p-1.5 rounded-md hover:bg-error/10 text-text-muted hover:text-error transition-all"
                             onClick={onApkClear}
-                            title="Remove APK"
+                            title={t.removeApk}
                         >
                             <X size={16} />
                         </button>
@@ -130,7 +130,7 @@ export function ApkDropzone({ apkInfo, onApkSelected, onApkClear }: ApkDropzoneP
                         <span>{t.selectApk}</span>
                     </button>
                 )}
-            </div>
+            </div >
         </>
     );
 }

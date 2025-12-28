@@ -94,7 +94,54 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 ---
 
-### Phase 6 — Advanced Device Integration (Android Agent)
+### Phase 6 — Performance & Smart Caching
+
+**Goal:** Eliminate UI lag and implement persistent device state to handle disconnections gracefully.
+
+**Analysis & Strategy:**
+- **Current Issue:** Application polls `adb devices` every 10s and fully re-renders the list on every change, causing flicker. Device details are re-fetched on every tab switch.
+- **Solution:** Move to a persistent local state model where devices are updated/merged rather than replaced.
+
+**Key Features:**
+- [x] **Persistent Device Store:**
+  - Implement `DeviceContext` with persistence.
+  - Retain disconnected devices as "Offline" with a "Remove" option.
+  - Eliminate redundant polling in `useDevices.ts` (rely on `device-changed` event).
+- [x] **Smart Data Caching (Stale-While-Revalidate):**
+  - Cache heavy data (Device Details, App List, File List) in memory.
+  - Show cached data immediately while fetching updates in background.
+  - Only re-render if data has effectively changed.
+- [x] **Home Screen Optimizations:**
+  - Compact "Reload" button to save space.
+  - Add "Connect via IP" quick action (Popup).
+  - Reduce layout thrashing during device discovery.
+
+
+---
+
+### Phase 7 — Advanced Control & Streaming
+
+**Goal:** Transform mirroring into a professional interactive workspace and implement real-time log streaming.
+
+**Key Features:**
+- [ ] **Mirroring 2.0 (Full Interaction):**
+  - Fix **Enable Touch** reliability (implement control socket in backend).
+  - Implement **Full Gestures**: Drag/Swipe, Long Press, and smooth Scrolling.
+  - **Keyboard Forwarding**: Send keystrokes from desktop directly to device.
+- [ ] **Streaming Logcat:**
+  - Real-time log streaming via Tauri events (eliminate polling latency).
+  - Advanced filtering (Regex) and syntax highlighting.
+  - Export logs to local files.
+- [ ] **Quick Command Menu:**
+  - Add a "Quick Actions" button next to existing **Delete** buttons (Device Card/App Manager).
+  - **IDE-style Suggestions**: Smart autocomplete/suggestions when typing custom commands.
+  - Provides instant access to: Clear Cache, Grant Permissions, UI Toggles, and Reboot commands.
+- [ ] **Popped-out Mirroring:**
+  - Launch mirroring in a dedicated, resizable utility window.
+
+---
+
+### Phase 8 — Advanced Device Integration (Android Agent)
 
 **Goal:** Implement a custom Android Agent (Server) to bypass ADB limitations and unlock advanced features.
 
@@ -109,24 +156,6 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 - [ ] **File System indexing:** Faster file listing and searching than raw `ls` commands.
 - [ ] **Clipboard Sync:** Bi-directional clipboard sharing.
 - [ ] **Input Control:** Lower latency touch/keyboard injection compared to `adb shell input`.
-
-- [ ] To be planned
-
----
-
-### Phase 7 — (Reserved)
-
-**Goal:** TBD
-
-- [ ] To be planned
-
----
-
-### Phase 8 — (Reserved)
-
-**Goal:** TBD
-
-- [ ] To be planned
 
 ---
 

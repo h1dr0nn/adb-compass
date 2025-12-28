@@ -1,9 +1,9 @@
 @import './styles/tokens.css';
 
 /* Import Apple-style design tokens */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss/base";
+@import "tailwindcss/components";
+@import "tailwindcss/utilities";
 
 /* Base layer - global styles */
 @layer base {
@@ -44,8 +44,26 @@
         --color-text-muted: 100 116 139;
     }
 
+    html,
     body {
-        @apply bg-surface-bg text-text-primary font-sans antialiased transition-colors duration-300;
+        @apply bg-surface-bg text-text-primary font-sans antialiased;
+        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+        background-color: rgb(var(--color-surface-bg));
+    }
+
+    /* Apply smooth transition to all themed elements */
+    *,
+    *::before,
+    *::after {
+        transition-property: background-color, border-color, color, fill, stroke;
+        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+        transition-duration: 300ms;
+    }
+
+    /* Disable transitions for performance-heavy or non-themed elements if needed */
+    .no-transition,
+    .no-transition * {
+        transition: none !important;
     }
 }
 

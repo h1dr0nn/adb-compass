@@ -2,11 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Smartphone, Loader2, AlertTriangle, RefreshCw,
-    Info, Trash2, Power, Keyboard, FileInput, Package
+    Info, Trash2, Power, Keyboard, FileInput, Package, Plus
 } from 'lucide-react';
 import { toast } from 'sonner';
-import type { DeviceInfo, ApkInfo } from '../types';
-import { getDeviceStatusText } from '../types';
+import { DeviceInfo, ApkInfo } from '../types';
 import { RequirementChecklist } from './RequirementChecklist';
 import { ActionRequirementsChecklist } from './ActionRequirementsChecklist';
 import { InstallButton } from './InstallButton';
@@ -16,6 +15,7 @@ import { InputTextModal } from './modals/InputTextModal';
 import { UninstallModal } from './modals/UninstallModal';
 import { FileTransferModal } from './modals/FileTransferModal';
 import { useLanguage } from '../contexts/LanguageContext';
+import { useDeviceStatus } from '../hooks/useDeviceStatus';
 import { listContainer, listItem } from '../lib/animations';
 
 interface DeviceListProps {
@@ -25,24 +25,28 @@ interface DeviceListProps {
     apkInfo: ApkInfo | null;
     onRefresh: () => void;
     onDeviceSelect?: (device: DeviceInfo) => void;
+    onRemove?: (deviceId: string) => void;
+    onAddDevice?: () => void;
 }
 
-export function DeviceList({ devices, loading, error, apkInfo, onRefresh, onDeviceSelect }: DeviceListProps) {
+export function DeviceList({ devices, loading, error, apkInfo, onRefresh, onDeviceSelect, onRemove, onAddDevice }: DeviceListProps) {
     const prevDevicesRef = useRef<DeviceInfo[]>([]);
     const { t } = useLanguage();
 
     useEffect(() => {
         const prevIds = new Set(prevDevicesRef.current.map(d => d.id));
-        const currentIds = new Set(devices.map(d => d.id));
+        const currentIds = new Set(devices.filter(d => d.status === 'Device').map(d => d.id));
 
         devices.forEach(device => {
-            if (!prevIds.has(device.id)) {
+            if (device.status === 'Device' && !prevIds.has(device.id)) {
                 toast.success(t.deviceConnected, { description: device.model || device.id });
             }
         });
 
+        // Only notify disconnect if it was previously connected and now it's not in the connected set
         prevDevicesRef.current.forEach(device => {
-            if (!currentIds.has(device.id)) {
+            if (device.status === 'Device' && !currentIds.has(device.id)) {
+                // It might be still in 'devices' but as 'Offline'
                 toast.info(t.deviceDisconnected, { description: device.model || device.id });
             }
         });
@@ -129,29 +133,51 @@ export function DeviceList({ devices, loading, error, apkInfo, onRefresh, onDevi
                 <div className="flex items-center gap-3">
                     <h2 className="text-lg font-semibold text-text-primary">{t.connectedDevices}</h2>
                     <span className="w-6 h-6 rounded-full bg-accent/20 text-accent text-sm font-semibold flex items-center justify-center">
-                        {devices.length}
+                        {devices.filter(d => d.status === 'Device').length}
                     </span>
+                    {/* Show offline count if any */}
+                    {devices.filter(d => d.status === 'Offline').length > 0 && (
+                        <span className="w-6 h-6 rounded-full bg-surface-elevated text-text-muted text-sm font-semibold flex items-center justify-center ml-2" title={t.offlineDevices}>
+                            {devices.filter(d => d.status === 'Offline').length}
+                        </span>
+                    )}
                 </div>
 
-                <button
-                    onClick={onRefresh}
-                    className="p-2 bg-surface-elevated border border-border text-text-secondary hover:text-accent hover:border-accent rounded-lg transition-all"
-                    title="Refresh Devices"
-                    disabled={loading}
-                >
-                    <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-                </button>
+                <div className="flex gap-2">
+                    <button
+                        onClick={onAddDevice}
+                        className="p-2 bg-surface-elevated border border-border text-text-secondary hover:text-accent hover:border-accent rounded-lg transition-all"
+                        title={t.connectViaIp}
+                    >
+                        <Plus size={20} />
+                    </button>
+                    <button
+                        onClick={onRefresh}
+                        className="p-2 bg-surface-elevated border border-border text-text-secondary hover:text-accent hover:border-accent rounded-lg transition-all"
+                        title={t.refreshDevices}
+                        disabled={loading}
+                    >
+                        <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                    </button>
+                </div>
             </motion.div>
 
             <motion.div
                 className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full"
+                layout
                 variants={listContainer}
                 initial="initial"
                 animate="animate"
             >
-                <AnimatePresence mode="popLayout">
+                <AnimatePresence initial={false}>
                     {devices.map((device) => (
-                        <DeviceCard key={device.id} device={device} apkInfo={apkInfo} onSelect={onDeviceSelect} />
+                        <DeviceCard
+                            key={device.id}
+                            device={device}
+                            apkInfo={apkInfo}
+                            onSelect={onDeviceSelect}
+                            onRemove={onRemove}
+                        />
                     ))}
                 </AnimatePresence>
             </motion.div>
@@ -163,14 +189,15 @@ interface DeviceCardProps {
     device: DeviceInfo;
     apkInfo: ApkInfo | null;
     onSelect?: (device: DeviceInfo) => void;
+    onRemove?: (deviceId: string) => void;
 }
 
 type ActionType = 'info' | 'uninstall' | 'reboot' | 'input' | 'file' | null;
 type ChecklistType = 'requirements' | 'actions' | null;
 
-function DeviceCard({ device, apkInfo, onSelect }: DeviceCardProps) {
-    const statusText = getDeviceStatusText(device.status);
+function DeviceCard({ device, apkInfo, onSelect, onRemove }: DeviceCardProps) {
     const { t } = useLanguage();
+    const { getStatusTranslation } = useDeviceStatus();
     const [activeAction, setActiveAction] = useState<ActionType>(null);
     const [expandedChecklist, setExpandedChecklist] = useState<ChecklistType>(null);
 
@@ -178,34 +205,36 @@ function DeviceCard({ device, apkInfo, onSelect }: DeviceCardProps) {
         switch (device.status) {
             case 'Device': return 'text-success bg-success/10';
             case 'Unauthorized': return 'text-warning bg-warning/10';
+            case 'Offline': return 'text-text-muted bg-surface-elevated';
             default: return 'text-error bg-error/10';
         }
     };
 
-    const displayStatus =
-        device.status === 'Device' ? t.ready :
-            device.status === 'Unauthorized' ? t.unauthorized :
-                device.status === 'Offline' ? t.offline : statusText;
+    const displayStatus = getStatusTranslation(device.status);
 
     // Action Button Styles
     const actionBtnBase = "flex items-center justify-center gap-2 px-3 py-2 rounded-lg border transition-all duration-200 text-xs font-medium h-9";
     const actionBtnActive = "bg-surface-elevated border-border text-text-primary hover:border-accent hover:text-accent hover:shadow-sm";
     const actionBtnDisabled = "bg-surface-elevated/50 border-transparent text-text-muted cursor-not-allowed opacity-50";
 
+    const isOffline = device.status === 'Offline';
+
     return (
         <motion.div
-            className="bg-surface-card border border-border rounded-2xl p-5 
-                       hover:border-accent hover:shadow-xl
-                       transition-all duration-300"
+            className={`bg-surface-card border border-border rounded-2xl p-5 
+                       hover:border-accent ${isOffline ? 'opacity-70 grayscale-[0.5]' : ''}`}
             layout
+            initial="initial"
+            animate="animate"
+            exit="exit"
             variants={listItem}
             whileHover={{ y: -4, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}
             transition={{ duration: 0.2, layout: { duration: 0.3 } }}
         >
             {/* Header: Icon + Info - Clickable to open detail view */}
             <div
-                className="flex items-center gap-4 mb-4 cursor-pointer group"
-                onClick={() => onSelect?.(device)}
+                className="flex items-center gap-4 mb-4 cursor-pointer group relative"
+                onClick={() => !isOffline && onSelect?.(device)}
             >
                 <div className="w-12 h-12 rounded-xl bg-surface-elevated flex items-center justify-center text-accent group-hover:bg-accent/10 transition-colors">
                     <Smartphone size={28} />
@@ -216,9 +245,23 @@ function DeviceCard({ device, apkInfo, onSelect }: DeviceCardProps) {
                     </h3>
                     <p className="text-xs text-text-muted font-mono">{device.id}</p>
                 </div>
-                <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${getStatusColor()}`}>
-                    <span className="w-2 h-2 rounded-full bg-current"></span>
-                    <span>{displayStatus}</span>
+
+                {/* Status or Remove Button */}
+                <div className="flex items-center gap-2">
+                    {isOffline && onRemove ? (
+                        <button
+                            onClick={(e) => { e.stopPropagation(); onRemove(device.id); }}
+                            className="p-2 text-text-muted hover:text-error hover:bg-error/10 rounded-lg transition-colors"
+                            title={t.removeDevice}
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    ) : null}
+
+                    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${getStatusColor()}`}>
+                        <span className="w-2 h-2 rounded-full bg-current"></span>
+                        <span>{displayStatus}</span>
+                    </div>
                 </div>
             </div>
 
@@ -227,7 +270,7 @@ function DeviceCard({ device, apkInfo, onSelect }: DeviceCardProps) {
                 <div>
                     <div className="flex items-center gap-2 px-3 py-2 bg-warning/10 text-warning rounded-lg text-sm">
                         <AlertTriangle size={16} />
-                        <span>Please accept USB debugging</span>
+                        <span>{t.acceptUsbDebug}</span>
                     </div>
                 </div>
             )}
@@ -302,7 +345,7 @@ function DeviceCard({ device, apkInfo, onSelect }: DeviceCardProps) {
                 </button>
 
                 {/* 6. Install (Special logic) */}
-                {apkInfo ? (
+                {apkInfo && !isOffline ? (
                     <InstallButton
                         deviceId={device.id}
                         apkPath={apkInfo.path}
@@ -316,7 +359,7 @@ function DeviceCard({ device, apkInfo, onSelect }: DeviceCardProps) {
                                 `}
                             >
                                 {loading ? <Loader2 size={16} className="animate-spin" /> : <Package size={16} />}
-                                <span>{loading ? 'Installing' : 'Install'}</span>
+                                <span>{loading ? t.btnInstalling : t.btnInstall}</span>
                             </button>
                         )}
                     />
@@ -325,10 +368,10 @@ function DeviceCard({ device, apkInfo, onSelect }: DeviceCardProps) {
                     <button
                         disabled
                         className={`${actionBtnBase} ${actionBtnDisabled}`}
-                        title="Select an APK to enable"
+                        title={isOffline ? t.deviceOffline : t.selectApkToEnable}
                     >
                         <Package size={16} />
-                        <span>Install</span>
+                        <span>{t.btnInstall}</span>
                     </button>
                 )}
             </div>
