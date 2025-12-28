@@ -3,7 +3,9 @@ import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import {
     Camera, Video, VideoOff, RefreshCw,
-    FolderOpen, Image, ExternalLink, Zap, Settings
+    FolderOpen, Image, ExternalLink, Zap, Settings,
+    Home, Square, Power, Volume2, Volume1, VolumeX,
+    Menu, Sun, Moon, Bell, Play, Triangle
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
@@ -33,11 +35,12 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     const [isCapturing, setIsCapturing] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const [recordingTime, setRecordingTime] = useState(0);
-    const [lastScreenshot, setLastScreenshot] = useState<string | null>(null);
+
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [isLoadingPreview, setIsLoadingPreview] = useState(false);
     const [aspectRatio, setAspectRatio] = useState<number>(9 / 19.5); // Default modern phone ratio
     const [isLive, setIsLive] = useState(false);
+    const [showFps, setShowFps] = useState(true);
     const [allowTouch, setAllowTouch] = useState(false);
 
     // High-performance mode state
@@ -105,7 +108,6 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             });
 
             if (result.success && result.path) {
-                setLastScreenshot(result.path);
                 toast.success('Screenshot saved', {
                     description: result.path
                 });
@@ -184,8 +186,6 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             setIsLoadingPreview(false);
         }
     };
-
-
 
     // Live loop
     useEffect(() => {
@@ -311,6 +311,19 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         }
     }, [device.id, allowTouch, screenWidth, screenHeight]);
 
+    // Handle Quick Actions (Key Events)
+    const handleKeyEvent = async (keycode: number) => {
+        try {
+            await invoke('execute_shell', {
+                deviceId: device.id,
+                command: `input keyevent ${keycode}`
+            });
+        } catch (error) {
+            console.error('Key event failed:', error);
+            toast.error('Failed to send key event');
+        }
+    };
+
     return (
         <div className="h-full flex gap-4">
             {/* Controls Panel - Expands */}
@@ -329,18 +342,18 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                             </div>
                         )}
                     </div>
-                    <div className="flex gap-3">
+                    <div className="flex flex-wrap gap-3">
                         <button
                             onClick={handleScreenshot}
                             disabled={isCapturing}
-                            className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-accent/10 hover:bg-accent/20 border border-accent/30 text-text-primary rounded-lg transition-all disabled:opacity-50"
+                            className="flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 bg-accent/10 hover:bg-accent/20 border border-accent/30 text-text-primary rounded-lg transition-all disabled:opacity-50"
                         >
                             {isCapturing ? <RefreshCw size={16} className="animate-spin" /> : <Camera size={16} />}
                             <span className="text-sm font-medium">Screenshot</span>
                         </button>
                         <button
                             onClick={handleRecordingToggle}
-                            className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all ${isRecording
+                            className={`flex-1 min-w-[140px] flex items-center justify-center gap-2 py-2.5 rounded-lg transition-all ${isRecording
                                 ? 'bg-error/20 text-error border border-error/30'
                                 : 'bg-surface-card hover:bg-surface-hover border border-border'
                                 }`}
@@ -387,6 +400,19 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                                     />
                                 </button>
                             </div>
+                            <div className="flex items-center justify-between">
+                                <span className="text-sm text-text-secondary">Show FPS</span>
+                                <button
+                                    onClick={() => setShowFps(!showFps)}
+                                    className={`w-10 h-6 rounded-full transition-colors flex items-center p-1 ${showFps ? 'bg-accent' : 'bg-surface-card border border-border'
+                                        }`}
+                                >
+                                    <motion.div
+                                        animate={{ x: showFps ? 16 : 0 }}
+                                        className="w-4 h-4 rounded-full bg-white shadow-sm"
+                                    />
+                                </button>
+                            </div>
                         </div>
                     </motion.div>
 
@@ -406,16 +432,71 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                             Open Folder
                         </button>
                     </motion.div>
+
                 </div>
+
+                {/* Quick Actions - Full Width Row */}
+                <motion.div variants={listItem} className="bg-surface-elevated border border-border rounded-xl p-4">
+                    <h4 className="text-sm font-semibold text-text-primary mb-4 flex items-center gap-2">
+                        <Zap size={16} className="text-accent" />
+                        Quick Actions
+                    </h4>
+                    <div className="grid grid-cols-4 gap-2">
+                        {/* Row 1: Navigation */}
+                        <button onClick={() => handleKeyEvent(4)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Back">
+                            <Triangle size={18} className="text-text-secondary -rotate-90" />
+                        </button>
+                        <button onClick={() => handleKeyEvent(3)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Home">
+                            <Home size={18} className="text-text-secondary" />
+                        </button>
+                        <button onClick={() => handleKeyEvent(187)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Recents">
+                            <Square size={18} className="text-text-secondary" />
+                        </button>
+                        <button onClick={() => handleKeyEvent(82)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Menu">
+                            <Menu size={18} className="text-text-secondary" />
+                        </button>
+
+                        {/* Row 2: Volume & Power */}
+                        <button onClick={() => handleKeyEvent(25)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Volume Down">
+                            <Volume1 size={18} className="text-text-secondary" />
+                        </button>
+                        <button onClick={() => handleKeyEvent(24)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Volume Up">
+                            <Volume2 size={18} className="text-text-secondary" />
+                        </button>
+                        <button onClick={() => handleKeyEvent(164)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Mute">
+                            <VolumeX size={18} className="text-text-secondary" />
+                        </button>
+                        <button onClick={() => handleKeyEvent(26)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Power">
+                            <Power size={18} className="text-error" />
+                        </button>
+
+                        {/* Row 3: System & Media */}
+                        <button onClick={() => handleKeyEvent(220)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Brightness Down">
+                            <Moon size={18} className="text-text-secondary" />
+                        </button>
+                        <button onClick={() => handleKeyEvent(221)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Brightness Up">
+                            <Sun size={18} className="text-text-secondary" />
+                        </button>
+                        <button onClick={() => handleKeyEvent(83)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Notifications">
+                            <Bell size={18} className="text-text-secondary" />
+                        </button>
+                        <button onClick={() => handleKeyEvent(85)} className="p-2 bg-surface-card hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title="Play/Pause">
+                            <Play size={18} className="text-success" />
+                        </button>
+                    </div>
+                </motion.div>
             </div>
 
             {/* Phone Preview - Fixed Width */}
             <div className="w-96 h-full shrink-0 flex items-center justify-center relative bg-surface-elevated/50 rounded-xl border border-border p-4">
-                {/* Status Badge */}
+                {/* Status Badge & Controls */}
                 {streamMode === 'high-perf' && (
-                    <div className="absolute top-2 right-2 z-10 flex items-center gap-1.5 px-2 py-1 bg-success/20 text-success rounded-lg text-xs font-medium">
-                        <Zap size={12} />
-                        <span>Live</span>
+                    <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
+
+                        <div className="flex items-center gap-1.5 px-2 py-1 bg-success/20 backdrop-blur text-success rounded-lg text-xs font-medium border border-success/20">
+                            <Zap size={12} />
+                            <span>Live</span>
+                        </div>
                     </div>
                 )}
                 {streamMode === 'standard' && (
@@ -432,18 +513,21 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 <div
                     className={`bg-black border-4 border-surface-elevated rounded-[1.5rem] overflow-hidden shadow-2xl relative ${allowTouch ? 'cursor-pointer' : ''
                         }`}
-                    style={{ height: 'calc(100% - 2rem)', width: 'auto', aspectRatio: aspectRatio }}
+                    style={{ height: '100%', maxHeight: 'calc(100% - 2rem)', maxWidth: '100%', aspectRatio: aspectRatio }}
                     onClick={streamMode === 'standard' ? handleTouch : undefined}
                 >
                     {streamMode === 'high-perf' && scrcpyStatus?.port ? (
                         <StreamPlayer
                             deviceId={device.id}
-                            port={scrcpyStatus.port}
                             width={screenWidth}
                             height={screenHeight}
                             allowTouch={allowTouch}
+                            onVideoDimensions={(w, h) => {
+                                setAspectRatio(w / h);
+                            }}
                             onTouch={handleScrcpyTouch}
                             onScroll={handleScrcpyScroll}
+                            showFps={showFps}
                         />
                     ) : previewImage ? (
                         <img src={previewImage} alt="Preview" className="w-full h-full" />
@@ -468,4 +552,3 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         </div>
     );
 }
-

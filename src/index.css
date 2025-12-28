@@ -1,9 +1,9 @@
+@import './styles/tokens.css';
+
+/* Import Apple-style design tokens */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Import Apple-style design tokens */
-@import './styles/tokens.css';
 
 /* Base layer - global styles */
 @layer base {

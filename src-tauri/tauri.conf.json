@@ -15,7 +15,7 @@
         "title": "ADB Compass",
         "width": 1000,
         "height": 700,
-        "minWidth": 800,
+        "minWidth": 960,
         "minHeight": 600,
         "center": true,
         "decorations": true,

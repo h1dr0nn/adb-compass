@@ -4,11 +4,9 @@
 use crate::adb::AdbExecutor;
 use crate::command_utils::hidden_command;
 use crate::error::AppError;
-use image::{ImageBuffer, Rgb};
-use openh264::decoder::Decoder;
-use openh264::formats::YUVSource;
+use base64;
 use serde::Serialize;
-use std::io::{Cursor, Read};
+use std::io::Read;
 use std::net::TcpStream;
 use std::process::{Child, Stdio};
 use std::sync::{Arc, Mutex};
@@ -115,7 +113,7 @@ pub fn push_scrcpy_server(device_id: &str, app_handle: &AppHandle) -> Result<(),
 
     let resource_path = possible_paths.into_iter().flatten().find(|p| {
         let exists = p.exists();
-        println!("[scrcpy] Checking path {:?}: exists={}", p, exists);
+
         exists
     });
 
@@ -128,8 +126,6 @@ pub fn push_scrcpy_server(device_id: &str, app_handle: &AppHandle) -> Result<(),
             ));
         }
     };
-
-    println!("[scrcpy] Using server jar: {:?}", resource_path);
 
     let output = hidden_command(&adb_path)
         .args([
@@ -150,7 +146,6 @@ pub fn push_scrcpy_server(device_id: &str, app_handle: &AppHandle) -> Result<(),
         ));
     }
 
-    println!("[scrcpy] Server pushed successfully");
     Ok(())
 }
 
@@ -250,13 +245,10 @@ pub fn start_server(
 
         match TcpStream::connect(format!("127.0.0.1:{}", video_port)) {
             Ok(mut socket) => {
-                println!("[scrcpy] Connected on attempt {}", attempt);
-
                 // Read dummy byte (required for tunnel_forward=true)
                 let mut dummy = [0u8; 1];
                 match socket.read_exact(&mut dummy) {
                     Ok(_) => {
-                        println!("[scrcpy] Received dummy byte");
                         video_socket = Some(socket);
                         break;
                     }
@@ -310,7 +302,7 @@ pub fn start_server(
     })
 }
 
-/// Decode H.264 stream and emit JPEG frames
+/// Stream raw H.264 NAL units to frontend
 fn decode_and_stream(
     device_id: String,
     mut socket: TcpStream,
@@ -323,8 +315,6 @@ fn decode_and_stream(
         println!("[scrcpy] Failed to read device name: {}", e);
         return;
     }
-    let name = String::from_utf8_lossy(&device_name);
-    println!("[scrcpy] Device: {}", name.trim_end_matches('\0'));
 
     // Read video header (12 bytes)
     let mut header = [0u8; 12];
@@ -332,17 +322,9 @@ fn decode_and_stream(
         println!("[scrcpy] Failed to read video header: {}", e);
         return;
     }
-    println!("[scrcpy] Video header received");
 
-    // Initialize H.264 decoder
-    let mut decoder = match Decoder::new() {
-        Ok(d) => d,
-        Err(e) => {
-            println!("[scrcpy] Failed to create decoder: {:?}", e);
-            return;
-        }
-    };
-
+    // We don't need OpenH264 anymore!
+    // Just a buffer to hold incoming stream
     let mut buffer = vec![0u8; 65536];
     let mut nal_buffer: Vec<u8> = Vec::with_capacity(1024 * 1024);
 
@@ -357,26 +339,30 @@ fn decode_and_stream(
         // Read from socket
         match socket.read(&mut buffer) {
             Ok(n) if n > 0 => {
-                if nal_buffer.is_empty() {
-                    // println!("[scrcpy] First data: {} bytes", n); // Verbose
-                }
                 nal_buffer.extend_from_slice(&buffer[..n]);
 
-                // Try to decode accumulated NAL units
-                while let Some(frame) = try_decode_frame(&mut decoder, &mut nal_buffer) {
-                    // Convert YUV to JPEG and emit
-                    if let Some(jpeg_data) = yuv_to_jpeg(&frame) {
-                        let base64_data = base64::Engine::encode(
-                            &base64::engine::general_purpose::STANDARD,
-                            &jpeg_data,
-                        );
-                        let _ =
-                            app_handle.emit(&format!("scrcpy-frame-{}", device_id), base64_data);
+                // Extract and emit all complete NAL units
+                while let Some(nal_data) = extract_next_nal(&mut nal_buffer) {
+                    // Encode to Base64 (raw H.264 with start codes)
+                    let base64_data = base64::Engine::encode(
+                        &base64::engine::general_purpose::STANDARD,
+                        &nal_data,
+                    );
+
+                    // Emit 'scrcpy-h264-frame-{device_id}'
+                    // Sanitize device_id for Tauri event name requirements (alphanumeric, -, /, :, _)
+                    let sanitized_id = device_id.replace('.', "_").replace(':', "_");
+                    if let Err(e) =
+                        app_handle.emit(&format!("scrcpy-frame-{}", sanitized_id), base64_data)
+                    {
+                        println!("[scrcpy] Emit error: {}", e);
                     }
                 }
             }
             Ok(_) => {
-                thread::sleep(Duration::from_millis(1));
+                // Connection closed (0 bytes)
+
+                break;
             }
             Err(e) => {
                 if e.kind() != std::io::ErrorKind::WouldBlock
@@ -388,117 +374,63 @@ fn decode_and_stream(
             }
         }
     }
-
-    println!("[scrcpy] Streaming stopped for {}", device_id);
 }
 
-/// Try to decode a frame from NAL buffer
-fn try_decode_frame(decoder: &mut Decoder, nal_buffer: &mut Vec<u8>) -> Option<DecodedFrame> {
-    // Find NAL unit boundaries (00 00 00 01 or 00 00 01)
-    let mut start = 0;
-    let mut end = 0;
+/// Extract next NAL unit from buffer and prepend annex-b start code
+fn extract_next_nal(nal_buffer: &mut Vec<u8>) -> Option<Vec<u8>> {
+    // NAL start codes are 00 00 00 01 or 00 00 01
 
-    // Find first start code
-    for i in 0..nal_buffer.len().saturating_sub(4) {
-        if nal_buffer[i] == 0 && nal_buffer[i + 1] == 0 {
-            if nal_buffer[i + 2] == 0 && nal_buffer[i + 3] == 1 {
-                start = i;
-                break;
-            } else if nal_buffer[i + 2] == 1 {
-                start = i;
-                break;
-            }
-        }
-    }
-
-    // Find next start code
-    for i in (start + 3)..nal_buffer.len().saturating_sub(4) {
-        if nal_buffer[i] == 0 && nal_buffer[i + 1] == 0 {
-            if nal_buffer[i + 2] == 0 && nal_buffer[i + 3] == 1 {
-                end = i;
-                break;
-            } else if nal_buffer[i + 2] == 1 {
-                end = i;
-                break;
-            }
-        }
-    }
-
-    if end <= start {
-        return None;
-    }
-
-    // Extract NAL unit
-    let nal_unit: Vec<u8> = nal_buffer[start..end].to_vec();
-    nal_buffer.drain(..end);
-
-    // Decode
-    match decoder.decode(&nal_unit) {
-        Ok(Some(yuv)) => {
-            let (width, height) = yuv.dimensions();
-            let y_data = yuv.y();
-            let u_data = yuv.u();
-            let v_data = yuv.v();
-
-            // Calculate strides based on actual data length
-            let y_stride = y_data.len() / height;
-            let uv_stride = u_data.len() / (height / 2);
-
-            let mut rgb_data = vec![0u8; width * height * 3];
-
-            // YUV420 to RGB conversion
-            for j in 0..height {
-                for i in 0..width {
-                    let y_idx = j * y_stride + i;
-                    let uv_idx = (j / 2) * uv_stride + (i / 2);
-
-                    if y_idx < y_data.len() && uv_idx < u_data.len() && uv_idx < v_data.len() {
-                        let y = y_data[y_idx] as f32;
-                        let u = u_data[uv_idx] as f32 - 128.0;
-                        let v = v_data[uv_idx] as f32 - 128.0;
-
-                        let r = (y + 1.402 * v).clamp(0.0, 255.0) as u8;
-                        let g = (y - 0.344 * u - 0.714 * v).clamp(0.0, 255.0) as u8;
-                        let b = (y + 1.772 * u).clamp(0.0, 255.0) as u8;
-
-                        let rgb_idx = (j * width + i) * 3;
-                        if rgb_idx + 2 < rgb_data.len() {
-                            rgb_data[rgb_idx] = r;
-                            rgb_data[rgb_idx + 1] = g;
-                            rgb_data[rgb_idx + 2] = b;
-                        }
-                    }
+    // Helper to find start code sequence
+    let find_start = |data: &[u8]| -> Option<usize> {
+        for i in 0..data.len().saturating_sub(3) {
+            if data[i] == 0 && data[i + 1] == 0 {
+                if data[i + 2] == 1 {
+                    return Some(i); // 00 00 01
+                }
+                if data.len() > i + 3 && data[i + 2] == 0 && data[i + 3] == 1 {
+                    return Some(i); // 00 00 00 01
                 }
             }
-
-            Some(DecodedFrame {
-                width: width as u32,
-                height: height as u32,
-                rgb_data,
-            })
         }
-        _ => None,
+        None
+    };
+
+    let start_idx = match find_start(nal_buffer) {
+        Some(idx) => idx,
+        None => return None, // No start code yet
+    };
+
+    // Before the start code is garbage or previous data?
+    // Usually we drain up to start code.
+    if start_idx > 0 {
+        nal_buffer.drain(..start_idx);
     }
+
+    // Now nal_buffer starts with 00 ...
+    // We need to find the NEXT start code to define the END of this NAL
+    // Skip the current start code prefix (3 or 4 bytes)
+    let prefix_len = if nal_buffer.len() > 3 && nal_buffer[2] == 0 && nal_buffer[3] == 1 {
+        4
+    } else {
+        3
+    };
+
+    // Search for next start code after current prefix
+    let end_idx = match find_start(&nal_buffer[prefix_len..]) {
+        Some(offset) => prefix_len + offset,
+        None => return None, // Incomplete NAL
+    };
+
+    // Extract complete NAL (including start code)
+    let nal_unit = nal_buffer[..end_idx].to_vec();
+
+    // Remove from buffer
+    nal_buffer.drain(..end_idx);
+
+    Some(nal_unit)
 }
 
-struct DecodedFrame {
-    width: u32,
-    height: u32,
-    rgb_data: Vec<u8>,
-}
-
-/// Convert RGB frame to JPEG
-fn yuv_to_jpeg(frame: &DecodedFrame) -> Option<Vec<u8>> {
-    let img: ImageBuffer<Rgb<u8>, Vec<u8>> =
-        ImageBuffer::from_raw(frame.width, frame.height, frame.rgb_data.clone())?;
-
-    let mut jpeg_data = Vec::new();
-    let mut cursor = Cursor::new(&mut jpeg_data);
-
-    img.write_to(&mut cursor, image::ImageFormat::Jpeg).ok()?;
-
-    Some(jpeg_data)
-}
+// Removing unused functions try_decode_frame and yuv_to_jpeg
 
 /// Stop scrcpy server
 pub fn stop_server(device_id: &str) -> Result<(), AppError> {
