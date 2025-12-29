@@ -37,12 +37,6 @@ pub fn start_device_tracker(app: AppHandle) {
     thread::spawn(move || {
         run_tracker(app_handle, running_clone, last_devices_clone);
     });
-
-    // Thread 2: Heartbeat/Fallback poller
-    // This ensures that status changes (like Authorization) are picked up even if track-devices is silent
-    let running_heartbeat = last_devices.clone(); // re-use but we need the bool
-    let running_flag = Arc::new(AtomicBool::new(true)); // We'll just use the app's running flag
-                                                        // Wait, I should use the SAME running flag.
 }
 
 /// State for the device tracker
