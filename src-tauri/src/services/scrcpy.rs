@@ -84,45 +84,39 @@ pub fn push_scrcpy_server(device_id: &str, app_handle: &AppHandle) -> Result<(),
 
     // Try multiple paths to find scrcpy-server.jar
     let possible_paths = [
-        // Production: resource dir
+        // Production: resource dir (standard Tauri location)
+        app_handle
+            .path()
+            .resource_dir()
+            .ok()
+            .map(|p| p.join("resources").join("scrcpy-server.jar")),
         app_handle
             .path()
             .resource_dir()
             .ok()
             .map(|p| p.join("scrcpy-server.jar")),
-        // Dev: relative to exe
-        std::env::current_exe()
-            .ok()
-            .and_then(|p| p.parent().map(|p| p.join("scrcpy-server.jar"))),
         // Dev: src-tauri/resources
         std::env::current_exe().ok().and_then(|p| {
-            p.parent().map(|p| {
-                p.join("..")
-                    .join("..")
-                    .join("..")
-                    .join("resources")
-                    .join("scrcpy-server.jar")
-            })
+            // target/debug/tauri-app.exe -> target/debug -> target -> src-tauri -> resources
+            p.parent()?.parent()?.parent()?.join("src-tauri").join("resources").join("scrcpy-server.jar").into()
         }),
-        // Workspace: relative
+        // Dev fallback: parent of exe/resources (for different build layouts)
+        std::env::current_exe().ok().and_then(|p| {
+            p.parent()?.join("resources").join("scrcpy-server.jar").into()
+        }),
+        // Workspace root
+        Some(std::path::PathBuf::from("src-tauri/resources/scrcpy-server.jar")),
         Some(std::path::PathBuf::from("resources/scrcpy-server.jar")),
-        Some(std::path::PathBuf::from(
-            "src-tauri/resources/scrcpy-server.jar",
-        )),
     ];
 
-    let resource_path = possible_paths.into_iter().flatten().find(|p| {
-        let exists = p.exists();
-
-        exists
-    });
+    let resource_path = possible_paths.into_iter().flatten().find(|p| p.exists());
 
     let resource_path = match resource_path {
         Some(p) => p,
         None => {
             return Err(AppError::new(
                 "SERVER_NOT_FOUND",
-                "scrcpy-server.jar not found in any location",
+                &format!("scrcpy-server.jar not found. Please ensure it exists in src-tauri/resources/"),
             ));
         }
     };

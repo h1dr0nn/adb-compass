@@ -138,35 +138,40 @@ impl AdbExecutor {
 
     /// Find bundled ADB in app resources
     fn find_bundled_adb() -> Option<PathBuf> {
-        // Get the executable directory
         let exe_path = std::env::current_exe().ok()?;
         let exe_dir = exe_path.parent()?;
+        let exe_name = Self::adb_executable_name();
 
-        // In development, check src-tauri/binaries
-        let dev_path = exe_dir
-            .parent()? // target
-            .parent()? // debug or release
-            .parent()? // target
-            .join("binaries")
-            .join(Self::adb_executable_name());
+        let possible_paths = [
+            // Dev: target/debug/ -> target/ -> src-tauri/ -> binaries/
+            exe_dir.parent()
+                .and_then(|p| p.parent())
+                .map(|p| p.join("binaries").join(exe_name)),
+            
+            // Dev alternate: src-tauri/binaries/
+            exe_dir.parent()
+                .and_then(|p| p.parent())
+                .and_then(|p| p.parent())
+                .map(|p| p.join("src-tauri").join("binaries").join(exe_name)),
 
-        if dev_path.exists() {
-            return Some(dev_path);
-        }
+            // Production: standard resource dir
+            exe_dir.join("resources").join("binaries").join(exe_name).into(),
+            
+            // Production: alternate layout
+            exe_dir.join("binaries").join(exe_name).into(),
+            
+            // Production: flat layout
+            exe_dir.join(exe_name).into(),
+            
+            // Production: resources/
+            exe_dir.join("resources").join(exe_name).into(),
 
-        // In production, resources are next to executable
-        let prod_path = exe_dir.join(Self::adb_executable_name());
-        if prod_path.exists() {
-            return Some(prod_path);
-        }
+            // Relative to CWD (fallback)
+            Some(PathBuf::from("binaries").join(exe_name)),
+            Some(PathBuf::from("src-tauri").join("binaries").join(exe_name)),
+        ];
 
-        // Check _up_/resources/ (some Tauri bundle layouts)
-        let resources_path = exe_dir.join("resources").join(Self::adb_executable_name());
-        if resources_path.exists() {
-            return Some(resources_path);
-        }
-
-        None
+        possible_paths.into_iter().flatten().find(|p| p.exists())
     }
 
     /// Get platform-specific ADB executable name

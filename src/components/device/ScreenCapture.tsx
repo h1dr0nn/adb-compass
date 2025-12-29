@@ -260,7 +260,8 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 toast.success(t.highPerfModeEnabled, { description: `Streaming on port ${status.port}` });
             } catch (error) {
                 console.error('Scrcpy start error:', error);
-                toast.error(t.failedToStartHighPerf, { description: String(error) });
+                const errorMessage = (error as any)?.message || String(error);
+                toast.error(t.failedToStartHighPerf, { description: errorMessage });
             } finally {
                 setIsStartingScrcpy(false);
             }
