@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
-import { motion } from 'framer-motion';
-import { ArrowLeft, Terminal, Loader2, Trash2, Smartphone } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowLeft, Terminal, Loader2, Trash2, Smartphone, Command, ChevronRight, Sparkles } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { useDevices } from '../hooks/useDevices';
 import { Select } from './ui/Select';
@@ -16,6 +16,21 @@ interface CommandHistory {
     isError?: boolean;
 }
 
+const COMMON_COMMANDS = [
+    { label: 'List Packages', cmd: 'pm list packages' },
+    { label: 'Battery Stats', cmd: 'dumpsys battery' },
+    { label: 'Memory Info', cmd: 'cat /proc/meminfo' },
+    { label: 'Screen Cap', cmd: 'screencap -p /sdcard/screen.png' },
+    { label: 'Process List', cmd: 'top -n 1' },
+    { label: 'IP Address', cmd: 'ip addr show wlan0' },
+    { label: 'Clear Logcat', cmd: 'logcat -c' },
+    { label: 'Install APK', cmd: 'install ' },
+    { label: 'Uninstall Package', cmd: 'uninstall ' },
+    { label: 'Device Properties', cmd: 'getprop' },
+    { label: 'Activity Stack', cmd: 'dumpsys activity activities' },
+    { label: 'CPU Info', cmd: 'cat /proc/cpuinfo' },
+];
+
 export function TerminalView({ onBack }: TerminalViewProps) {
     const { devices, loading: devicesLoading } = useDevices();
     const [command, setCommand] = useState('');
@@ -23,8 +38,25 @@ export function TerminalView({ onBack }: TerminalViewProps) {
     const [loading, setLoading] = useState(false);
     const [selectedDevice, setSelectedDevice] = useState<string>('');
     const [historyIndex, setHistoryIndex] = useState(-1);
+    
+    // Suggestion states
+    const [suggestions, setSuggestions] = useState<typeof COMMON_COMMANDS>([]);
+    const [suggestionIndex, setSuggestionIndex] = useState(0);
+    const [showSuggestions, setShowSuggestions] = useState(false);
+
     const inputRef = useRef<HTMLInputElement>(null);
     const outputRef = useRef<HTMLDivElement>(null);
+    const suggestionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+
+    // Auto-scroll logic for suggestions
+    useEffect(() => {
+        if (showSuggestions && suggestionRefs.current[suggestionIndex]) {
+            suggestionRefs.current[suggestionIndex]?.scrollIntoView({
+                block: 'nearest',
+                behavior: 'smooth'
+            });
+        }
+    }, [suggestionIndex, showSuggestions]);
 
     // Set initial device if not set
     useEffect(() => {
@@ -38,13 +70,14 @@ export function TerminalView({ onBack }: TerminalViewProps) {
         outputRef.current?.scrollTo({ top: outputRef.current.scrollHeight, behavior: 'smooth' });
     }, [history]);
 
-    const executeCommand = async () => {
-        if (!command.trim() || !selectedDevice) return;
+    const executeCommand = async (cmdToRun?: string) => {
+        const cmd = (cmdToRun || command).trim();
+        if (!cmd || !selectedDevice) return;
 
         setLoading(true);
-        const cmd = command.trim();
         setCommand('');
         setHistoryIndex(-1);
+        setShowSuggestions(false);
 
         try {
             const output = await invoke<string>('execute_shell', {
@@ -60,7 +93,44 @@ export function TerminalView({ onBack }: TerminalViewProps) {
         }
     };
 
+    // Filter suggestions
+    useEffect(() => {
+        if (command.trim() && !loading) {
+            const filtered = COMMON_COMMANDS.filter(c =>
+                c.cmd.toLowerCase().includes(command.toLowerCase()) ||
+                c.label.toLowerCase().includes(command.toLowerCase())
+            );
+            setSuggestions(filtered);
+            setSuggestionIndex(0);
+            setShowSuggestions(filtered.length > 0);
+        } else {
+            setSuggestions([]);
+            setShowSuggestions(false);
+        }
+    }, [command, loading]);
+
     const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+        if (showSuggestions && suggestions.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSuggestionIndex(prev => (prev + 1) % suggestions.length);
+                return;
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSuggestionIndex(prev => (prev - 1 + suggestions.length) % suggestions.length);
+                return;
+            } else if (e.key === 'Enter' || e.key === 'Tab') {
+                e.preventDefault();
+                const selected = suggestions[suggestionIndex].cmd;
+                setCommand(selected);
+                setShowSuggestions(false);
+                return;
+            } else if (e.key === 'Escape') {
+                setShowSuggestions(false);
+                return;
+            }
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             executeCommand();
@@ -178,9 +248,46 @@ export function TerminalView({ onBack }: TerminalViewProps) {
             </div>
 
             {/* Input Area */}
-            <div className="mt-4">
-                <div className="flex items-center gap-2 bg-surface-card border border-border rounded-xl px-4 py-3">
-                    <span className="text-accent font-mono text-lg">$</span>
+            <div className="mt-4 relative">
+                {/* Suggestions Overlay */}
+                <AnimatePresence>
+                    {showSuggestions && suggestions.length > 0 && (
+                        <motion.div
+                            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                            animate={{ opacity: 1, y: 0, scale: 1 }}
+                            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                            className="absolute bottom-full left-0 mb-2 w-[450px] bg-surface-card border border-border rounded-2xl shadow-2xl z-[100] overflow-hidden"
+                        >
+                            <div className="p-2 border-b border-border bg-surface-elevated/50 text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
+                                <Sparkles size={10} className="text-accent" />
+                                Smart Suggestions
+                            </div>
+                            <div className="p-1 max-h-48 overflow-y-auto custom-scrollbar">
+                                {suggestions.map((s, i) => (
+                                    <button
+                                        key={i}
+                                        ref={el => { suggestionRefs.current[i] = el; }}
+                                        onClick={() => {
+                                            setCommand(s.cmd);
+                                            setShowSuggestions(false);
+                                            inputRef.current?.focus();
+                                        }}
+                                        className={`w-full flex items-center justify-between p-2 rounded-xl transition-all group ${i === suggestionIndex ? 'bg-accent text-white' : 'hover:bg-surface-elevated text-text-secondary hover:text-text-primary'}`}
+                                    >
+                                        <div className="flex flex-col items-start px-1">
+                                            <span className="text-[10px] opacity-70 font-medium mb-0.5">{s.label}</span>
+                                            <span className="text-xs font-mono">{s.cmd}</span>
+                                        </div>
+                                        <ChevronRight size={14} className={`opacity-0 group-hover:opacity-100 transition-all ${i === suggestionIndex ? 'text-white' : 'text-text-muted'}`} />
+                                    </button>
+                                ))}
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
+                <div className="flex items-center gap-3 bg-surface-card border border-border rounded-xl px-4 py-3 shadow-inner group focus-within:border-accent transition-all">
+                    <Terminal size={18} className="text-accent group-focus-within:scale-110 transition-transform" />
                     <input
                         ref={inputRef}
                         type="text"
@@ -194,8 +301,9 @@ export function TerminalView({ onBack }: TerminalViewProps) {
                     />
                     {loading && <Loader2 size={16} className="animate-spin text-accent" />}
                 </div>
-                <p className="text-xs text-text-muted mt-2 ml-1">
-                    Press Enter to execute • ↑↓ for command history
+                <p className="text-xs text-text-muted mt-2 ml-1 flex items-center gap-3">
+                    <span className="flex items-center gap-1"><Command size={10} /> Enter to execute</span>
+                    <span className="flex items-center gap-1"><ChevronRight size={10} className="rotate-270" /> Arrow keys for history & suggestions</span>
                 </p>
             </div>
         </motion.div>

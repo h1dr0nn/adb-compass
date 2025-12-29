@@ -76,11 +76,13 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 **Goal:** Redesign the interface layout following Apple HIG principles with new Device Detail View feature.
 
 **Design Principles:**
+
 - **Clarity:** Content-focused with proper whitespace and typography
 - **Deference:** Subtle, elegant UI that supports content
 - **Depth:** Visual layers and smooth motion for hierarchy
 
 **Completed:**
+
 - [x] Design tokens (`src/styles/tokens.css`) - spacing, typography, shadows, transitions
 - [x] Animation variants (`src/lib/animations.ts`) - page, card, modal, tab, list animations
 - [x] Device Detail View (`src/components/DeviceDetailView.tsx`) - 4-tab interface (Overview, Screen, Apps, Files)
@@ -99,10 +101,12 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 **Goal:** Eliminate UI lag and implement persistent device state to handle disconnections gracefully.
 
 **Analysis & Strategy:**
+
 - **Current Issue:** Application polls `adb devices` every 10s and fully re-renders the list on every change, causing flicker. Device details are re-fetched on every tab switch.
 - **Solution:** Move to a persistent local state model where devices are updated/merged rather than replaced.
 
 **Key Features:**
+
 - [x] **Persistent Device Store:**
   - Implement `DeviceContext` with persistence.
   - Retain disconnected devices as "Offline" with a "Remove" option.
@@ -116,14 +120,14 @@ The roadmap is intended to be flexible and may evolve as implementation progress
   - Add "Connect via IP" quick action (Popup).
   - Reduce layout thrashing during device discovery.
 
-
 ---
 
-### Phase 7 — Advanced Control & Streaming
+### Phase 7 — Advanced Control & Streaming ✅
 
 **Goal:** Transform mirroring into a professional interactive workspace and implement real-time log streaming.
 
 **Key Features:**
+
 - [x] **Mirroring 2.0 (Full Interaction):**
   - Fix **Enable Touch** reliability (implement control socket in backend).
   - Implement **Full Gestures**: Drag/Swipe, Long Press, and smooth Scrolling.
@@ -146,11 +150,13 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 **Goal:** Implement a custom Android Agent (Server) to bypass ADB limitations and unlock advanced features.
 
 **Core Concept:**
+
 - Push a lightweight Android app/jar (Agent) to the device via ADB.
 - The Agent runs as a local server on the phone, communicating with ADB Compass via socket.
 - **Fallback Strategy:** If Agent installation fails or is rejected, fallback to standard ADB commands (Smart Mapping for names/icons).
 
 **Key Features:**
+
 - [ ] **Real App Icons & Labels:** Agent extracts original icons and labels from `PackageManager` and sends them to desktop.
 - [ ] **Real-time Performance Stats:** High-frequency CPU/RAM/FPS monitoring (overlay potential).
 - [ ] **File System indexing:** Faster file listing and searching than raw `ls` commands.
@@ -175,6 +181,7 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 **Goal:** Specialized tools for game developers and modders to inspect internals and debug engines like Unity.
 
 **Key Features:**
+
 - [ ] **Game Modding Tab:**
   - **Data/OBB Manager:** Specialized access to `Android/data` and `obb` directories.
   - **Save Editor:** Visual editor for `SharedPreference` XMLs and SQLite databases.

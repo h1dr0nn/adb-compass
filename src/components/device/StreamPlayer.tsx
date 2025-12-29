@@ -382,14 +382,11 @@ export function StreamPlayer({
 
     return (
         <div
-            className="relative w-full h-full flex items-center justify-center outline-none rounded-lg overflow-hidden group"
+            className="relative w-full h-full flex items-center justify-center outline-none rounded-xl overflow-hidden group"
             tabIndex={0}
             onKeyDown={handleEvents.onKeyDown}
             onKeyUp={handleEvents.onKeyUp}
         >
-            {/* Focus Indicator Overlay (Subtle) */}
-            <div className="absolute inset-0 border-2 border-accent/40 rounded-lg pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity z-10" />
-
             <canvas
                 ref={canvasRef}
                 className={`max-w-full max-h-full object-contain ${allowTouch ? 'cursor-pointer' : ''}`}

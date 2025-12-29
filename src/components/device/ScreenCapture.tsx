@@ -616,11 +616,12 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             <div className="flex-initial h-full flex items-center gap-6 bg-surface-card rounded-xl border border-border p-6 min-w-[320px] max-w-[480px]">
                 {/* Phone Frame - Boxy Style */}
                 <div
-                    className={`flex-1 bg-black rounded-xl overflow-hidden shadow-2xl relative ${allowTouch ? 'cursor-pointer' : ''}`}
+                    className={`flex-1 bg-black rounded-xl shadow-2xl relative transition-all focus-within:ring-2 focus-within:ring-accent/60 focus-within:ring-offset-[3px] focus-within:ring-offset-surface-card ${allowTouch ? 'cursor-pointer' : ''}`}
                     style={{ height: '100%', maxHeight: '100%', aspectRatio: aspectRatio }}
                     onClick={streamMode === 'standard' ? handleTouch : undefined}
                 >
-                    {isMirroring ? (
+                    <div className="absolute inset-0 rounded-xl overflow-hidden">
+                        {isMirroring ? (
                         <div className="absolute inset-0 bg-black flex flex-col items-center justify-center text-center p-6 z-30">
                             <motion.div
                                 animate={{ opacity: [0.4, 1, 0.4] }}
@@ -678,6 +679,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                             </div>
                         </div>
                     )}
+                    </div>
                 </div>
 
                 {/* Vertical Controls Column */}
