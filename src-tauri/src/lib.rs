@@ -23,6 +23,7 @@ use commands::{
     disconnect_wireless,
     enable_tcpip,
     execute_shell,
+    get_default_media_dir,
     get_device_ip,
     get_device_property,
     get_device_props,
@@ -45,8 +46,12 @@ use commands::{
     // Device Actions
     reboot_device,
     refresh_devices,
+    request_scrcpy_sync,
+    save_capture_file,
     scan_apks_in_folder,
+    scrcpy_key,
     scrcpy_scroll,
+    scrcpy_text,
     scrcpy_touch,
     start_adb_server,
     // Scrcpy
@@ -106,17 +111,22 @@ pub fn run() {
             clear_logcat,
             // Screen Capture
             take_screenshot,
+            save_capture_file,
             start_screen_recording,
             stop_screen_recording,
             get_screen_frame,
+            get_default_media_dir,
             open_captures_folder,
             // Scrcpy
             start_scrcpy_server,
             stop_scrcpy_server,
             get_scrcpy_status,
+            request_scrcpy_sync,
             read_scrcpy_frame,
             scrcpy_touch,
-            scrcpy_scroll
+            scrcpy_scroll,
+            scrcpy_key,
+            scrcpy_text,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

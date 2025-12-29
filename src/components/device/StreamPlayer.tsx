@@ -1,6 +1,8 @@
 // StreamPlayer - Display H.264 stream using WebCodecs
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { listen } from '@tauri-apps/api/event';
+import { invoke } from '@tauri-apps/api/core';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { useLanguage } from '../../contexts/LanguageContext';
 
 interface StreamPlayerProps {
@@ -12,7 +14,28 @@ interface StreamPlayerProps {
     allowTouch?: boolean;
     onVideoDimensions?: (width: number, height: number) => void;
     showFps?: boolean;
+    canvasRef?: React.RefObject<HTMLCanvasElement | null>;
+    windowLabel?: string;
+    onFpsUpdate?: (fps: number) => void;
+    allowKeyboard?: boolean;
 }
+
+const ANDROID_KEYMAP: Record<string, number> = {
+    'Enter': 66,
+    'Backspace': 67,
+    'Tab': 61,
+    'Escape': 111,
+    'ArrowUp': 19,
+    'ArrowDown': 20,
+    'ArrowLeft': 21,
+    'ArrowRight': 22,
+    'Home': 3,
+    'PageUp': 92,
+    'PageDown': 93,
+    'Delete': 122,
+    'End': 123,
+    'Meta': 3, // Windows Key -> Home
+};
 
 export function StreamPlayer({
     deviceId,
@@ -23,8 +46,13 @@ export function StreamPlayer({
     allowTouch = false,
     onVideoDimensions,
     showFps = true,
+    canvasRef: externalCanvasRef,
+    windowLabel,
+    onFpsUpdate,
+    allowKeyboard = true,
 }: StreamPlayerProps) {
-    const canvasRef = useRef<HTMLCanvasElement>(null);
+    const internalCanvasRef = useRef<HTMLCanvasElement>(null);
+    const canvasRef = externalCanvasRef || internalCanvasRef;
     const [fps, setFps] = useState(0);
     const [isConnected, setIsConnected] = useState(false);
     const frameCountRef = useRef(0);
@@ -33,17 +61,41 @@ export function StreamPlayer({
     const spsBufferRef = useRef<Uint8Array | null>(null);
     const ppsBufferRef = useRef<Uint8Array | null>(null);
     const lastTouchRef = useRef<{ x: number; y: number } | null>(null);
+    const timestampRef = useRef(0);
+    const hasKeyframeRef = useRef(false);
+    const lastFrameTimeRef = useRef(Date.now());
+    const errorCountRef = useRef(0);
     const { t } = useLanguage();
+
+    // Stall Detection & Recovery
+    useEffect(() => {
+        if (!isConnected) return;
+        const checkStall = setInterval(() => {
+            const timeSinceLastFrame = Date.now() - lastFrameTimeRef.current;
+            if (timeSinceLastFrame > 3000) {
+                console.warn(`[StreamPlayer] Stream stalled for ${timeSinceLastFrame}ms for ${deviceId}. Requesting emergency sync.`);
+                const currentLabel = windowLabel || getCurrentWindow().label;
+                invoke('request_scrcpy_sync', {
+                    deviceId,
+                    windowLabel: currentLabel
+                }).catch(console.error);
+                lastFrameTimeRef.current = Date.now(); // Rate limit sync requests
+            }
+        }, 1000);
+        return () => clearInterval(checkStall);
+    }, [isConnected, deviceId, windowLabel]);
 
     // FPS counter
     useEffect(() => {
-        if (!showFps) return;
+        if (!showFps && !onFpsUpdate) return;
         const interval = setInterval(() => {
-            setFps(frameCountRef.current);
+            const currentFps = frameCountRef.current;
+            setFps(currentFps);
+            if (onFpsUpdate) onFpsUpdate(currentFps);
             frameCountRef.current = 0;
         }, 1000);
         return () => clearInterval(interval);
-    }, [showFps]);
+    }, [showFps, onFpsUpdate]);
 
     // Initialize WebCodecs Decoder
     useEffect(() => {
@@ -59,13 +111,16 @@ export function StreamPlayer({
                     if (canvasRef.current.width !== frame.displayWidth || canvasRef.current.height !== frame.displayHeight) {
                         canvasRef.current.width = frame.displayWidth;
                         canvasRef.current.height = frame.displayHeight;
+                        console.log(`[StreamPlayer] Video dimensions changed: ${frame.displayWidth}x${frame.displayHeight}`);
                         if (onVideoDimensions) {
                             onVideoDimensions(frame.displayWidth, frame.displayHeight);
                         }
                     }
                     ctx.drawImage(frame, 0, 0);
                     frameCountRef.current++;
-                    setIsConnected(true); // State update is fine, won't trigger re-run as it's not in dep array
+                    lastFrameTimeRef.current = Date.now();
+                    errorCountRef.current = 0;
+                    setIsConnected(true);
                 }
             }
             frame.close();
@@ -74,6 +129,7 @@ export function StreamPlayer({
         const handleError = (e: Error) => {
             console.error("VideoDecoder error:", e);
             setIsConnected(false);
+            isConfiguredRef.current = false; // Allow re-configuration
         };
 
         try {
@@ -96,12 +152,12 @@ export function StreamPlayer({
     useEffect(() => {
         if (!deviceId || !decoderRef.current) return;
 
-        // Sanitize deviceId to match backend (alphanumeric, -, /, :, _)
         const sanitizedId = deviceId.replace(/\./g, "_").replace(/:/g, "_");
-        console.log(`Listening for scrcpy-frame-${sanitizedId}`);
+        let active = true;
+        let unlistenFn: (() => void) | null = null;
 
-        const unlisten = listen<string>(`scrcpy-frame-${sanitizedId}`, (event) => {
-            const base64Data = event.payload;
+        const handleFrameData = (base64Data: string) => {
+            if (!active) return;
             const binaryString = atob(base64Data);
             const len = binaryString.length;
             const bytes = new Uint8Array(len);
@@ -115,12 +171,11 @@ export function StreamPlayer({
                 else if (bytes[2] === 0 && bytes[3] === 1) nalHeaderIndex = 4;
             }
 
-            if (nalHeaderIndex === -1) {
-                return;
-            }
+            if (nalHeaderIndex === -1) return;
 
             const nalHeader = bytes[nalHeaderIndex];
             const nalType = nalHeader & 0x1F;
+            // console.log(`NAL Type: ${nalType} (${base64Data.length} chars)`);
 
             // SPS (7)
             if (nalType === 7) {
@@ -131,13 +186,16 @@ export function StreamPlayer({
                 const codecString = `avc1.${[profile, constraint, level].map(b => b.toString(16).padStart(2, '0')).join('')}`;
 
                 if (!isConfiguredRef.current) {
-                    console.log(`Configuring for ${codecString}`);
                     try {
+                        console.log(`[StreamPlayer] Configuring decoder for ${deviceId} with codec: ${codecString}`);
                         decoderRef.current?.configure({
                             codec: codecString,
                             optimizeForLatency: true,
                         });
                         isConfiguredRef.current = true;
+                        hasKeyframeRef.current = false; // Need a new keyframe after re-config
+                        timestampRef.current = 0; // Reset timestamps for new sequence
+                        decoderRef.current?.flush().catch(console.error);
                     } catch (e: any) {
                         console.error(`Config Error: ${e.message}`);
                     }
@@ -151,60 +209,116 @@ export function StreamPlayer({
                 return;
             }
 
-            // IDR (5)
-            if (nalType === 5) {
+            // IDR (5) or Delta (1)
+            if (nalType === 5 || nalType === 1) {
                 let chunkData = bytes;
-                if (spsBufferRef.current && ppsBufferRef.current) {
-                    const spsLen = spsBufferRef.current.length;
-                    const ppsLen = ppsBufferRef.current.length;
-                    const totalLen = spsLen + ppsLen + bytes.length;
-                    const merged = new Uint8Array(totalLen);
-                    merged.set(spsBufferRef.current, 0);
-                    merged.set(ppsBufferRef.current, spsLen);
-                    merged.set(bytes, spsLen + ppsLen);
-                    chunkData = merged;
+                if (nalType === 5) {
+                    if (spsBufferRef.current && ppsBufferRef.current) {
+                        const spsLen = spsBufferRef.current.length;
+                        const ppsLen = ppsBufferRef.current.length;
+                        const totalLen = spsLen + ppsLen + bytes.length;
+                        const merged = new Uint8Array(totalLen);
+                        merged.set(spsBufferRef.current, 0);
+                        merged.set(ppsBufferRef.current, spsLen);
+                        merged.set(bytes, spsLen + ppsLen);
+                        chunkData = merged;
+                    }
+                    // console.log("Processing IDR frame");
                 }
 
                 try {
-                    const chunk = new EncodedVideoChunk({
-                        type: 'key',
-                        timestamp: performance.now() * 1000,
-                        data: chunkData,
-                    });
-
                     if (decoderRef.current?.state === 'configured') {
+                        // CRITICAL: Ignore all Delta frames (1) until we have an IDR (5)
+                        if (nalType === 1 && !hasKeyframeRef.current) {
+                            return;
+                        }
+
+                        if (nalType === 5) {
+                            if (!hasKeyframeRef.current) {
+                                console.log("[StreamPlayer] First Keyframe received - Syncing stream display");
+                            }
+                            hasKeyframeRef.current = true;
+                        }
+
+                        const timestamp = timestampRef.current++;
+                        const chunk = new EncodedVideoChunk({
+                            type: nalType === 5 ? 'key' : 'delta',
+                            timestamp: timestamp * 16666,
+                            data: chunkData,
+                        });
                         decoderRef.current.decode(chunk);
                     }
                 } catch (e: any) {
-                    console.error(`Decode IDR Error: ${e.message}`);
+                    console.error(`[StreamPlayer] Decode Error: ${e.message}`);
+                    errorCountRef.current++;
+                    if (errorCountRef.current > 5 || nalType === 5) {
+                        console.warn("[StreamPlayer] High error rate - Resetting decoder state");
+                        isConfiguredRef.current = false;
+                        hasKeyframeRef.current = false;
+                        errorCountRef.current = 0;
+                    }
                 }
                 return;
             }
+        };
 
-            // Delta (1)
-            try {
-                const chunk = new EncodedVideoChunk({
-                    type: 'delta',
-                    timestamp: performance.now() * 1000,
-                    data: bytes,
-                });
+        const setupListener = async () => {
+            const currentLabel = windowLabel || getCurrentWindow().label;
+            console.log(`[StreamPlayer] Setting up listeners for ${deviceId} in window ${currentLabel} (sanitized: ${sanitizedId})`);
 
-                if (decoderRef.current?.state === 'configured') {
-                    decoderRef.current.decode(chunk);
-                }
-            } catch (e: any) {
-                // console.error(`Decode Delta Error: ${e.message}`);
+            // 1. Normal frame listener (global for this device)
+            const unlistenFrame = await listen<string>(`scrcpy-frame-${sanitizedId}`, (event) => {
+                handleFrameData(event.payload);
+            });
+
+            // 2. Private sync listener (unique for this window)
+            const unlistenSync = await listen<string>(`scrcpy-sync-${currentLabel}-${sanitizedId}`, (event) => {
+                console.log(`[StreamPlayer] Sync packet received for window ${currentLabel} and device ${deviceId}`);
+                handleFrameData(event.payload);
+            });
+
+            if (!active) {
+                unlistenFrame();
+                unlistenSync();
+                return;
             }
-        });
+
+            const cleanup = () => {
+                console.log(`[StreamPlayer] Cleaning up listeners for ${deviceId} in window ${currentLabel}`);
+                unlistenFrame();
+                unlistenSync();
+            };
+            unlistenFn = cleanup;
+
+            // Request SPS/PPS from backend via private channel
+            setTimeout(() => {
+                if (!active) return;
+                console.log(`[StreamPlayer] Window: ${currentLabel} requesting private sync for ${deviceId}`);
+                invoke('request_scrcpy_sync', {
+                    deviceId,
+                    windowLabel: currentLabel
+                }).catch(err => {
+                    console.error(`[StreamPlayer] Sync request failed for ${deviceId}:`, err);
+                });
+            }, 800);
+        };
+
+        setupListener();
 
         return () => {
-            unlisten.then((fn) => fn());
-            // Don't reset isConnected/isConfigured here to avoid flicker if deviceId doesn't change
-            // Actually, if deviceId changes, we DO want to reset.
+            console.log(`[StreamPlayer] Effect cleanup for ${deviceId} in window ${windowLabel || 'current'}`);
+            active = false;
+            if (unlistenFn) {
+                unlistenFn();
+                unlistenFn = null;
+            }
             setIsConnected(false);
             isConfiguredRef.current = false;
+            hasKeyframeRef.current = false;
+            spsBufferRef.current = null;
+            ppsBufferRef.current = null;
         };
-    }, [deviceId]); // Removed isConnected from dependencies!
+    }, [deviceId, windowLabel]);
 
     // Events Wrappers
     const handleEvents = useMemo(() => {
@@ -220,6 +334,7 @@ export function StreamPlayer({
             onMouseDown: (e: React.MouseEvent) => {
                 if (!allowTouch || !onTouch || !canvasRef.current) return;
                 const { x, y } = getXY(e, canvasRef.current.getBoundingClientRect());
+                console.log(`[StreamPlayer] Touch Down: ${x},${y} (ref: ${width}x${height})`);
                 lastTouchRef.current = { x, y };
                 onTouch(x, y, 'down');
             },
@@ -239,12 +354,42 @@ export function StreamPlayer({
                 e.preventDefault();
                 const { x, y } = getXY(e, canvasRef.current.getBoundingClientRect());
                 onScroll(x, y, Math.round(e.deltaX), Math.round(e.deltaY));
+            },
+            onKeyDown: (e: React.KeyboardEvent) => {
+                if (!allowKeyboard || !allowTouch) return;
+
+                const androidKeycode = ANDROID_KEYMAP[e.key];
+                if (androidKeycode !== undefined) {
+                    e.preventDefault();
+                    invoke('scrcpy_key', { deviceId, action: 0, keycode: androidKeycode, metastate: 0 }).catch(console.error);
+                } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                    // It's a printable character, send as text event
+                    e.preventDefault();
+                    invoke('scrcpy_text', { deviceId, text: e.key }).catch(console.error);
+                }
+            },
+            onKeyUp: (e: React.KeyboardEvent) => {
+                if (!allowKeyboard || !allowTouch) return;
+
+                const androidKeycode = ANDROID_KEYMAP[e.key];
+                if (androidKeycode !== undefined) {
+                    e.preventDefault();
+                    invoke('scrcpy_key', { deviceId, action: 1, keycode: androidKeycode, metastate: 0 }).catch(console.error);
+                }
             }
         };
-    }, [allowTouch, onTouch, onScroll, width, height]);
+    }, [allowTouch, allowKeyboard, onTouch, onScroll, width, height, deviceId]);
 
     return (
-        <div className="relative w-full h-full flex items-center justify-center bg-black">
+        <div
+            className="relative w-full h-full flex items-center justify-center outline-none rounded-lg overflow-hidden group"
+            tabIndex={0}
+            onKeyDown={handleEvents.onKeyDown}
+            onKeyUp={handleEvents.onKeyUp}
+        >
+            {/* Focus Indicator Overlay (Subtle) */}
+            <div className="absolute inset-0 border-2 border-accent/40 rounded-lg pointer-events-none opacity-0 group-focus-within:opacity-100 transition-opacity z-10" />
+
             <canvas
                 ref={canvasRef}
                 className={`max-w-full max-h-full object-contain ${allowTouch ? 'cursor-pointer' : ''}`}

@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getCurrentWindow } from '@tauri-apps/api/window';
+import { MirrorWindow } from './components/modals/MirrorWindow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Toaster } from 'sonner';
 import { useDevices } from './hooks/useDevices';
@@ -191,6 +193,20 @@ function AppContent() {
 }
 
 function App() {
+  const [windowLabel, setWindowLabel] = useState<string>('');
+
+  useEffect(() => {
+    setWindowLabel(getCurrentWindow().label);
+  }, []);
+
+  if (windowLabel.startsWith('mirror-')) {
+    return (
+      <div className="h-screen bg-black overflow-hidden font-sans">
+        <MirrorWindow />
+      </div>
+    );
+  }
+
   return (
     <DeviceProvider>
       <DeviceCacheProvider>

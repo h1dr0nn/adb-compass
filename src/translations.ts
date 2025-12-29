@@ -43,6 +43,14 @@ export const translations = {
         light: 'Light',
         dark: 'Dark',
         system: 'System',
+        askBeforeSave: 'Ask where to save each time',
+        askBeforeSaveDesc: 'Show a dialog to choose the file location for every capture',
+        defaultSavePath: 'Default: Library/media',
+        resetToDefaults: 'Reset to Defaults',
+        resetConfirm: 'Are you sure you want to reset all settings to default? This action cannot be undone.',
+        resetSuccess: 'Settings reset successfully',
+        developedBy: 'Developed by',
+        officialWebsite: 'Official Website',
 
         // Device List & Status
         noDevices: 'No devices connected',
@@ -314,6 +322,14 @@ export const translations = {
         light: 'Sáng',
         dark: 'Tối',
         system: 'Hệ thống',
+        askBeforeSave: 'Hỏi nơi lưu mỗi lần',
+        askBeforeSaveDesc: 'Hiện hộp thoại chọn vị trí lưu cho mỗi lần chụp/quay',
+        defaultSavePath: 'Mặc định: Thư viện/media',
+        resetToDefaults: 'Khôi phục mặc định',
+        resetConfirm: 'Bạn có chắc chắn muốn khôi phục tất cả cài đặt về mặc định không? Thao tác này không thể hoàn tác.',
+        resetSuccess: 'Đã khôi phục cài đặt gốc thành công',
+        developedBy: 'Phát triển bởi',
+        officialWebsite: 'Trang web chính thức',
 
         // Device List & Status
         noDevices: 'Không có thiết bị nào',

@@ -129,4 +129,17 @@
     .no-scrollbar::-webkit-scrollbar {
         display: none;
     }
+
+    @keyframes soft-spin {
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+
+    .animate-soft-spin {
+        animation: soft-spin 10s linear infinite;
+    }
 }

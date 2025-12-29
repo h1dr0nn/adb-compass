@@ -8,6 +8,7 @@ import {
     Menu, Sun, Moon, Bell, Play, Triangle
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { save } from '@tauri-apps/plugin-dialog';
 import { toast } from 'sonner';
 import { DeviceInfo } from '../../types';
 import { listItem } from '../../lib/animations';
@@ -44,6 +45,83 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     const [isLive, setIsLive] = useState(false);
     const [showFps, setShowFps] = useState(true);
     const [allowTouch, setAllowTouch] = useState(false);
+    const [isMirroring, setIsMirroring] = useState(false);
+
+    const handleStopMirror = async () => {
+        setIsMirroring(false);
+        try {
+            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+            const label = `mirror-${device.id.replace(/\./g, '_').replace(/:/g, '__')}`;
+            const webview = await WebviewWindow.getByLabel(label);
+            if (webview) {
+                await webview.close();
+            }
+        } catch (e) {
+            console.error('Failed to close mirror window:', e);
+        }
+    };
+
+    const handleStartMirror = async () => {
+        if (isMirroring) return;
+
+        try {
+            const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+            const label = `mirror-${device.id.replace(/\./g, '_').replace(/:/g, '__')}`;
+
+            // Check if already exists
+            const existing = await WebviewWindow.getByLabel(label);
+            if (existing) {
+                await existing.setFocus();
+                setIsMirroring(true);
+                return;
+            }
+
+            // Dynamic size calculation
+            const targetHeight = 850;
+            const headerHeight = 48;
+            const padding = 16;
+            const sidebarWidth = 48; // w-12
+            const gap = 12; // gap-3
+
+            const availableVideoHeight = targetHeight - headerHeight - padding;
+            const calculatedVideoWidth = availableVideoHeight * (screenWidth / screenHeight);
+            const targetWidth = Math.round(calculatedVideoWidth + sidebarWidth + gap + padding);
+
+            const webview = new WebviewWindow(label, {
+                title: `Mirror - ${device.model || device.id}`,
+                width: targetWidth,
+                height: targetHeight,
+                resizable: true,
+                decorations: true,
+                alwaysOnTop: true,
+            });
+
+            webview.once('tauri://created', () => {
+                setIsMirroring(true);
+                toast.success("Mirror window opened");
+            });
+
+            webview.once('tauri://error', (e) => {
+                console.error("Window error:", e);
+                toast.error("Failed to create window");
+            });
+
+            // Handle window close to restore UI
+            webview.onCloseRequested(() => {
+                console.log("[ScreenCapture] Mirror window closed, restoring main preview");
+                setIsMirroring(false);
+            });
+
+            // Fallback: lắng nghe sự kiện destroy nếu onCloseRequested không bắt được
+            webview.once('tauri://destroyed', () => {
+                setIsMirroring(false);
+            });
+
+        } catch (e) {
+            console.error('Failed to open mirror window:', e);
+            toast.error("Failed to open mirror window");
+        }
+    };
 
     // High-performance mode state
     const [streamMode, setStreamMode] = useState<StreamMode>('standard');
@@ -58,10 +136,12 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             try {
                 const props = await invoke<{ screen_resolution: string | null }>('get_device_props', { deviceId: device.id });
                 if (props.screen_resolution) {
-                    console.log('Device resolution raw:', props.screen_resolution);
-                    const [w, h] = props.screen_resolution.replace('Physical size: ', '').replace('Override size: ', '').split('x').map(Number);
-                    console.log('Parsed resolution:', w, 'x', h, '→ ratio:', w / h);
-                    if (w && h) {
+                    // scrcpy server usually uses physical size (e.g. "Physical size: 1080x2340")
+                    const resMatch = props.screen_resolution.match(/(?:Physical|Override) size: (\d+)x(\d+)/);
+                    if (resMatch) {
+                        const w = parseInt(resMatch[1]);
+                        const h = parseInt(resMatch[2]);
+                        console.log(`[ScreenCapture] Device resolution detected: ${w}x${h}`);
                         setAspectRatio(w / h);
                         setScreenWidth(w);
                         setScreenHeight(h);
@@ -74,14 +154,23 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         fetchProps();
     }, [device.id]);
 
-    // Stop scrcpy when unmounting or switching modes
+    // Check if mirror window already exists on mount
     useEffect(() => {
-        return () => {
-            if (scrcpyStatus?.running) {
-                invoke('stop_scrcpy_server', { deviceId: device.id }).catch(console.error);
+        const checkExisting = async () => {
+            try {
+                const { WebviewWindow } = await import('@tauri-apps/api/webviewWindow');
+                const label = `mirror-${device.id.replace(/\./g, '_').replace(/:/g, '__')}`;
+                const existing = await WebviewWindow.getByLabel(label);
+                if (existing) {
+                    console.log(`[ScreenCapture] Detected existing mirror window for ${device.id}`);
+                    setIsMirroring(true);
+                }
+            } catch (e) {
+                console.error('Failed to check existing mirror window:', e);
             }
         };
-    }, [device.id, scrcpyStatus?.running]);
+        checkExisting();
+    }, [device.id]);
 
     // Recording timer
     useEffect(() => {
@@ -105,8 +194,24 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     const handleScreenshot = async () => {
         setIsCapturing(true);
         try {
+            const askBeforeSave = localStorage.getItem('askBeforeSave') === 'true';
+            const captureSavePath = localStorage.getItem('captureSavePath');
+
+            let customSavePath: string | undefined = undefined;
+            if (askBeforeSave) {
+                const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                const defaultFilename = `screenshot-${device.id}-${timestamp}.png`;
+                const selected = await save({
+                    defaultPath: `${captureSavePath}/${defaultFilename}`,
+                    filters: [{ name: 'Image', extensions: ['png'] }]
+                });
+                if (!selected) return; // User cancelled
+                customSavePath = selected;
+            }
+
             const result = await invoke<CaptureResult>('take_screenshot', {
-                deviceId: device.id
+                deviceId: device.id,
+                customSavePath
             });
 
             if (result.success && result.path) {
@@ -132,8 +237,24 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         if (isRecording) {
             // Stop recording
             try {
+                const askBeforeSave = localStorage.getItem('askBeforeSave') === 'true';
+                const captureSavePath = localStorage.getItem('captureSavePath');
+
+                let customSavePath: string | undefined = undefined;
+                if (askBeforeSave) {
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    const defaultFilename = `recording-${device.id}-${timestamp}.mp4`;
+                    const selected = await save({
+                        defaultPath: `${captureSavePath}/${defaultFilename}`,
+                        filters: [{ name: 'Video', extensions: ['mp4'] }]
+                    });
+                    if (!selected) return; // User cancelled
+                    customSavePath = selected;
+                }
+
                 const result = await invoke<CaptureResult>('stop_screen_recording', {
-                    deviceId: device.id
+                    deviceId: device.id,
+                    customSavePath
                 });
 
                 setIsRecording(false);
@@ -233,7 +354,8 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     // Open Save Folder
     const handleOpenFolder = async () => {
         try {
-            await invoke('open_captures_folder');
+            const captureSavePath = localStorage.getItem('captureSavePath');
+            await invoke('open_captures_folder', { customSavePath: captureSavePath });
             toast.success(t.folderOpened);
         } catch (error) {
             toast.error(t.failedToOpenFolder, { description: String(error) });
@@ -250,7 +372,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 const status = await invoke<ScrcpyStatus>('start_scrcpy_server', {
                     deviceId: device.id,
                     maxSize: 1024,
-                    bitRate: 8000000,
+                    bitRate: 4000000,
                     maxFps: 60,
                 });
                 console.log('Scrcpy status:', status);
@@ -490,50 +612,56 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 </motion.div>
             </div>
 
-            {/* Phone Preview - Fixed Width */}
-            <div className="w-96 h-full shrink-0 flex items-center justify-center relative bg-surface-card rounded-xl border border-border p-4">
-                {/* Status Badge & Controls */}
-                {streamMode === 'high-perf' && (
-                    <div className="absolute top-2 right-2 z-10 flex items-center gap-2">
-
-                        <div className="flex items-center gap-1.5 px-2 py-1 bg-success/20 backdrop-blur text-success rounded-lg text-xs font-medium border border-success/20">
-                            <Zap size={12} />
-                            <span>{t.live}</span>
-                        </div>
-                    </div>
-                )}
-                {streamMode === 'standard' && (
-                    <button
-                        onClick={handleRefreshPreview}
-                        disabled={isLoadingPreview}
-                        className="absolute top-2 right-2 z-10 p-1.5 bg-surface-elevated rounded-lg border border-border hover:text-accent disabled:opacity-50"
-                    >
-                        <RefreshCw size={14} className={isLoadingPreview ? 'animate-spin' : ''} />
-                    </button>
-                )}
-
-                {/* Phone Frame */}
+            {/* Phone Preview - Flexible Width with Min/Max */}
+            <div className="flex-initial h-full flex items-center gap-6 bg-surface-card rounded-xl border border-border p-6 min-w-[320px] max-w-[480px]">
+                {/* Phone Frame - Boxy Style */}
                 <div
-                    className={`bg-black border-4 border-surface-elevated rounded-[1.5rem] overflow-hidden shadow-2xl relative ${allowTouch ? 'cursor-pointer' : ''
-                        }`}
-                    style={{ height: '100%', maxHeight: 'calc(100% - 2rem)', maxWidth: '100%', aspectRatio: aspectRatio }}
+                    className={`flex-1 bg-black rounded-xl overflow-hidden shadow-2xl relative ${allowTouch ? 'cursor-pointer' : ''}`}
+                    style={{ height: '100%', maxHeight: '100%', aspectRatio: aspectRatio }}
                     onClick={streamMode === 'standard' ? handleTouch : undefined}
                 >
-                    {streamMode === 'high-perf' && scrcpyStatus?.port ? (
+                    {isMirroring ? (
+                        <div className="absolute inset-0 bg-black flex flex-col items-center justify-center text-center p-6 z-30">
+                            <motion.div
+                                animate={{ opacity: [0.4, 1, 0.4] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                                className="flex flex-col items-center gap-4"
+                            >
+                                <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center">
+                                    <ExternalLink size={32} className="text-accent" />
+                                </div>
+                                <div>
+                                    <h3 className="text-white font-semibold mb-1">Mirroring Active</h3>
+                                    <p className="text-text-muted text-xs">Device screen is being projected to a dedicated window.</p>
+                                </div>
+                                <button
+                                    onClick={handleStopMirror}
+                                    className="mt-4 px-4 py-1.5 bg-surface-elevated border border-border rounded-lg text-xs text-text-secondary hover:text-white transition-colors"
+                                >
+                                    Stop Mirroring
+                                </button>
+                            </motion.div>
+                        </div>
+                    ) : streamMode === 'high-perf' && scrcpyStatus?.port ? (
                         <StreamPlayer
                             deviceId={device.id}
                             width={screenWidth}
                             height={screenHeight}
                             allowTouch={allowTouch}
                             onVideoDimensions={(w, h) => {
+                                console.log(`[ScreenCapture] StreamPlayer reported video dimensions: ${w}x${h}`);
                                 setAspectRatio(w / h);
+                                setScreenWidth(w);
+                                setScreenHeight(h);
                             }}
                             onTouch={handleScrcpyTouch}
                             onScroll={handleScrcpyScroll}
                             showFps={showFps}
+                            windowLabel="main"
+                            allowKeyboard={true}
                         />
                     ) : previewImage ? (
-                        <img src={previewImage} alt="Preview" className="w-full h-full" />
+                        <img src={previewImage} alt="Preview" className="w-full h-full object-contain" />
                     ) : (
                         <div className="w-full h-full flex flex-col items-center justify-center text-text-muted">
                             <Image size={40} className="opacity-30 mb-1" />
@@ -550,6 +678,42 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                             </div>
                         </div>
                     )}
+                </div>
+
+                {/* Vertical Controls Column */}
+                <div className="flex flex-col gap-2 self-stretch justify-start">
+                    <button
+                        onClick={toggleHighPerfMode}
+                        disabled={isStartingScrcpy}
+                        className={`p-2.5 rounded-lg border transition-all shadow-sm ${streamMode === 'high-perf'
+                            ? 'bg-success text-white border-success shadow-success/20'
+                            : 'bg-surface-elevated border-border text-text-muted hover:text-text-primary'
+                            }`}
+                        title={streamMode === 'high-perf' ? 'Stop Live Preview' : 'Start Live Preview'}
+                    >
+                        {isStartingScrcpy ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} />}
+                    </button>
+
+                    <button
+                        onClick={handleRefreshPreview}
+                        disabled={isLoadingPreview || streamMode === 'high-perf'}
+                        className={`p-2.5 rounded-lg border border-border text-text-secondary hover:text-accent disabled:opacity-20 shadow-sm bg-surface-elevated`}
+                        title={t.refresh}
+                    >
+                        <RefreshCw size={16} className={isLoadingPreview ? 'animate-spin' : ''} />
+                    </button>
+
+                    <button
+                        onClick={handleStartMirror}
+                        disabled={streamMode !== 'high-perf'}
+                        className={`p-2.5 rounded-lg border transition-all shadow-sm ${isMirroring
+                            ? 'bg-accent text-white border-accent'
+                            : 'bg-surface-elevated border-border text-text-secondary hover:text-accent disabled:opacity-20'
+                            }`}
+                        title="Mirror in popup"
+                    >
+                        <ExternalLink size={16} />
+                    </button>
                 </div>
             </div>
         </div>

@@ -124,7 +124,7 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 **Goal:** Transform mirroring into a professional interactive workspace and implement real-time log streaming.
 
 **Key Features:**
-- [ ] **Mirroring 2.0 (Full Interaction):**
+- [x] **Mirroring 2.0 (Full Interaction):**
   - Fix **Enable Touch** reliability (implement control socket in backend).
   - Implement **Full Gestures**: Drag/Swipe, Long Press, and smooth Scrolling.
   - **Keyboard Forwarding**: Send keystrokes from desktop directly to device.
@@ -136,7 +136,7 @@ The roadmap is intended to be flexible and may evolve as implementation progress
   - Add a "Quick Actions" button next to existing **Delete** buttons (Device Card/App Manager).
   - **IDE-style Suggestions**: Smart autocomplete/suggestions when typing custom commands.
   - Provides instant access to: Clear Cache, Grant Permissions, UI Toggles, and Reboot commands.
-- [ ] **Popped-out Mirroring:**
+- [x] **Popped-out Mirroring:**
   - Launch mirroring in a dedicated, resizable utility window.
 
 ---
@@ -159,19 +159,33 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 ---
 
-### Phase 9 — (Reserved)
+### Phase 9 — Automation & Batch Operations
 
-**Goal:** TBD
+**Goal:** Automate repetitive tasks and manage multiple devices efficiently to save time.
 
-- [ ] To be planned
+- [ ] **Visual Macro Recorder:** Record touch inputs and replay them; save as macros.
+- [ ] **Multi-Device Control:** Broadcast clicks/text input from one device to all others (multiboxing).
+- [ ] **Workflow Builder:** Create simple command chains (e.g., "Clear Data -> Launch App -> Click X").
+- [ ] **Scheduled Tasks:** Auto-run scripts or log captures at specific times.
 
 ---
 
-### Phase 10 — (Reserved)
+### Phase 10 — Game Modding & Advanced Debugging
 
-**Goal:** TBD
+**Goal:** Specialized tools for game developers and modders to inspect internals and debug engines like Unity.
 
-- [ ] To be planned
+**Key Features:**
+- [ ] **Game Modding Tab:**
+  - **Data/OBB Manager:** Specialized access to `Android/data` and `obb` directories.
+  - **Save Editor:** Visual editor for `SharedPreference` XMLs and SQLite databases.
+  - **Backup/Restore:** Quick one-click backup of specific game data containers.
+- [ ] **Unity/Engine Debugger:**
+  - **Smart Log Filtering:** One-click presets for Unity/Unreal Engine logs.
+  - **Stack Trace Beautifier:** Auto-format and highlight errors/exceptions from game engines.
+  - **Asset/Bundle Inspector:** (Potential) Basic viewing of deployed app assets.
+- [ ] **Deep Inspection:**
+  - **Activity Launcher:** Manually launch hidden activities with custom intents/extras.
+  - **Manifest Viewer:** Readable view of permissions, services, and receivers.
 
 ---
 

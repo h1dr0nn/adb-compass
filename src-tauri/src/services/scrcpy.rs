@@ -70,6 +70,10 @@ struct ScrcpySession {
     video_port: u16,
     #[allow(dead_code)]
     control_port: u16,
+    control_socket: Option<Arc<Mutex<TcpStream>>>,
+    last_sps: Arc<Mutex<Option<Vec<u8>>>>,
+    last_pps: Arc<Mutex<Option<Vec<u8>>>>,
+    last_idr: Arc<Mutex<Option<Vec<u8>>>>,
 }
 
 lazy_static::lazy_static! {
@@ -98,14 +102,25 @@ pub fn push_scrcpy_server(device_id: &str, app_handle: &AppHandle) -> Result<(),
         // Dev: src-tauri/resources
         std::env::current_exe().ok().and_then(|p| {
             // target/debug/tauri-app.exe -> target/debug -> target -> src-tauri -> resources
-            p.parent()?.parent()?.parent()?.join("src-tauri").join("resources").join("scrcpy-server.jar").into()
+            p.parent()?
+                .parent()?
+                .parent()?
+                .join("src-tauri")
+                .join("resources")
+                .join("scrcpy-server.jar")
+                .into()
         }),
         // Dev fallback: parent of exe/resources (for different build layouts)
         std::env::current_exe().ok().and_then(|p| {
-            p.parent()?.join("resources").join("scrcpy-server.jar").into()
+            p.parent()?
+                .join("resources")
+                .join("scrcpy-server.jar")
+                .into()
         }),
         // Workspace root
-        Some(std::path::PathBuf::from("src-tauri/resources/scrcpy-server.jar")),
+        Some(std::path::PathBuf::from(
+            "src-tauri/resources/scrcpy-server.jar",
+        )),
         Some(std::path::PathBuf::from("resources/scrcpy-server.jar")),
     ];
 
@@ -116,7 +131,9 @@ pub fn push_scrcpy_server(device_id: &str, app_handle: &AppHandle) -> Result<(),
         None => {
             return Err(AppError::new(
                 "SERVER_NOT_FOUND",
-                &format!("scrcpy-server.jar not found. Please ensure it exists in src-tauri/resources/"),
+                &format!(
+                    "scrcpy-server.jar not found. Please ensure it exists in src-tauri/resources/"
+                ),
             ));
         }
     };
@@ -161,7 +178,6 @@ pub fn start_server(
     push_scrcpy_server(device_id, app_handle)?;
 
     let video_port = 27183;
-    let control_port = 27184;
 
     // Forward video socket
     let socket_name = "scrcpy_12345678"; // Must match "scrcpy_" + scid (8 chars)
@@ -189,7 +205,7 @@ pub fn start_server(
         "CLASSPATH={} app_process / com.genymobile.scrcpy.Server {} \
         scid=12345678 log_level=verbose max_size={} max_fps={} \
         lock_video_orientation={} tunnel_forward={} \
-        send_frame_meta={} control=false display_id={} \
+        send_frame_meta={} control=true display_id={} \
         show_touches={} stay_awake={} power_off_on_close={} \
         cleanup={} power_on={} audio=false video=true",
         SCRCPY_SERVER_PATH,
@@ -257,13 +273,28 @@ pub fn start_server(
         }
     }
 
-    let video_socket = video_socket
-        .ok_or_else(|| AppError::new("SOCKET_ERROR", "Failed to connect after 10 attempts"))?;
+    let video_socket = video_socket.ok_or_else(|| {
+        AppError::new("SOCKET_ERROR", "Failed to connect video after 10 attempts")
+    })?;
 
     video_socket
         .set_read_timeout(Some(Duration::from_millis(5000)))
         .ok();
     video_socket.set_nodelay(true).ok();
+
+    // Connect to control socket
+    let mut control_socket: Option<TcpStream> = None;
+    for _ in 0..5 {
+        if let Ok(socket) = TcpStream::connect(format!("127.0.0.1:{}", video_port)) {
+            socket.set_nodelay(true).ok();
+            control_socket = Some(socket);
+            break;
+        }
+        thread::sleep(Duration::from_millis(200));
+    }
+
+    let control_socket = control_socket
+        .ok_or_else(|| AppError::new("CONTROL_SOCKET_ERROR", "Failed to connect control socket"))?;
 
     let streaming = Arc::new(Mutex::new(true));
 
@@ -272,8 +303,16 @@ pub fn start_server(
         server_process: Some(server_process),
         streaming: streaming.clone(),
         video_port,
-        control_port,
+        control_port: video_port, // Reusing same forwarded port for both connections
+        control_socket: Some(Arc::new(Mutex::new(control_socket))),
+        last_sps: Arc::new(Mutex::new(None)),
+        last_pps: Arc::new(Mutex::new(None)),
+        last_idr: Arc::new(Mutex::new(None)),
     };
+
+    let last_sps = session.last_sps.clone();
+    let last_pps = session.last_pps.clone();
+    let last_idr = session.last_idr.clone();
 
     {
         let mut sessions = SCRCPY_SESSIONS.lock().unwrap();
@@ -285,7 +324,15 @@ pub fn start_server(
     let app_handle_clone = app_handle.clone();
 
     thread::spawn(move || {
-        decode_and_stream(device_id_clone, video_socket, streaming, app_handle_clone);
+        decode_and_stream(
+            device_id_clone,
+            video_socket,
+            streaming,
+            app_handle_clone,
+            last_sps,
+            last_pps,
+            last_idr,
+        );
     });
 
     Ok(ScrcpyStatus {
@@ -302,6 +349,9 @@ fn decode_and_stream(
     mut socket: TcpStream,
     streaming: Arc<Mutex<bool>>,
     app_handle: AppHandle,
+    last_sps: Arc<Mutex<Option<Vec<u8>>>>,
+    last_pps: Arc<Mutex<Option<Vec<u8>>>>,
+    last_idr: Arc<Mutex<Option<Vec<u8>>>>,
 ) {
     // Read device name (64 bytes)
     let mut device_name = [0u8; 64];
@@ -337,6 +387,25 @@ fn decode_and_stream(
 
                 // Extract and emit all complete NAL units
                 while let Some(nal_data) = extract_next_nal(&mut nal_buffer) {
+                    // Cache SPS/PPS headers
+                    if nal_data.len() > 4 {
+                        // Find NAL type (usually byte 4 or 3 depending on start code)
+                        let nal_type_byte = if nal_data[2] == 0 && nal_data[3] == 1 {
+                            nal_data[4]
+                        } else {
+                            nal_data[3]
+                        };
+                        let nal_type = nal_type_byte & 0x1F;
+
+                        if nal_type == 7 {
+                            *last_sps.lock().unwrap() = Some(nal_data.clone());
+                        } else if nal_type == 8 {
+                            *last_pps.lock().unwrap() = Some(nal_data.clone());
+                        } else if nal_type == 5 {
+                            *last_idr.lock().unwrap() = Some(nal_data.clone());
+                        }
+                    }
+
                     // Encode to Base64 (raw H.264 with start codes)
                     let base64_data = base64::Engine::encode(
                         &base64::engine::general_purpose::STANDARD,
@@ -479,7 +548,70 @@ pub fn read_video_frame(_device_id: &str) -> Result<Vec<u8>, AppError> {
 }
 
 /// Send control event
-pub fn send_control_event(_device_id: &str, _event_type: u8, _data: &[u8]) -> Result<(), AppError> {
-    // TODO: Implement control socket
+pub fn send_control_event(device_id: &str, event_type: u8, data: &[u8]) -> Result<(), AppError> {
+    let sessions = SCRCPY_SESSIONS.lock().unwrap();
+    if let Some(session) = sessions.get(device_id) {
+        if let Some(socket_arc) = &session.control_socket {
+            let mut socket = socket_arc.lock().unwrap();
+
+            // Scrcpy control message: [Type (1 byte)] + [Data]
+            let mut message = Vec::with_capacity(data.len() + 1);
+            message.push(event_type);
+            message.extend_from_slice(data);
+
+            use std::io::Write;
+            socket
+                .write_all(&message)
+                .map_err(|e| AppError::new("CONTROL_WRITE_FAILED", &format!("{}", e)))?;
+            socket.flush().ok();
+        }
+    }
+    Ok(())
+}
+
+/// Synchronize a new client by re-emitting cached SPS/PPS/IDR headers to a private event channel
+pub fn sync_session(
+    device_id: &str,
+    window_label: &str,
+    app_handle: &AppHandle,
+) -> Result<(), AppError> {
+    let sessions = SCRCPY_SESSIONS.lock().unwrap();
+    if let Some(session) = sessions.get(device_id) {
+        let sps = session.last_sps.lock().unwrap().clone();
+        let pps = session.last_pps.lock().unwrap().clone();
+        let idr = session.last_idr.lock().unwrap().clone();
+
+        let sanitized_id = device_id.replace('.', "_").replace(':', "_");
+        // Private sync event for this specific window
+        let sync_event = format!("scrcpy-sync-{}-{}", window_label, sanitized_id);
+
+        println!(
+            "[scrcpy] Processing sync request for device {} from window {}. Target channel: {}",
+            device_id, window_label, sync_event
+        );
+
+        // Atomic Sync: Emit all config packets as quickly as possible to prevent interspersing Delta frames
+        if let Some(sps_data) = sps {
+            let base64_sps =
+                base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &sps_data);
+            app_handle.emit(&sync_event, base64_sps).ok();
+        }
+
+        if let Some(pps_data) = pps {
+            let base64_pps =
+                base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &pps_data);
+            app_handle.emit(&sync_event, base64_pps).ok();
+        }
+
+        if let Some(idr_data) = idr {
+            let base64_idr =
+                base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &idr_data);
+            app_handle.emit(&sync_event, base64_idr).ok();
+        }
+
+        println!("[scrcpy] Atomic sync completed for {}", device_id);
+    } else {
+        println!("[scrcpy] Warning: No active session found for device {} during sync request from window {}", device_id, window_label);
+    }
     Ok(())
 }

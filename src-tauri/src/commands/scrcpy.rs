@@ -57,30 +57,30 @@ pub fn scrcpy_touch(
     width: u32,
     height: u32,
 ) -> Result<(), AppError> {
-    // Scrcpy touch event format:
-    // type(1) + action(1) + pointerId(8) + position(12) + screenSize(8) + pressure(2) + buttons(4)
-    let mut data = Vec::with_capacity(36);
+    // Type 2 = INJECT_TOUCH_EVENT: type(1) + action(1) + pointerId(8) + position(4+4+2+2) + pressure(2) + action_button(4) + buttons(4) = 31 bytes data (type byte is sent separately)
+    let mut data = Vec::with_capacity(31);
 
-    // Action
+    // Action (1 byte)
     data.push(action);
 
-    // Pointer ID (8 bytes, big endian) - using 0
+    // Pointer ID (8 bytes)
     data.extend_from_slice(&0u64.to_be_bytes());
 
-    // Position - x, y as fixed point (4 bytes each)
-    let x_fixed = ((x as u64) << 16) / width as u64;
-    let y_fixed = ((y as u64) << 16) / height as u64;
-    data.extend_from_slice(&(x_fixed as u32).to_be_bytes());
-    data.extend_from_slice(&(y_fixed as u32).to_be_bytes());
+    // Position - x, y as raw pixel coordinates relative to the screen size (4 bytes each)
+    data.extend_from_slice(&x.to_be_bytes());
+    data.extend_from_slice(&y.to_be_bytes());
 
-    // Screen size
+    // Screen size (2 + 2 bytes) - MUST match the video frame dimensions
     data.extend_from_slice(&(width as u16).to_be_bytes());
     data.extend_from_slice(&(height as u16).to_be_bytes());
 
-    // Pressure (2 bytes) - 0xFFFF for max
+    // Pressure (2 bytes)
     data.extend_from_slice(&0xFFFFu16.to_be_bytes());
 
-    // Buttons (4 bytes) - 0 for none
+    // Action button (4 bytes)
+    data.extend_from_slice(&0u32.to_be_bytes());
+
+    // Buttons (4 bytes)
     data.extend_from_slice(&0u32.to_be_bytes());
 
     scrcpy::send_control_event(&device_id, 2, &data) // 2 = INJECT_TOUCH_EVENT
@@ -97,17 +97,14 @@ pub fn scrcpy_scroll(
     width: u32,
     height: u32,
 ) -> Result<(), AppError> {
-    // Scrcpy scroll event format:
-    // position(12) + screenSize(8) + hScroll(4) + vScroll(4) + buttons(4)
-    let mut data = Vec::with_capacity(32);
+    // Type 3 = INJECT_SCROLL_EVENT: type(1) + position(4+4+2+2) + hScroll(4) + vScroll(4) + buttons(4) = 24 bytes data
+    let mut data = Vec::with_capacity(24);
 
-    // Position
-    let x_fixed = ((x as u64) << 16) / width as u64;
-    let y_fixed = ((y as u64) << 16) / height as u64;
-    data.extend_from_slice(&(x_fixed as u32).to_be_bytes());
-    data.extend_from_slice(&(y_fixed as u32).to_be_bytes());
+    // Position - x, y as raw pixel coordinates (4 bytes each)
+    data.extend_from_slice(&x.to_be_bytes());
+    data.extend_from_slice(&y.to_be_bytes());
 
-    // Screen size
+    // Screen size (2 + 2 bytes)
     data.extend_from_slice(&(width as u16).to_be_bytes());
     data.extend_from_slice(&(height as u16).to_be_bytes());
 
@@ -119,4 +116,42 @@ pub fn scrcpy_scroll(
     data.extend_from_slice(&0u32.to_be_bytes());
 
     scrcpy::send_control_event(&device_id, 3, &data) // 3 = INJECT_SCROLL_EVENT
+}
+
+#[tauri::command]
+pub fn scrcpy_key(
+    device_id: String,
+    action: u8, // 0 = down, 1 = up
+    keycode: u32,
+    metastate: u32,
+) -> Result<(), AppError> {
+    // Type 0 = INJECT_KEYCODE_EVENT: type(1) + action(1) + keycode(4) + repeat(4) + metastate(4) = 13 bytes
+    let mut data = Vec::with_capacity(13);
+    data.push(action);
+    data.extend_from_slice(&keycode.to_be_bytes());
+    data.extend_from_slice(&0u32.to_be_bytes()); // Repeat
+    data.extend_from_slice(&metastate.to_be_bytes());
+
+    scrcpy::send_control_event(&device_id, 0, &data)
+}
+
+#[tauri::command]
+pub fn scrcpy_text(device_id: String, text: String) -> Result<(), AppError> {
+    // Type 1 = INJECT_TEXT_EVENT: type(1) + length(4) + text(n)
+    let text_bytes = text.as_bytes();
+    let mut data = Vec::with_capacity(4 + text_bytes.len());
+    data.extend_from_slice(&(text_bytes.len() as u32).to_be_bytes());
+    data.extend_from_slice(text_bytes);
+
+    scrcpy::send_control_event(&device_id, 1, &data)
+}
+
+/// Request scrcpy sync (re-emit SPS/PPS/IDR headers)
+#[tauri::command]
+pub fn request_scrcpy_sync(
+    device_id: String,
+    window_label: String,
+    app_handle: AppHandle,
+) -> Result<(), AppError> {
+    scrcpy::sync_session(&device_id, &window_label, &app_handle)
 }
