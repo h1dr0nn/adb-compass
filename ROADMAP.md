@@ -128,12 +128,12 @@ The roadmap is intended to be flexible and may evolve as implementation progress
   - Fix **Enable Touch** reliability (implement control socket in backend).
   - Implement **Full Gestures**: Drag/Swipe, Long Press, and smooth Scrolling.
   - **Keyboard Forwarding**: Send keystrokes from desktop directly to device.
-- [ ] **Streaming Logcat:**
+- [x] **Streaming Logcat:**
   - Real-time log streaming via Tauri events (eliminate polling latency).
   - Advanced filtering (Regex) and syntax highlighting.
   - Export logs to local files.
-- [ ] **Quick Command Menu:**
-  - Add a "Quick Actions" button next to existing **Delete** buttons (Device Card/App Manager).
+- [x] **Quick Command Menu:**
+  - Add a "Quick Actions" button (Zap icon) in the **Shell Terminal** and **Logcat Viewer**.
   - **IDE-style Suggestions**: Smart autocomplete/suggestions when typing custom commands.
   - Provides instant access to: Clear Cache, Grant Permissions, UI Toggles, and Reboot commands.
 - [x] **Popped-out Mirroring:**

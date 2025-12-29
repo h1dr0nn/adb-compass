@@ -2,7 +2,9 @@ import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowLeft, Terminal, Loader2, Trash2, Smartphone } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
+import { useDevices } from '../hooks/useDevices';
 import { Select } from './ui/Select';
+import { QuickActionMenu } from './device/QuickActionMenu';
 
 interface TerminalViewProps {
     onBack: () => void;
@@ -15,26 +17,22 @@ interface CommandHistory {
 }
 
 export function TerminalView({ onBack }: TerminalViewProps) {
+    const { devices, loading: devicesLoading } = useDevices();
     const [command, setCommand] = useState('');
     const [history, setHistory] = useState<CommandHistory[]>([]);
     const [loading, setLoading] = useState(false);
     const [selectedDevice, setSelectedDevice] = useState<string>('');
-    const [devices, setDevices] = useState<Array<{ id: string; model?: string; status: string }>>([]);
     const [historyIndex, setHistoryIndex] = useState(-1);
     const inputRef = useRef<HTMLInputElement>(null);
     const outputRef = useRef<HTMLDivElement>(null);
 
+    // Set initial device if not set
     useEffect(() => {
-        invoke<Array<{ id: string; model?: string; status: string }>>('get_devices')
-            .then((devs) => {
-                const authorizedDevices = devs.filter((d) => d.status === 'Device');
-                setDevices(authorizedDevices);
-                if (authorizedDevices.length > 0) {
-                    setSelectedDevice(authorizedDevices[0].id);
-                }
-            })
-            .catch(console.error);
-    }, []);
+        if (!selectedDevice && devices.length > 0) {
+            const firstAuthorized = devices.find(d => d.status === 'Device');
+            if (firstAuthorized) setSelectedDevice(firstAuthorized.id);
+        }
+    }, [devices, selectedDevice]);
 
     useEffect(() => {
         outputRef.current?.scrollTo({ top: outputRef.current.scrollHeight, behavior: 'smooth' });
@@ -95,8 +93,9 @@ export function TerminalView({ onBack }: TerminalViewProps) {
     // Prepare options for Select component
     const deviceOptions = devices.map((d) => ({
         value: d.id,
-        label: d.model || d.id,
-        icon: <Smartphone size={14} className="text-accent" />,
+        label: `${d.model || d.id}${d.status !== 'Device' ? ` (${d.status})` : ''}`,
+        icon: <Smartphone size={14} className={d.status === 'Device' ? 'text-accent' : 'text-text-muted'} />,
+        disabled: d.status !== 'Device'
     }));
 
     return (
@@ -138,12 +137,16 @@ export function TerminalView({ onBack }: TerminalViewProps) {
 
                 <div className="flex-1" />
 
+                {selectedDevice && (
+                    <QuickActionMenu deviceId={selectedDevice} />
+                )}
+
                 <button
                     onClick={clearHistory}
-                    className="p-2 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-colors"
+                    className="p-2 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-all"
                     title="Clear history"
                 >
-                    <Trash2 size={16} />
+                    <Trash2 size={20} />
                 </button>
             </div>
 
@@ -154,7 +157,7 @@ export function TerminalView({ onBack }: TerminalViewProps) {
             >
                 {history.length === 0 ? (
                     <div className="flex items-center justify-center h-full text-text-muted">
-                        Enter a command to get started
+                        {devicesLoading ? 'Loading devices...' : 'Enter a command to get started'}
                     </div>
                 ) : (
                     history.map((item, i) => (

@@ -10,10 +10,12 @@ pub mod requirements;
 pub mod services;
 
 use adb::{start_device_tracker, AdbExecutor};
+use commands::logcat::LogcatState;
 use commands::{
     check_action_requirements,
     check_adb_status,
     check_device_requirements,
+    clear_app_data,
     // Shell
     clear_logcat,
     // Wireless
@@ -23,6 +25,7 @@ use commands::{
     disconnect_wireless,
     enable_tcpip,
     execute_shell,
+    export_logcat,
     get_default_media_dir,
     get_device_ip,
     get_device_property,
@@ -32,6 +35,7 @@ use commands::{
     get_scrcpy_status,
     // Screen Capture
     get_screen_frame,
+    grant_all_permissions,
     input_tap,
     input_text,
     install_apk,
@@ -53,17 +57,24 @@ use commands::{
     scrcpy_scroll,
     scrcpy_text,
     scrcpy_touch,
+    set_animations,
+    // Quick Actions
+    set_dark_mode,
+    set_show_taps,
     start_adb_server,
-    // Scrcpy
+    // Logcat Streaming
+    start_logcat_stream,
+    // Scrcpy & Screen Capture
     start_scrcpy_server,
     start_screen_recording,
+    stop_logcat_stream,
     stop_scrcpy_server,
     stop_screen_recording,
     take_screenshot,
     uninstall_app,
     validate_apk,
 };
-use tauri::RunEvent;
+use tauri::{Manager, RunEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -71,6 +82,9 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
+            // Manage state
+            app.manage(LogcatState::new());
+
             // Start real-time device tracking
             start_device_tracker(app.handle().clone());
             Ok(())
@@ -109,6 +123,10 @@ pub fn run() {
             execute_shell,
             get_logcat,
             clear_logcat,
+            // Logcat Streaming
+            start_logcat_stream,
+            stop_logcat_stream,
+            export_logcat,
             // Screen Capture
             take_screenshot,
             save_capture_file,
@@ -127,11 +145,28 @@ pub fn run() {
             scrcpy_scroll,
             scrcpy_key,
             scrcpy_text,
+            // Quick Actions
+            set_dark_mode,
+            set_show_taps,
+            set_animations,
+            clear_app_data,
+            grant_all_permissions,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|_app_handle, event| {
+        .run(|app_handle, event| {
             if let RunEvent::Exit = event {
+                // Kill all logcat streams
+                if let Some(state) = app_handle.try_state::<LogcatState>() {
+                    let mut streams = state.streams.lock().unwrap();
+                    for (_, mut child) in streams
+                        .drain()
+                        .collect::<Vec<(String, std::process::Child)>>()
+                    {
+                        let _ = child.kill();
+                    }
+                }
+
                 // Kill ADB server when app closes to prevent orphan processes
                 let executor = AdbExecutor::new();
                 let _ = executor.kill_server();
