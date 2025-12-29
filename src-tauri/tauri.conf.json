@@ -41,5 +41,13 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ]
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://raw.githubusercontent.com/h1dr0nn/adb-compass/main/updater.json"
+      ],
+      "pubkey": "RWQBLdXrq3OnAh45D7Czl1bP3QRvwUK2XjabMiWrYvCdWM8ok25o2mlc"
+    }
   }
 }

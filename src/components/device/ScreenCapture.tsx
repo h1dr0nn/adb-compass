@@ -622,63 +622,63 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 >
                     <div className="absolute inset-0 rounded-xl overflow-hidden">
                         {isMirroring ? (
-                        <div className="absolute inset-0 bg-black flex flex-col items-center justify-center text-center p-6 z-30">
-                            <motion.div
-                                animate={{ opacity: [0.4, 1, 0.4] }}
-                                transition={{ duration: 2, repeat: Infinity }}
-                                className="flex flex-col items-center gap-4"
-                            >
-                                <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center">
-                                    <ExternalLink size={32} className="text-accent" />
-                                </div>
-                                <div>
-                                    <h3 className="text-white font-semibold mb-1">Mirroring Active</h3>
-                                    <p className="text-text-muted text-xs">Device screen is being projected to a dedicated window.</p>
-                                </div>
-                                <button
-                                    onClick={handleStopMirror}
-                                    className="mt-4 px-4 py-1.5 bg-surface-elevated border border-border rounded-lg text-xs text-text-secondary hover:text-white transition-colors"
+                            <div className="absolute inset-0 bg-black flex flex-col items-center justify-center text-center p-6 z-30">
+                                <motion.div
+                                    animate={{ opacity: [0.4, 1, 0.4] }}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className="flex flex-col items-center gap-4"
                                 >
-                                    Stop Mirroring
-                                </button>
-                            </motion.div>
-                        </div>
-                    ) : streamMode === 'high-perf' && scrcpyStatus?.port ? (
-                        <StreamPlayer
-                            deviceId={device.id}
-                            width={screenWidth}
-                            height={screenHeight}
-                            allowTouch={allowTouch}
-                            onVideoDimensions={(w, h) => {
-                                console.log(`[ScreenCapture] StreamPlayer reported video dimensions: ${w}x${h}`);
-                                setAspectRatio(w / h);
-                                setScreenWidth(w);
-                                setScreenHeight(h);
-                            }}
-                            onTouch={handleScrcpyTouch}
-                            onScroll={handleScrcpyScroll}
-                            showFps={showFps}
-                            windowLabel="main"
-                            allowKeyboard={true}
-                        />
-                    ) : previewImage ? (
-                        <img src={previewImage} alt="Preview" className="w-full h-full object-contain" />
-                    ) : (
-                        <div className="w-full h-full flex flex-col items-center justify-center text-text-muted">
-                            <Image size={40} className="opacity-30 mb-1" />
-                            <span className="text-xs opacity-50">{t.noSignal}</span>
-                        </div>
-                    )}
-
-                    {/* Recording Overlay */}
-                    {isRecording && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                            <div className="text-center text-white">
-                                <div className="w-3 h-3 rounded-full bg-error animate-pulse mx-auto mb-1" />
-                                <span className="text-xs">{t.recording}</span>
+                                    <div className="w-16 h-16 rounded-full bg-accent/20 flex items-center justify-center">
+                                        <ExternalLink size={32} className="text-accent" />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-white font-semibold mb-1">Mirroring Active</h3>
+                                        <p className="text-text-muted text-xs">Device screen is being projected to a dedicated window.</p>
+                                    </div>
+                                    <button
+                                        onClick={handleStopMirror}
+                                        className="mt-4 px-4 py-1.5 bg-surface-elevated border border-border rounded-lg text-xs text-text-secondary hover:text-white transition-colors"
+                                    >
+                                        Stop Mirroring
+                                    </button>
+                                </motion.div>
                             </div>
-                        </div>
-                    )}
+                        ) : streamMode === 'high-perf' && scrcpyStatus?.port ? (
+                            <StreamPlayer
+                                deviceId={device.id}
+                                width={screenWidth}
+                                height={screenHeight}
+                                allowTouch={allowTouch}
+                                onVideoDimensions={(w, h) => {
+                                    console.log(`[ScreenCapture] StreamPlayer reported video dimensions: ${w}x${h}`);
+                                    setAspectRatio(w / h);
+                                    setScreenWidth(w);
+                                    setScreenHeight(h);
+                                }}
+                                onTouch={handleScrcpyTouch}
+                                onScroll={handleScrcpyScroll}
+                                showFps={showFps}
+                                windowLabel="main"
+                                allowKeyboard={true}
+                            />
+                        ) : previewImage ? (
+                            <img src={previewImage} alt="Preview" className="w-full h-full object-contain" />
+                        ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-text-muted">
+                                <Image size={40} className="opacity-30 mb-1" />
+                                <span className="text-xs opacity-50">{t.noSignal}</span>
+                            </div>
+                        )}
+
+                        {/* Recording Overlay */}
+                        {isRecording && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                                <div className="text-center text-white">
+                                    <div className="w-3 h-3 rounded-full bg-error animate-pulse mx-auto mb-1" />
+                                    <span className="text-xs">{t.recording}</span>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 

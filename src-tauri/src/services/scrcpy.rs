@@ -6,7 +6,7 @@ use crate::command_utils::hidden_command;
 use crate::error::AppError;
 use base64;
 use serde::Serialize;
-use std::io::Read;
+use std::io::{BufRead, Read};
 use std::net::TcpStream;
 use std::process::{Child, Stdio};
 use std::sync::{Arc, Mutex};
@@ -232,13 +232,11 @@ pub fn start_server(
 
     // Spawn thread to log server stderr (critical for debugging)
     if let Some(stderr) = server_process.stderr.take() {
-        let device_id = device_id.to_string();
         thread::spawn(move || {
             let src = std::io::BufReader::new(stderr);
-            use std::io::BufRead;
             for line in src.lines() {
-                if let Ok(l) = line {
-                    println!("[scrcpy-server-{}] {}", device_id, l);
+                if let Ok(_l) = line {
+                    // scrcpy server output
                 }
             }
         });
@@ -249,7 +247,7 @@ pub fn start_server(
 
     // Connect to video socket with retry - wait between retries
     let mut video_socket: Option<TcpStream> = None;
-    for attempt in 1..=10 {
+    for _attempt in 1..=10 {
         // Give server more time to create socket
         thread::sleep(Duration::from_millis(500));
 
@@ -262,13 +260,13 @@ pub fn start_server(
                         video_socket = Some(socket);
                         break;
                     }
-                    Err(e) => {
-                        println!("[scrcpy] Failed to read dummy byte: {}", e);
+                    Err(_e) => {
+                        // Failed to read dummy byte
                     }
                 }
             }
-            Err(e) => {
-                println!("[scrcpy] Connection attempt {} failed: {}", attempt, e);
+            Err(_e) => {
+                // Connection attempt failed
             }
         }
     }
@@ -355,15 +353,13 @@ fn decode_and_stream(
 ) {
     // Read device name (64 bytes)
     let mut device_name = [0u8; 64];
-    if let Err(e) = socket.read_exact(&mut device_name) {
-        println!("[scrcpy] Failed to read device name: {}", e);
+    if let Err(_e) = socket.read_exact(&mut device_name) {
         return;
     }
 
     // Read video header (12 bytes)
     let mut header = [0u8; 12];
-    if let Err(e) = socket.read_exact(&mut header) {
-        println!("[scrcpy] Failed to read video header: {}", e);
+    if let Err(_e) = socket.read_exact(&mut header) {
         return;
     }
 
@@ -415,11 +411,7 @@ fn decode_and_stream(
                     // Emit 'scrcpy-h264-frame-{device_id}'
                     // Sanitize device_id for Tauri event name requirements (alphanumeric, -, /, :, _)
                     let sanitized_id = device_id.replace('.', "_").replace(':', "_");
-                    if let Err(e) =
-                        app_handle.emit(&format!("scrcpy-frame-{}", sanitized_id), base64_data)
-                    {
-                        println!("[scrcpy] Emit error: {}", e);
-                    }
+                    let _ = app_handle.emit(&format!("scrcpy-frame-{}", sanitized_id), base64_data);
                 }
             }
             Ok(_) => {
@@ -431,7 +423,6 @@ fn decode_and_stream(
                 if e.kind() != std::io::ErrorKind::WouldBlock
                     && e.kind() != std::io::ErrorKind::TimedOut
                 {
-                    println!("[scrcpy] Read error: {}", e);
                     break;
                 }
             }
@@ -585,11 +576,6 @@ pub fn sync_session(
         // Private sync event for this specific window
         let sync_event = format!("scrcpy-sync-{}-{}", window_label, sanitized_id);
 
-        println!(
-            "[scrcpy] Processing sync request for device {} from window {}. Target channel: {}",
-            device_id, window_label, sync_event
-        );
-
         // Atomic Sync: Emit all config packets as quickly as possible to prevent interspersing Delta frames
         if let Some(sps_data) = sps {
             let base64_sps =
@@ -608,10 +594,6 @@ pub fn sync_session(
                 base64::Engine::encode(&base64::engine::general_purpose::STANDARD, &idr_data);
             app_handle.emit(&sync_event, base64_idr).ok();
         }
-
-        println!("[scrcpy] Atomic sync completed for {}", device_id);
-    } else {
-        println!("[scrcpy] Warning: No active session found for device {} during sync request from window {}", device_id, window_label);
     }
     Ok(())
 }

@@ -3,8 +3,8 @@ name: Build and Release
 on:
   push:
     tags:
-      - 'develop-v*'
-      - 'release-v*'
+      - "develop-v*"
+      - "release-v*"
 
 permissions:
   contents: write
@@ -73,7 +73,7 @@ jobs:
             node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('package.json')); p.version='$VERSION'; fs.writeFileSync('package.json', JSON.stringify(p, null, 2));"
             node -e "const fs=require('fs'); const p=JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json')); p.version='$VERSION'; fs.writeFileSync('src-tauri/tauri.conf.json', JSON.stringify(p, null, 2));"
           fi
-          
+
           echo "Updated versions to: $VERSION"
           cat package.json | grep version || true
           cat src-tauri/tauri.conf.json | grep version || true
@@ -82,7 +82,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          cache: "npm"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -106,6 +106,9 @@ jobs:
 
       - name: Build Tauri App
         run: npm run tauri build -- --target ${{ matrix.target }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Rename and Prepare Artifacts
         shell: bash
@@ -116,7 +119,7 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: |
           mkdir -p release-artifacts
-          
+
           # Windows
           if [ "$PLATFORM" == "windows" ]; then
             # Debug: List all files in release folder
@@ -154,7 +157,7 @@ jobs:
               # Fallback: find any .exe that's not a dll or installer-related
               ls -la "src-tauri/target/$TARGET/release/"*.exe 2>/dev/null || true
             fi
-          
+
           # Linux
           elif [ "$PLATFORM" == "linux" ]; then
             # AppImage
@@ -162,12 +165,21 @@ jobs:
             
             # Deb package
             cp src-tauri/target/$TARGET/release/bundle/deb/*.deb "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.deb" 2>/dev/null || true
-          
+
           # macOS
           elif [ "$PLATFORM" == "macos" ]; then
             cp src-tauri/target/$TARGET/release/bundle/dmg/*.dmg "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}.dmg" 2>/dev/null || true
           fi
-          
+
+          # Extract and save signature for updater automation
+          echo "Extracting signature..."
+          SIG_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.sig" | head -n 1)
+          if [ -n "$SIG_FILE" ]; then
+            # Tauri .sig files contain minisign format data
+            # The raw signature string is on the second line
+            sed -n '2p' "$SIG_FILE" > "release-artifacts/${PLATFORM}-${ARCH}.sig.txt"
+          fi
+
           echo "Artifacts prepared:"
           ls -la release-artifacts/
 
@@ -181,11 +193,11 @@ jobs:
         run: |
           $portableExe = "release-artifacts/adbcompass-${env:VERSION}-windows-${env:ARCH}-portable.exe"
           $zipFile = "release-artifacts/adbcompass-${env:VERSION}-windows-${env:ARCH}-portable.zip"
-          
+
           # Debug: List what we have
           Write-Host "=== Contents of release-artifacts ==="
           Get-ChildItem release-artifacts -ErrorAction SilentlyContinue | Format-Table Name, Length
-          
+
           # If portable exe doesn't exist, try to find and copy it
           if (-not (Test-Path $portableExe)) {
             Write-Host "Portable exe not found at expected path, searching..."
@@ -209,7 +221,7 @@ jobs:
               }
             }
           }
-          
+
           if (Test-Path $portableExe) {
             # Create temp folder and copy files
             New-Item -ItemType Directory -Force -Path "portable-temp" | Out-Null
@@ -266,10 +278,15 @@ jobs:
           if-no-files-found: warn
 
   create-release:
-    name: Create Release
+    name: Create Release & Update Manifest
     needs: build
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
       - name: Extract Version from Tag
         id: get_version
         run: |
@@ -289,10 +306,67 @@ jobs:
           pattern: artifacts-*
           merge-multiple: true
 
-      - name: Display Artifacts
+      - name: Update updater.json
+        shell: node
+        env:
+          VERSION: ${{ steps.get_version.outputs.version }}
+          TAG_NAME: ${{ github.ref_name }}
         run: |
-          echo "All artifacts:"
-          ls -laR artifacts/
+          const fs = require('fs');
+          const updater = JSON.parse(fs.readFileSync('updater.json', 'utf8'));
+          const version = process.env.VERSION;
+          const tagName = process.env.TAG_NAME;
+
+          updater.version = version;
+          updater.pub_date = new Date().toISOString();
+
+          const platformMap = {
+            'windows-x64': 'windows-x86_64',
+            'linux-x64': 'linux-x86_64',
+            'macos-x64': 'darwin-x86_64',
+            'macos-arm64': 'darwin-aarch64'
+          };
+
+          Object.entries(platformMap).forEach(([key, updaterKey]) => {
+            const sigFile = `artifacts/${key}.sig.txt`;
+            if (fs.existsSync(sigFile)) {
+              const signature = fs.readFileSync(sigFile, 'utf8').trim();
+              if (updater.platforms[updaterKey]) {
+                updater.platforms[updaterKey].signature = signature;
+                // Update URL to point to the new release
+                const baseUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/${tagName}`;
+                
+                if (updaterKey === 'windows-x86_64') {
+                    updater.platforms[updaterKey].url = `${baseUrl}/adbcompass-${version}-windows-x64-setup.exe`;
+                } else if (updaterKey === 'linux-x86_64') {
+                    updater.platforms[updaterKey].url = `${baseUrl}/adbcompass-${version}-linux-x64.AppImage`;
+                } else if (updaterKey === 'darwin-x86_64') {
+                    updater.platforms[updaterKey].url = `${baseUrl}/adbcompass-${version}-macos-x64.dmg`;
+                } else if (updaterKey === 'darwin-aarch64') {
+                    updater.platforms[updaterKey].url = `${baseUrl}/adbcompass-${version}-macos-arm64.dmg`;
+                }
+              }
+            }
+          });
+
+          fs.writeFileSync('updater.json', JSON.stringify(updater, null, 2));
+          console.log('Updated updater.json successfully');
+
+      - name: Commit and Push updater.json
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add updater.json
+          git commit -m "chore: update updater.json for version ${{ steps.get_version.outputs.version }} [skip ci]" || echo "No changes to commit"
+          git push origin main || echo "Failed to push updater.json"
+
+      - name: Prepare Release Files
+        run: |
+          mkdir -p release-files
+          # Copy only installers and portable versions, exclude .sig.txt files
+          find artifacts -type f ! -name "*.sig.txt" -exec cp {} release-files/ \;
+          echo "Files to be uploaded to release:"
+          ls -la release-files/
 
       - name: Determine Release Type
         id: release_type
@@ -312,7 +386,7 @@ jobs:
           tag_name: ${{ github.ref_name }}
           draft: false
           prerelease: ${{ steps.release_type.outputs.is_prerelease }}
-          files: artifacts/*
+          files: release-files/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

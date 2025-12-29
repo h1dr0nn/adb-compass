@@ -52,7 +52,6 @@ pub async fn start_logcat_stream<R: Runtime>(
         .spawn()
         .map_err(|e| {
             let err = format!("Failed to spawn logcat: {}", e);
-            println!("{}", err);
             err
         })?;
 

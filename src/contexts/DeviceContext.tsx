@@ -164,37 +164,41 @@ export function DeviceProvider({ children }: { children: React.ReactNode }) {
             if (isReconnectingRef.current) return;
 
             const offlineWireless = devices.filter(d =>
-                d.status === 'Offline' && d.id.includes(':')
+                d.status === 'Offline' && 
+                d.id.includes('.') && 
+                d.id.includes(':')
             );
 
             if (offlineWireless.length === 0) return;
 
             isReconnectingRef.current = true;
             try {
-                for (const device of offlineWireless) {
+                // Try to connect to all offline wireless devices
+                const promises = offlineWireless.map(async (device) => {
                     try {
                         const [ip, port] = device.id.split(':');
                         await invoke('connect_wireless', { ip, port: port || '5555' });
                     } catch (e) {
                         // Ignore background connection errors
                     }
-                }
+                });
+                
+                await Promise.all(promises);
 
                 // If we attempted connections, trigger a refresh to see if they hooked up
-                if (offlineWireless.length > 0) {
-                    const freshDevices = await invoke<DeviceInfo[]>('get_devices');
-                    mergeDevices(freshDevices);
-                }
+                const freshDevices = await invoke<DeviceInfo[]>('get_devices');
+                mergeDevices(freshDevices);
             } finally {
                 isReconnectingRef.current = false;
             }
         };
 
-        const interval = setInterval(reconnectOfflineWireless, 30000); // 30s
-        reconnectOfflineWireless();
+        const interval = setInterval(reconnectOfflineWireless, 15000); // Check every 15s instead of 30s
+        reconnectOfflineWireless(); // Run immediately on mount or status change
 
         return () => clearInterval(interval);
-    }, [devices.length, mergeDevices]);
+        // We watch for changes in the count of offline wireless devices to trigger immediately
+    }, [devices.filter(d => d.status === 'Offline' && d.id.includes(':')).length, mergeDevices]);
 
     // Initialize
     useEffect(() => {

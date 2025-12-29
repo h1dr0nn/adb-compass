@@ -1,0 +1,23 @@
+{
+  "version": "0.1.0",
+  "notes": "Initial release with UI improvements and updater support.",
+  "pub_date": "2025-12-29T15:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "",
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/v0.1.0/adb-compass_0.1.0_x64-setup.exe.sig"
+    },
+    "linux-x86_64": {
+      "signature": "",
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/v0.1.0/adb-compass_0.1.0_amd64.AppImage.tar.gz.sig"
+    },
+    "darwin-x86_64": {
+      "signature": "",
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/v0.1.0/adb-compass_0.1.0_x64.app.tar.gz.sig"
+    },
+    "darwin-aarch64": {
+      "signature": "",
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/v0.1.0/adb-compass_0.1.0_aarch64.app.tar.gz.sig"
+    }
+  }
+}

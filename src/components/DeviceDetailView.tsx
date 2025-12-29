@@ -121,7 +121,7 @@ export function DeviceDetailView({ device, onBack }: DeviceDetailViewProps) {
 
             {/* Tab Content */}
             <div className="flex-1 overflow-hidden">
-                <AnimatePresence mode="wait">
+                <AnimatePresence>
                     <motion.div
                         key={activeTab}
                         variants={tabContent}

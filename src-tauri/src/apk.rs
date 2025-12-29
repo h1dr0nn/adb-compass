@@ -139,3 +139,48 @@ pub fn map_install_error(error_output: &str) -> (String, Option<String>) {
         None,
     )
 }
+
+/// Helper for APK installation
+pub struct ApkInstaller<'a> {
+    executor: &'a crate::adb::AdbExecutor,
+}
+
+impl<'a> ApkInstaller<'a> {
+    pub fn new(executor: &'a crate::adb::AdbExecutor) -> Self {
+        Self { executor }
+    }
+
+    /// Install APK on device
+    pub fn install(&self, device_id: &str, apk_path: &str) -> InstallResult {
+        // Verify APK file exists
+        if !std::path::Path::new(apk_path).exists() {
+            return InstallResult::failure(device_id, "APK file not found", None);
+        }
+
+        let output = self.executor.run_with_retry(
+            || {
+                let mut cmd = crate::command_utils::hidden_command(self.executor.get_adb_path());
+                cmd.args(["-s", device_id, "install", "-r", apk_path]);
+                cmd
+            },
+            std::time::Duration::from_secs(120),
+            0,
+        );
+
+        match output {
+            Ok(result) => {
+                let stdout = String::from_utf8_lossy(&result.stdout);
+                let stderr = String::from_utf8_lossy(&result.stderr);
+                let combined = format!("{}{}", stdout, stderr);
+
+                if result.status.success() && combined.contains("Success") {
+                    InstallResult::success(device_id, "APK installed successfully")
+                } else {
+                    let (message, error_code) = map_install_error(&combined);
+                    InstallResult::failure(device_id, &message, error_code.as_deref())
+                }
+            }
+            Err(e) => InstallResult::failure(device_id, &format!("Failed to run adb: {}", e), None),
+        }
+    }
+}

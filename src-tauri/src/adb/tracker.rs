@@ -145,8 +145,7 @@ fn run_tracker(
                     thread::sleep(Duration::from_secs(1));
                 }
             }
-            Err(e) => {
-                eprintln!("Failed to start track-devices: {}", e);
+            Err(_e) => {
                 thread::sleep(Duration::from_secs(5));
             }
         }

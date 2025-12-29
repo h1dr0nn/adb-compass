@@ -3,13 +3,14 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     ArrowLeft, Moon, Sun, Monitor, FolderOpen, Globe,
-    FileText, Settings as SettingsIcon, RotateCcw
+    FileText, Settings as SettingsIcon, RotateCcw, Github
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { open as openDialog, confirm } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { invoke } from '@tauri-apps/api/core';
 import { Select } from './ui/Select';
+import { check } from '@tauri-apps/plugin-updater';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useTheme } from '../contexts/ThemeContext';
 
@@ -130,6 +131,28 @@ export function Settings({ onBack }: SettingsProps) {
 
     const handleViewLogs = async () => {
         toast.info("Logs unavailable in debug mode");
+    };
+
+    const handleCheckUpdates = async () => {
+        try {
+            const update = await check();
+            if (update) {
+                const confirmed = await confirm(
+                    `New version ${update.version} is available! Would you like to update?`,
+                    { title: 'Update Available', kind: 'info' }
+                );
+                if (confirmed) {
+                    toast.info('Downloading update...');
+                    await update.downloadAndInstall();
+                    toast.success('Update installed! Please restart the app.');
+                }
+            } else {
+                toast.success(t.latestVersion || 'You are on the latest version!');
+            }
+        } catch (err) {
+            console.error('Failed to check for updates', err);
+            toast.error('Failed to check for updates. Make sure you have an internet connection.');
+        }
     };
 
 
@@ -314,6 +337,7 @@ export function Settings({ onBack }: SettingsProps) {
                     <div className="flex flex-col md:flex-row items-start gap-6">
                         <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
+                                <img src="/icon.png" alt="ADB Compass" className="w-8 h-8 rounded-lg shadow-sm" />
                                 <h2 className="text-xl font-bold text-text-primary">ADB Compass</h2>
                                 <span className="text-[10px] font-bold text-accent bg-accent/10 px-2 py-0.5 rounded border border-accent/20">
                                     v{t.version.split(':')[1].trim()}
@@ -325,14 +349,16 @@ export function Settings({ onBack }: SettingsProps) {
                             <div className="flex flex-wrap gap-2">
                                 <button
                                     onClick={() => openUrl('https://github.com/h1dr0nn/adb-compass')}
-                                    className="text-xs font-medium text-text-secondary hover:text-accent transition-colors bg-surface-elevated px-3 py-1.5 rounded-lg border border-border/50"
+                                    className="text-xs font-medium text-text-secondary hover:text-accent transition-colors bg-surface-elevated px-3 py-1.5 rounded-lg border border-border/50 flex items-center gap-2"
                                 >
+                                    <Github size={14} />
                                     GitHub
                                 </button>
                                 <button
                                     onClick={() => openUrl('https://github.com/h1dr0nn')}
-                                    className="text-xs font-medium text-text-secondary hover:text-accent transition-colors bg-surface-elevated px-3 py-1.5 rounded-lg border border-border/50"
+                                    className="text-xs font-medium text-text-secondary hover:text-accent transition-colors bg-surface-elevated px-3 py-1.5 rounded-lg border border-border/50 flex items-center gap-2"
                                 >
+                                    <Globe size={14} />
                                     {t.officialWebsite}
                                 </button>
                             </div>
@@ -359,7 +385,7 @@ export function Settings({ onBack }: SettingsProps) {
                             </button>
                             <span className="text-text-muted/20">|</span>
                             <button
-                                onClick={() => toast.info('Latest version!')}
+                                onClick={handleCheckUpdates}
                                 className="text-[11px] font-bold text-accent/60 hover:text-accent transition-colors"
                             >
                                 {t.checkUpdates}

@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import {
     Smartphone, Cpu, HardDrive, Battery, BatteryCharging,
     Wifi, Signal, Monitor, MemoryStick, Building2,
-    Shield, Hash
+    Shield, Hash, Loader2
 } from 'lucide-react';
 import { invoke } from '@tauri-apps/api/core';
 import { DeviceInfo } from '../../types';
@@ -53,10 +53,11 @@ function InfoCard({ icon, label, value, loading }: InfoCardProps) {
                 <div className="min-w-0 flex-1">
                     <p className="text-xs text-text-muted uppercase tracking-wide mb-1">{label}</p>
                     {loading ? (
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center h-5">
+                            <Loader2 className="animate-spin text-accent/50" size={14} />
                         </div>
                     ) : (
-                        <p className="text-sm font-semibold text-text-primary truncate">
+                        <p className="text-sm font-semibold text-text-primary truncate h-5">
                             {value}
                         </p>
                     )}
