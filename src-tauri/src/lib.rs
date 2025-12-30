@@ -12,6 +12,7 @@ pub mod services;
 use adb::{start_device_tracker, AdbExecutor};
 use commands::logcat::LogcatState;
 use commands::{
+    build_index,
     check_action_requirements,
     check_adb_status,
     check_device_requirements,
@@ -26,22 +27,28 @@ use commands::{
     enable_tcpip,
     execute_shell,
     export_logcat,
+    get_app_icon,
+    get_apps_full,
+    get_clipboard,
     get_default_media_dir,
     get_device_ip,
     get_device_property,
     get_device_props,
     get_devices,
     get_logcat,
+    get_performance_stats,
     get_scrcpy_status,
     // Screen Capture
     get_screen_frame,
     grant_all_permissions,
+    inject_tap_fast,
     input_tap,
     input_text,
     install_apk,
     kill_adb_server,
     // File Transfer
     list_files,
+    list_files_fast,
     list_packages,
     open_captures_folder,
     pull_file,
@@ -57,7 +64,9 @@ use commands::{
     scrcpy_scroll,
     scrcpy_text,
     scrcpy_touch,
+    search_files_fast,
     set_animations,
+    set_clipboard,
     // Quick Actions
     set_dark_mode,
     set_show_taps,
@@ -71,6 +80,7 @@ use commands::{
     stop_scrcpy_server,
     stop_screen_recording,
     take_screenshot,
+    test_agent_connection,
     uninstall_app,
     validate_apk,
 };
@@ -152,6 +162,16 @@ pub fn run() {
             set_animations,
             clear_app_data,
             grant_all_permissions,
+            test_agent_connection,
+            get_apps_full,
+            get_app_icon,
+            list_files_fast,
+            get_performance_stats,
+            get_clipboard,
+            set_clipboard,
+            inject_tap_fast,
+            build_index,
+            search_files_fast,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")

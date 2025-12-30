@@ -10,9 +10,10 @@ import { toast } from 'sonner';
 
 interface QuickActionMenuProps {
     deviceId: string;
+    triggerIcon?: React.ReactNode;
 }
 
-export function QuickActionMenu({ deviceId }: QuickActionMenuProps) {
+export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps) {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -62,7 +63,7 @@ export function QuickActionMenu({ deviceId }: QuickActionMenuProps) {
                 className={`p-2 rounded-lg border transition-all ${isOpen ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' : 'bg-surface-elevated border-border text-text-secondary hover:text-accent hover:border-accent'}`}
                 title="Quick Actions"
             >
-                <Zap size={20} className={isOpen ? 'fill-current' : ''} />
+                {triggerIcon || <Zap size={20} className={isOpen ? 'fill-current' : ''} />}
             </button>
 
             <AnimatePresence>

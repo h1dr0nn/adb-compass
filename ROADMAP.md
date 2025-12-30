@@ -147,21 +147,22 @@ The roadmap is intended to be flexible and may evolve as implementation progress
 
 ### Phase 8 — Advanced Device Integration (Android Agent)
 
-**Goal:** Implement a custom Android Agent (Server) to bypass ADB limitations and unlock advanced features.
+**Goal:** Implement a custom Android Agent (Headless Java JAR) to bypass ADB limitations and unlock advanced features with high performance.
 
-**Core Concept:**
+**Technical Stack:**
 
-- Push a lightweight Android app/jar (Agent) to the device via ADB.
-- The Agent runs as a local server on the phone, communicating with ADB Compass via socket.
-- **Fallback Strategy:** If Agent installation fails or is rejected, fallback to standard ADB commands (Smart Mapping for names/icons).
+- **Agent:** Java 11+ (DEX/JAR) running via `app_process`.
+- **Communication:** TCP Socket over ADB port forwarding.
+- **Fallback:** Automatic fallback to standard ADB commands if the agent cannot be started.
 
 **Key Features:**
 
-- [ ] **Real App Icons & Labels:** Agent extracts original icons and labels from `PackageManager` and sends them to desktop.
-- [ ] **Real-time Performance Stats:** High-frequency CPU/RAM/FPS monitoring (overlay potential).
-- [ ] **File System indexing:** Faster file listing and searching than raw `ls` commands.
-- [ ] **Clipboard Sync:** Bi-directional clipboard sharing.
-- [ ] **Input Control:** Lower latency touch/keyboard injection compared to `adb shell input`.
+- [ ] **Native App Icons & Labels:** Extract original high-res icons and localized names using Android `PackageManager`.
+- [ ] **High-Frequency Monitoring:** Real-time CPU, RAM, and Battery temperature tracking via Socket.
+- [ ] **App FPS Counter:** Measure real-time frame rates of the currently active app.
+- [ ] **Faster File Discovery:** Built-in file indexing for instantaneous searching and listing.
+- [ ] **Bi-directional Clipboard:** Seamless clipboard sharing between desktop and device.
+- [ ] **Advanced Input:** Lower latency touch and keyboard injection via the Agent's local service.
 
 ---
 

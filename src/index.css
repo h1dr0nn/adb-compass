@@ -1,4 +1,4 @@
-@import './styles/tokens.css';
+@import "./styles/tokens.css";
 
 /* Import Apple-style design tokens */
 @import "tailwindcss/base";
@@ -7,139 +7,170 @@
 
 /* Base layer - global styles */
 @layer base {
-    :root {
-        /* Light Theme Variables - Improved Contrast & Less Glare */
-        --color-surface-bg: 241 245 249;
-        /* slate-100 */
-        --color-surface-card: 255 255 255;
-        /* white */
-        --color-surface-elevated: 226 232 240;
-        /* slate-200 */
-        --color-surface-hover: 203 213 225;
-        /* slate-300 */
+  :root {
+    /* Light Theme Variables - Improved Contrast & Less Glare */
+    --color-surface-bg: 241 245 249;
+    /* slate-100 */
+    --color-surface-card: 255 255 255;
+    /* white */
+    --color-surface-elevated: 226 232 240;
+    /* slate-200 */
+    --color-surface-hover: 203 213 225;
+    /* slate-300 */
 
-        --color-border: 203 213 225;
-        /* slate-300 */
+    --color-border: 203 213 225;
+    /* slate-300 */
 
-        --color-text-primary: 15 23 42;
-        /* slate-900 */
-        --color-text-secondary: 51 65 85;
-        /* slate-700 */
-        --color-text-muted: 100 116 139;
-        /* slate-500 */
-    }
+    --color-text-primary: 15 23 42;
+    /* slate-900 */
+    --color-text-secondary: 51 65 85;
+    /* slate-700 */
+    --color-text-muted: 100 116 139;
+    /* slate-500 */
+  }
 
-    .dark {
-        /* Dark Theme Variables */
-        --color-surface-bg: 10 10 15;
-        --color-surface-card: 20 20 30;
-        --color-surface-elevated: 30 30 45;
-        --color-surface-hover: 40 40 60;
+  .dark {
+    /* Dark Theme Variables */
+    --color-surface-bg: 10 10 15;
+    --color-surface-card: 20 20 30;
+    --color-surface-elevated: 30 30 45;
+    --color-surface-hover: 40 40 60;
 
-        --color-border: 100 116 139;
-        /* slate-500 */
+    --color-border: 100 116 139;
+    /* slate-500 */
 
-        --color-text-primary: 248 250 252;
-        --color-text-secondary: 148 163 184;
-        --color-text-muted: 100 116 139;
-    }
+    --color-text-primary: 248 250 252;
+    --color-text-secondary: 148 163 184;
+    --color-text-muted: 100 116 139;
+  }
 
-    html,
-    body {
-        @apply bg-surface-bg text-text-primary font-sans antialiased;
-        transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-        background-color: rgb(var(--color-surface-bg));
-    }
+  html,
+  body {
+    @apply bg-surface-bg text-text-primary font-sans antialiased;
+    transition: background-color 0.3s ease, color 0.3s ease,
+      border-color 0.3s ease;
+    background-color: rgb(var(--color-surface-bg));
+  }
 
-    /* Apply smooth transition to all themed elements */
-    *,
-    *::before,
-    *::after {
-        transition-property: background-color, border-color, color, fill, stroke;
-        transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-        transition-duration: 300ms;
-    }
+  /* Apply smooth transition to all themed elements */
+  *,
+  *::before,
+  *::after {
+    transition-property: background-color, border-color, color, fill, stroke;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 300ms;
+  }
 
-    /* Disable transitions for performance-heavy or non-themed elements if needed */
-    .no-transition,
-    .no-transition * {
-        transition: none !important;
-    }
+  /* Global Custom Scrollbar */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-border)) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  *::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 3px;
+    transition: background 0.2s ease;
+  }
+
+  *:hover::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-border));
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--color-text-muted));
+  }
+
+  /* Disable transitions for performance-heavy or non-themed elements if needed */
+  .no-transition,
+  .no-transition * {
+    transition: none !important;
+  }
 }
 
 /* Component layer - reusable component classes */
 @layer components {
-    .btn-primary {
-        @apply flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-br from-accent to-accent-secondary text-white font-semibold rounded-lg shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 transition-all duration-200;
-    }
+  .btn-primary {
+    @apply flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-br from-accent to-accent-secondary text-white font-semibold rounded-lg shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 transition-all duration-200;
+  }
 
-    .card {
-        @apply bg-surface-card border border-border rounded-2xl p-5 transition-all duration-300;
-    }
+  .card {
+    @apply bg-surface-card border border-border rounded-2xl p-5 transition-all duration-300;
+  }
 
-    .card-hover {
-        @apply hover:-translate-y-1 hover:shadow-xl hover:border-accent;
-    }
+  .card-hover {
+    @apply hover:-translate-y-1 hover:shadow-xl hover:border-accent;
+  }
 
-    /* Custom Scrollbar - Consistent across all modals */
-    .custom-scrollbar {
-        scrollbar-width: thin;
-        scrollbar-color: rgb(var(--color-border)) transparent;
-    }
+  /* Custom Scrollbar - Consistent across all modals */
+  .custom-scrollbar {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--color-border)) transparent;
+  }
 
-    .custom-scrollbar::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
 
-    .custom-scrollbar::-webkit-scrollbar-track {
-        background: transparent;
-        border-radius: 3px;
-    }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+    border-radius: 3px;
+  }
 
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: rgb(var(--color-border));
-        border-radius: 3px;
-        transition: background 0.2s ease;
-    }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-border));
+    border-radius: 3px;
+    transition: background 0.2s ease;
+  }
 
-    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-        background: rgb(var(--color-text-muted));
-    }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--color-text-muted));
+  }
 
-    /* Hide scrollbar until hover */
-    .custom-scrollbar::-webkit-scrollbar-thumb {
-        background: transparent;
-    }
+  /* Hide scrollbar until hover */
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
 
-    .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-        background: rgb(var(--color-border));
-    }
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    background: rgb(var(--color-border));
+  }
 
-    .custom-scrollbar:hover::-webkit-scrollbar-thumb:hover {
-        background: rgb(var(--color-text-muted));
-    }
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--color-text-muted));
+  }
 
-    /* Hide scrollbar completely but keep scroll functionality */
-    .no-scrollbar {
-        -ms-overflow-style: none;
-        scrollbar-width: none;
-    }
+  /* Hide scrollbar completely but keep scroll functionality */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 
-    .no-scrollbar::-webkit-scrollbar {
-        display: none;
-    }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 
-    @keyframes soft-spin {
-        from {
-            transform: rotate(0deg);
-        }
-        to {
-            transform: rotate(360deg);
-        }
+  @keyframes soft-spin {
+    from {
+      transform: rotate(0deg);
     }
+    to {
+      transform: rotate(360deg);
+    }
+  }
 
-    .animate-soft-spin {
-        animation: soft-spin 10s linear infinite;
-    }
+  .animate-soft-spin {
+    animation: soft-spin 10s linear infinite;
+  }
 }

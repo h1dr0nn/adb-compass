@@ -1,6 +1,7 @@
 // Commands Module - Tauri command handlers
 // These functions are exposed to the frontend via Tauri IPC
 
+pub mod agent;
 pub mod apk;
 pub mod device;
 pub mod device_actions;
@@ -11,6 +12,7 @@ pub mod screen_capture;
 pub mod shell;
 pub mod wireless;
 
+pub use agent::*;
 pub use apk::*;
 pub use device::*;
 pub use device_actions::*;

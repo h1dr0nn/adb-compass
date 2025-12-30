@@ -65,8 +65,12 @@ export function FileManager({ device }: FileManagerProps) {
 
         if (!data) setLoading(true);
         setError(null);
+
+        // Start spinning minimum 0.5s
+        const spinStart = Date.now();
+
         try {
-            const result = await invoke<FileInfo[]>('list_files', {
+            const result = await invoke<FileInfo[]>('list_files_fast', {
                 deviceId: device.id,
                 path
             });
@@ -76,7 +80,10 @@ export function FileManager({ device }: FileManagerProps) {
         } catch (e) {
             setError(String(e));
         } finally {
-            setLoading(false);
+            // Ensure minimum 500ms spin
+            const elapsed = Date.now() - spinStart;
+            const remaining = Math.max(0, 500 - elapsed);
+            setTimeout(() => setLoading(false), remaining);
         }
     };
 

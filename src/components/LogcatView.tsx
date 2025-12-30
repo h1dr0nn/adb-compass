@@ -18,7 +18,6 @@ import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import { Select } from "./ui/Select";
 import { useDevices } from "../hooks/useDevices";
-import { QuickActionMenu } from "./device/QuickActionMenu";
 
 interface LogcatViewProps {
   onBack: () => void;
@@ -359,8 +358,6 @@ export function LogcatView({ onBack }: LogcatViewProps) {
             {paused ? <Play size={14} /> : <Pause size={14} />}
             {paused ? "Resume" : "Pause"}
           </button>
-
-          {selectedDevice && <QuickActionMenu deviceId={selectedDevice} />}
 
           <button
             onClick={handleExport}

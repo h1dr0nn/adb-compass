@@ -289,6 +289,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     // Refresh screen preview
     const handleRefreshPreview = async () => {
         setIsLoadingPreview(true);
+        const startTime = Date.now();
         try {
             const result = await invoke<number[]>('get_screen_frame', {
                 deviceId: device.id
@@ -306,7 +307,9 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 description: String(error)
             });
         } finally {
-            setIsLoadingPreview(false);
+            const elapsed = Date.now() - startTime;
+            const remaining = Math.max(0, 500 - elapsed);
+            setTimeout(() => setIsLoadingPreview(false), remaining);
         }
     };
 
@@ -367,6 +370,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         if (streamMode === 'standard') {
             // Switch to high-perf mode
             setIsStartingScrcpy(true);
+            const startTime = Date.now();
             try {
                 console.log('Starting scrcpy server for device:', device.id);
                 const status = await invoke<ScrcpyStatus>('start_scrcpy_server', {
@@ -385,7 +389,9 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 const errorMessage = (error as any)?.message || String(error);
                 toast.error(t.failedToStartHighPerf, { description: errorMessage });
             } finally {
-                setIsStartingScrcpy(false);
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(0, 500 - elapsed);
+                setTimeout(() => setIsStartingScrcpy(false), remaining);
             }
         } else {
             // Switch back to standard mode

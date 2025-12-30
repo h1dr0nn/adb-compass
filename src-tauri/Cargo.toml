@@ -31,5 +31,6 @@ lazy_static = "1.4"
 openh264 = "0.6"
 image = "0.25"
 base64 = "0.22"
+tokio = { version = "1", features = ["full"] }
 
 
