@@ -108,21 +108,45 @@ jobs:
         shell: bash
         run: |
           if [ -z "$RAW_KEY" ]; then
-            echo "::error::KHÔNG TÌM THẤY PRIVATE KEY! Hãy đảm bảo bạn đã đặt TAURI_SIGNING_PRIVATE_KEY trong 'Repository secrets'."
+            echo "::error:: TAURI_SIGNING_PRIVATE_KEY is empty. Please check the 'Repository secrets'."
             exit 1
           fi
 
-          echo "TAURI_SIGNING_PRIVATE_KEY<<EOF" >> $GITHUB_ENV
-          if [[ "$RAW_KEY" == "untrusted comment:"* ]]; then
-            echo "$RAW_KEY" >> $GITHUB_ENV
-            echo "Key already has correct format."
+          # Debug: Print key length and first 20 characters
+          echo "Key length: ${#RAW_KEY} characters"
+          echo "Key starts with: ${RAW_KEY:0:20}..."
+
+          # Check if key contains newlines
+          if [[ "$RAW_KEY" == *$'\n'* ]]; then
+            echo "Key contains newlines, using as-is."
+            FINAL_KEY="$RAW_KEY"
+          elif [[ "$RAW_KEY" == "untrusted comment:"* ]]; then
+            # Key has header but no newline - need to split
+            echo "Key has header but no newline, attempting to split..."
+            # Tách phần header và phần base64
+            HEADER=$(echo "$RAW_KEY" | grep -oP '^untrusted comment:[^A-Z0-9+/=]+' | sed 's/ *$//')
+            BASE64_PART=$(echo "$RAW_KEY" | sed 's/^untrusted comment:[^A-Z0-9+/=]*//')
+            if [ -n "$BASE64_PART" ]; then
+              FINAL_KEY="${HEADER}"$'\n'"${BASE64_PART}"
+              echo "Split successful. Header: ${HEADER}"
+            else
+              echo "::error:: TAURI_SIGNING_PRIVATE_KEY is not valid. Please check the 'Repository secrets'."
+              exit 1
+            fi
           else
-            # Auto-wrap with minisign header
-            echo "untrusted comment: tauri signing key" >> $GITHUB_ENV
-            echo "$RAW_KEY" >> $GITHUB_ENV
-            echo "Key auto-wrapped with minisign header."
+            # Key is base64 only, need to add header
+            echo "Key is base64 only, adding header..."
+            FINAL_KEY="untrusted comment: tauri signing key"$'\n'"$RAW_KEY"
           fi
-          echo "EOF" >> $GITHUB_ENV
+
+          # Write key to GITHUB_ENV using heredoc
+          {
+            echo "TAURI_SIGNING_PRIVATE_KEY<<SIGNING_KEY_EOF"
+            printf '%s\n' "$FINAL_KEY"
+            echo "SIGNING_KEY_EOF"
+          } >> $GITHUB_ENV
+
+          echo "Key prepared successfully."
         env:
           RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
