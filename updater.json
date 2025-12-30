@@ -1,7 +1,7 @@
 {
-  "version": "1.0.2",
+  "version": "0.0.8",
   "notes": "Initial release with UI improvements and updater support.",
-  "pub_date": "2025-12-30T07:43:45.581Z",
+  "pub_date": "2025-12-30T10:15:27.134Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
@@ -13,11 +13,11 @@
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/v0.1.0/adb-compass_0.1.0_x64.app.tar.gz.sig"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/develop-v0.0.8/adbcompass-0.0.8-macos-x64-updater.app.tar.gz"
     },
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/v0.1.0/adb-compass_0.1.0_aarch64.app.tar.gz.sig"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/develop-v0.0.8/adbcompass-0.0.8-macos-arm64-updater.app.tar.gz"
     }
   }
 }
