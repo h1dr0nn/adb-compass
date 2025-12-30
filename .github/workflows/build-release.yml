@@ -104,10 +104,28 @@ jobs:
       - name: Install Frontend Dependencies
         run: npm ci
 
+      - name: Prepare Signing Key
+        shell: bash
+        run: |
+          if [ -n "$RAW_KEY" ]; then
+            if [[ "$RAW_KEY" == "untrusted comment:"* ]]; then
+              echo "TAURI_SIGNING_PRIVATE_KEY=$RAW_KEY" >> $GITHUB_ENV
+              echo "Key already has correct format."
+            else
+              # Auto-wrap with minisign header
+              printf "untrusted comment: tauri signing key\n%s" "$RAW_KEY" > tauri.key
+              echo "TAURI_SIGNING_PRIVATE_KEY=$(cat tauri.key)" >> $GITHUB_ENV
+              echo "Key auto-wrapped with minisign header."
+              rm tauri.key
+            fi
+          fi
+        env:
+          RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+
       - name: Build Tauri App
         run: npm run tauri build -- --target ${{ matrix.target }}
         env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          # TAURI_SIGNING_PRIVATE_KEY is now provided via GITHUB_ENV from the previous step
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
 
       - name: Rename and Prepare Artifacts
