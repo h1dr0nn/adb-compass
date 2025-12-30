@@ -154,10 +154,19 @@ jobs:
             cp src-tauri/target/$TARGET/release/bundle/nsis/*.exe "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-setup.exe" 2>/dev/null || true
             cp src-tauri/target/$TARGET/release/bundle/msi/*.msi "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}.msi" 2>/dev/null || true
             
-            # Find and rename Windows Updater Bundle
-            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle -name "*.msi.zip" | head -n 1)
+            # Find Windows Updater Bundle (Tauri may create .nsis.zip or .msi.zip)
+            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle -name "*.nsis.zip" -o -name "*.msi.zip" | head -n 1)
             if [ -n "$BUNDLE" ]; then
-              cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip"
+              cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip"
+            else
+              # Fallback: Create updater bundle by zipping .msi file
+              MSI_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.msi" | head -n 1)
+              if [ -n "$MSI_FILE" ]; then
+                echo "Creating Windows updater bundle from .msi..."
+                cd src-tauri/target/$TARGET/release/bundle/msi
+                zip -j "../../../../../../release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip" *.msi
+                cd -
+              fi
             fi
             
           # Linux
@@ -165,10 +174,18 @@ jobs:
             cp src-tauri/target/$TARGET/release/bundle/appimage/*.AppImage "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.AppImage" 2>/dev/null || true
             cp src-tauri/target/$TARGET/release/bundle/deb/*.deb "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.deb" 2>/dev/null || true
             
-            # Find and rename Linux Updater Bundle
+            # Find Linux Updater Bundle
             BUNDLE=$(find src-tauri/target/$TARGET/release/bundle -name "*.AppImage.tar.gz" | head -n 1)
             if [ -n "$BUNDLE" ]; then
               cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz"
+            else
+              # Fallback: Create updater bundle by compressing .AppImage file
+              APPIMAGE_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.AppImage" | head -n 1)
+              if [ -n "$APPIMAGE_FILE" ]; then
+                echo "Creating Linux updater bundle from .AppImage..."
+                APPIMAGE_NAME=$(basename "$APPIMAGE_FILE")
+                tar -czvf "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz" -C "$(dirname "$APPIMAGE_FILE")" "$APPIMAGE_NAME"
+              fi
             fi
 
           # macOS
@@ -187,8 +204,22 @@ jobs:
           find src-tauri/target/$TARGET/release/bundle -name "*.sig" | while read -r sig; do
             echo "Found signature: $sig"
             binary_name=$(basename "$sig" .sig)
-            # Create a signature meta file mapping binary name to signature content
-            sed -n '2p' "$sig" > "release-artifacts/${binary_name}.sig.txt"
+            # Extract just the base64 signature (line 2 of minisign format)
+            SIG_CONTENT=$(sed -n '2p' "$sig")
+            echo "$SIG_CONTENT" > "release-artifacts/${binary_name}.sig.txt"
+            
+            # Also create signature for our renamed updater files
+            case "$binary_name" in
+              *.msi)
+                echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip.sig.txt"
+                ;;
+              *.AppImage)
+                echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt"
+                ;;
+              *.app.tar.gz)
+                echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}-updater.app.tar.gz.sig.txt"
+                ;;
+            esac
           done
 
           # Fallback for old signature mapping if new one fails
@@ -355,38 +386,70 @@ jobs:
 
             const baseUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/${tagName}`;
             
-            // 1. Find the updater binary
-            let binaryFile = files.find(f => f.includes(`${key}-updater`));
+            // 1. Find the updater binary with multiple fallbacks
+            let binaryFile = null;
             
-            // Fallback to legacy naming if standardized not found
+            // Try standardized naming first
+            binaryFile = files.find(f => f.includes(`${key}-updater`));
+            
+            // Fallback patterns for each platform
             if (!binaryFile) {
-                if (updaterKey === 'windows-x86_64') binaryFile = files.find(f => f.endsWith('.msi.zip'));
-                else if (updaterKey === 'linux-x86_64') binaryFile = files.find(f => f.endsWith('.AppImage.tar.gz'));
-                else if (updaterKey.startsWith('darwin')) binaryFile = files.find(f => f.includes(key) && f.endsWith('.app.tar.gz'));
+                if (updaterKey === 'windows-x86_64') {
+                    // Windows: try .nsis.zip, .msi.zip, or just .msi
+                    binaryFile = files.find(f => f.includes('windows') && f.endsWith('.nsis.zip'));
+                    if (!binaryFile) binaryFile = files.find(f => f.includes('windows') && f.endsWith('.msi.zip'));
+                    if (!binaryFile) binaryFile = files.find(f => f.includes('windows') && f.endsWith('.msi'));
+                } else if (updaterKey === 'linux-x86_64') {
+                    // Linux: try .AppImage.tar.gz or just .AppImage
+                    binaryFile = files.find(f => f.includes('linux') && f.endsWith('.AppImage.tar.gz'));
+                    if (!binaryFile) binaryFile = files.find(f => f.includes('linux') && f.endsWith('.AppImage'));
+                } else if (updaterKey === 'darwin-x86_64') {
+                    binaryFile = files.find(f => f.includes('macos-x64') && f.endsWith('.app.tar.gz'));
+                } else if (updaterKey === 'darwin-aarch64') {
+                    binaryFile = files.find(f => f.includes('macos-arm64') && f.endsWith('.app.tar.gz'));
+                }
             }
 
             if (binaryFile) {
                 updater.platforms[updaterKey].url = `${baseUrl}/${binaryFile}`;
                 console.log(`  Binary matched: ${binaryFile}`);
 
-                // 2. Find the signature for this specific binary
-                // The binary might be 'adbcompass-1.0.2-windows-x64-updater.msi.zip'
-                // The sig meta file would be 'adbcompass-1.0.2-windows-x64-updater.msi.zip.sig.txt'
-                // OR it might be 'adb-compass_0.1.0_x64-setup.exe.sig.txt'
-                
+                // 2. Find signature - try multiple patterns
                 let sigContent = '';
-                const sigFileName = `${binaryFile}.sig.txt`;
-                const sigFile = `artifacts/${sigFileName}`;
                 
+                // Pattern 1: Exact match for renamed binary
+                let sigFile = `artifacts/${binaryFile}.sig.txt`;
                 if (fs.existsSync(sigFile)) {
                     sigContent = fs.readFileSync(sigFile, 'utf8').trim();
-                    console.log(`  Signature found via explicit mapping: ${sigFileName}`);
-                } else {
-                    // Fallback to legacy signature search
+                    console.log(`  Signature found: ${binaryFile}.sig.txt`);
+                }
+                
+                // Pattern 2: Look for any .sig.txt that matches the platform
+                if (!sigContent) {
+                    const platformSigs = files.filter(f => f.endsWith('.sig.txt') && !f.includes('legacy'));
+                    for (const sig of platformSigs) {
+                        // Match by checking if sig relates to this platform
+                        const sigLower = sig.toLowerCase();
+                        if ((updaterKey.includes('windows') && (sigLower.includes('msi') || sigLower.includes('exe'))) ||
+                            (updaterKey.includes('linux') && sigLower.includes('appimage')) ||
+                            (updaterKey === 'darwin-x86_64' && sigLower.includes('app.tar.gz') && !sigLower.includes('aarch64') && !sigLower.includes('arm64')) ||
+                            (updaterKey === 'darwin-aarch64' && sigLower.includes('app.tar.gz'))) {
+                            const content = fs.readFileSync(`artifacts/${sig}`, 'utf8').trim();
+                            if (content) {
+                                sigContent = content;
+                                console.log(`  Signature found via pattern match: ${sig}`);
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Pattern 3: Legacy fallback
+                if (!sigContent) {
                     const legacySigFile = `artifacts/${key}.legacy.sig.txt`;
                     if (fs.existsSync(legacySigFile)) {
                         sigContent = fs.readFileSync(legacySigFile, 'utf8').trim();
-                        console.log(`  Signature found via legacy fallback: ${legacySigFile}`);
+                        console.log(`  Signature found via legacy: ${key}.legacy.sig.txt`);
                     }
                 }
 
