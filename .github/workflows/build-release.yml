@@ -124,13 +124,8 @@ jobs:
             exit 1
           fi
 
-          # Always create fresh key with proper format (header + newline + base64)
-          {
-            echo "TAURI_SIGNING_PRIVATE_KEY<<SIGNING_KEY_EOF"
-            echo "untrusted comment: tauri signing key"
-            echo "$BASE64_KEY"
-            echo "SIGNING_KEY_EOF"
-          } >> $GITHUB_ENV
+          # Pass base64 key only (no header)
+          echo "TAURI_SIGNING_PRIVATE_KEY=$BASE64_KEY" >> $GITHUB_ENV
 
           echo "Signing key prepared successfully."
         env:
