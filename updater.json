@@ -1,7 +1,7 @@
 {
   "version": "1.0.2",
   "notes": "Initial release with UI improvements and updater support.",
-  "pub_date": "2025-12-30T02:29:36.928Z",
+  "pub_date": "2025-12-30T02:43:39.602Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
