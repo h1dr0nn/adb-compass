@@ -126,10 +126,15 @@ jobs:
           if [ "$PLATFORM" == "windows" ]; then
             cp src-tauri/target/$TARGET/release/bundle/nsis/*.exe "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-setup.exe" 2>/dev/null || true
             cp src-tauri/target/$TARGET/release/bundle/msi/*.msi "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}.msi" 2>/dev/null || true
-            # Tauri Updater bundles for Windows (.msi.zip)
-            find src-tauri/target/$TARGET/release/bundle -name "*.msi.zip" -exec cp {} release-artifacts/ \; 2>/dev/null || true
             
-            # Portable logic (already exists in next step, but let's ensure we find the exe)
+            # Standardized name for Windows Updater Bundle
+            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle -name "*.msi.zip" | head -n 1)
+            if [ -n "$BUNDLE" ]; then
+              cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip"
+              echo "Standardized Windows Updater Bundle created."
+            fi
+            
+            # Portable logic
             PORTABLE_EXE=""
             for exe in "src-tauri/target/$TARGET/release/ADB Compass.exe" \
                        "src-tauri/target/$TARGET/release/adb-compass.exe"; do
@@ -138,17 +143,29 @@ jobs:
                 break
               fi
             done
+
           # Linux
           elif [ "$PLATFORM" == "linux" ]; then
             cp src-tauri/target/$TARGET/release/bundle/appimage/*.AppImage "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.AppImage" 2>/dev/null || true
             cp src-tauri/target/$TARGET/release/bundle/deb/*.deb "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.deb" 2>/dev/null || true
-            # Tauri Updater bundles for Linux (.AppImage.tar.gz)
-            find src-tauri/target/$TARGET/release/bundle -name "*.AppImage.tar.gz" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+            
+            # Standardized name for Linux Updater Bundle
+            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle -name "*.AppImage.tar.gz" | head -n 1)
+            if [ -n "$BUNDLE" ]; then
+              cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz"
+              echo "Standardized Linux Updater Bundle created."
+            fi
+
           # macOS
           elif [ "$PLATFORM" == "macos" ]; then
             cp src-tauri/target/$TARGET/release/bundle/dmg/*.dmg "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}.dmg" 2>/dev/null || true
-            # Tauri Updater bundles for macOS (.app.tar.gz)
-            find src-tauri/target/$TARGET/release/bundle -name "*.app.tar.gz" -exec cp {} release-artifacts/ \; 2>/dev/null || true
+            
+            # Standardized name for macOS Updater Bundle
+            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle -name "*.app.tar.gz" | head -n 1)
+            if [ -n "$BUNDLE" ]; then
+              cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}-updater.app.tar.gz"
+              echo "Standardized macOS Updater Bundle created."
+            fi
           fi
 
           # Extract and save signature for updater automation
@@ -311,42 +328,52 @@ jobs:
           };
 
           const files = fs.readdirSync('artifacts');
-          console.log('Available artifacts:', files);
+          console.log('Available artifacts in directory:', files);
 
           Object.entries(platformMap).forEach(([key, updaterKey]) => {
             const sigFile = `artifacts/${key}.sig.txt`;
+            console.log(`Processing platform: ${key} (${updaterKey})`);
+            
             if (fs.existsSync(sigFile)) {
               const signature = fs.readFileSync(sigFile, 'utf8').trim();
+              console.log(`  Signature found for ${key}`);
+
               if (updater.platforms[updaterKey]) {
                 updater.platforms[updaterKey].signature = signature;
                 const baseUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/${tagName}`;
                 
-                // Find the best binary for the updater (prioritize .zip/.tar.gz update bundles)
+                // Use standardized bundle naming pattern
                 let binaryFile = '';
                 if (updaterKey === 'windows-x86_64') {
-                    binaryFile = files.find(f => f.endsWith('.msi.zip')) || files.find(f => f.endsWith('.exe'));
+                    binaryFile = files.find(f => f.includes('windows-x64-updater.msi.zip'));
                 } else if (updaterKey === 'linux-x86_64') {
-                    binaryFile = files.find(f => f.endsWith('.AppImage.tar.gz')) || files.find(f => f.endsWith('.AppImage'));
+                    binaryFile = files.find(f => f.includes('linux-x64-updater.AppImage.tar.gz'));
                 } else if (updaterKey === 'darwin-x86_64') {
-                    binaryFile = files.find(f => f.endsWith('x64.app.tar.gz')) || files.find(f => f.endsWith('x64.dmg'));
+                    binaryFile = files.find(f => f.includes('macos-x64-updater.app.tar.gz'));
                 } else if (updaterKey === 'darwin-aarch64') {
-                    binaryFile = files.find(f => f.endsWith('arm64.app.tar.gz')) || files.find(f => f.endsWith('arm64.dmg'));
+                    binaryFile = files.find(f => f.includes('macos-arm64-updater.app.tar.gz'));
                 }
 
                 if (binaryFile) {
                     updater.platforms[updaterKey].url = `${baseUrl}/${binaryFile}`;
-                    console.log(`Updated ${updaterKey} with signature and URL: ${binaryFile}`);
+                    console.log(`  Successfully matched binary: ${binaryFile}`);
                 } else {
-                    console.log(`Warning: No binary found for ${updaterKey}`);
+                    console.log(`  WARNING: No standardized updater bundle found for ${updaterKey}`);
+                    // Fallback to legacy matching if possible
+                    const fallback = files.find(f => f.includes(key) && (f.endsWith('.zip') || f.endsWith('.tar.gz')));
+                    if (fallback) {
+                        updater.platforms[updaterKey].url = `${baseUrl}/${fallback}`;
+                        console.log(`  Using fallback binary: ${fallback}`);
+                    }
                 }
               }
             } else {
-              console.log(`Warning: Signature file not found for ${key}`);
+              console.log(`  WARNING: Signature file NOT FOUND for ${key} at ${sigFile}`);
             }
           });
 
           fs.writeFileSync('updater.json', JSON.stringify(updater, null, 2));
-          console.log('Updated updater.json successfully');
+          console.log('Update of updater.json completed.');
           EOF
 
       - name: Commit and Push updater.json
