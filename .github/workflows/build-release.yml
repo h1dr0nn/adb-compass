@@ -119,65 +119,46 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: |
           mkdir -p release-artifacts
+          echo "=== Debug: Listing bundle directory ==="
+          ls -R src-tauri/target/$TARGET/release/bundle || true
 
           # Windows
           if [ "$PLATFORM" == "windows" ]; then
-            # Debug: List all files in release folder
-            echo "=== Files in target/$TARGET/release/ ==="
-            ls -la "src-tauri/target/$TARGET/release/" || true
-            echo "=== Files in bundle/nsis/ ==="
-            ls -la "src-tauri/target/$TARGET/release/bundle/nsis/" 2>/dev/null || true
-            echo "=== Files in bundle/msi/ ==="
-            ls -la "src-tauri/target/$TARGET/release/bundle/msi/" 2>/dev/null || true
-            
-            # NSIS installer (.exe)
             cp src-tauri/target/$TARGET/release/bundle/nsis/*.exe "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-setup.exe" 2>/dev/null || true
-            
-            # MSI installer
             cp src-tauri/target/$TARGET/release/bundle/msi/*.msi "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}.msi" 2>/dev/null || true
+            # Tauri Updater bundles for Windows (.msi.zip)
+            find src-tauri/target/$TARGET/release/bundle -name "*.msi.zip" -exec cp {} release-artifacts/ \; 2>/dev/null || true
             
-            # Portable executable - the main app exe (ADB Compass.exe or similar)
-            # Find exe that matches the app name (without spaces it could be adb-compass.exe or similar)
+            # Portable logic (already exists in next step, but let's ensure we find the exe)
             PORTABLE_EXE=""
             for exe in "src-tauri/target/$TARGET/release/ADB Compass.exe" \
-                       "src-tauri/target/$TARGET/release/adb-compass.exe" \
-                       "src-tauri/target/$TARGET/release/adbcompass.exe" \
-                       "src-tauri/target/$TARGET/release/ADB-Compass.exe"; do
+                       "src-tauri/target/$TARGET/release/adb-compass.exe"; do
               if [ -f "$exe" ]; then
-                PORTABLE_EXE="$exe"
+                cp "$exe" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.exe"
                 break
               fi
             done
-            
-            if [ -n "$PORTABLE_EXE" ]; then
-              cp "$PORTABLE_EXE" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-portable.exe"
-              echo "Found portable exe: $PORTABLE_EXE"
-            else
-              echo "WARNING: Could not find portable exe!"
-              # Fallback: find any .exe that's not a dll or installer-related
-              ls -la "src-tauri/target/$TARGET/release/"*.exe 2>/dev/null || true
-            fi
-
           # Linux
           elif [ "$PLATFORM" == "linux" ]; then
-            # AppImage
             cp src-tauri/target/$TARGET/release/bundle/appimage/*.AppImage "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.AppImage" 2>/dev/null || true
-            
-            # Deb package
             cp src-tauri/target/$TARGET/release/bundle/deb/*.deb "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.deb" 2>/dev/null || true
-
+            # Tauri Updater bundles for Linux (.AppImage.tar.gz)
+            find src-tauri/target/$TARGET/release/bundle -name "*.AppImage.tar.gz" -exec cp {} release-artifacts/ \; 2>/dev/null || true
           # macOS
           elif [ "$PLATFORM" == "macos" ]; then
             cp src-tauri/target/$TARGET/release/bundle/dmg/*.dmg "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}.dmg" 2>/dev/null || true
+            # Tauri Updater bundles for macOS (.app.tar.gz)
+            find src-tauri/target/$TARGET/release/bundle -name "*.app.tar.gz" -exec cp {} release-artifacts/ \; 2>/dev/null || true
           fi
 
           # Extract and save signature for updater automation
           echo "Extracting signature..."
           SIG_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.sig" | head -n 1)
           if [ -n "$SIG_FILE" ]; then
-            # Tauri .sig files contain minisign format data
-            # The raw signature string is on the second line
+            echo "Found signature file: $SIG_FILE"
             sed -n '2p' "$SIG_FILE" > "release-artifacts/${PLATFORM}-${ARCH}.sig.txt"
+          else
+            echo "WARNING: No signature file found!"
           fi
 
           echo "Artifacts prepared:"
@@ -314,6 +295,7 @@ jobs:
         run: |
           node << 'EOF'
           const fs = require('fs');
+          const path = require('path');
           const updater = JSON.parse(fs.readFileSync('updater.json', 'utf8'));
           const version = process.env.VERSION;
           const tagName = process.env.TAG_NAME;
@@ -328,25 +310,38 @@ jobs:
             'macos-arm64': 'darwin-aarch64'
           };
 
+          const files = fs.readdirSync('artifacts');
+          console.log('Available artifacts:', files);
+
           Object.entries(platformMap).forEach(([key, updaterKey]) => {
             const sigFile = `artifacts/${key}.sig.txt`;
             if (fs.existsSync(sigFile)) {
               const signature = fs.readFileSync(sigFile, 'utf8').trim();
               if (updater.platforms[updaterKey]) {
                 updater.platforms[updaterKey].signature = signature;
-                // Update URL to point to the new release
                 const baseUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/${tagName}`;
                 
+                // Find the best binary for the updater (prioritize .zip/.tar.gz update bundles)
+                let binaryFile = '';
                 if (updaterKey === 'windows-x86_64') {
-                    updater.platforms[updaterKey].url = `${baseUrl}/adbcompass-${version}-windows-x64-setup.exe`;
+                    binaryFile = files.find(f => f.endsWith('.msi.zip')) || files.find(f => f.endsWith('.exe'));
                 } else if (updaterKey === 'linux-x86_64') {
-                    updater.platforms[updaterKey].url = `${baseUrl}/adbcompass-${version}-linux-x64.AppImage`;
+                    binaryFile = files.find(f => f.endsWith('.AppImage.tar.gz')) || files.find(f => f.endsWith('.AppImage'));
                 } else if (updaterKey === 'darwin-x86_64') {
-                    updater.platforms[updaterKey].url = `${baseUrl}/adbcompass-${version}-macos-x64.dmg`;
+                    binaryFile = files.find(f => f.endsWith('x64.app.tar.gz')) || files.find(f => f.endsWith('x64.dmg'));
                 } else if (updaterKey === 'darwin-aarch64') {
-                    updater.platforms[updaterKey].url = `${baseUrl}/adbcompass-${version}-macos-arm64.dmg`;
+                    binaryFile = files.find(f => f.endsWith('arm64.app.tar.gz')) || files.find(f => f.endsWith('arm64.dmg'));
+                }
+
+                if (binaryFile) {
+                    updater.platforms[updaterKey].url = `${baseUrl}/${binaryFile}`;
+                    console.log(`Updated ${updaterKey} with signature and URL: ${binaryFile}`);
+                } else {
+                    console.log(`Warning: No binary found for ${updaterKey}`);
                 }
               }
+            } else {
+              console.log(`Warning: Signature file not found for ${key}`);
             }
           });
 
