@@ -112,41 +112,27 @@ jobs:
             exit 1
           fi
 
-          # Debug: Print key length and first 20 characters
-          echo "Key length: ${#RAW_KEY} characters"
-          echo "Key starts with: ${RAW_KEY:0:20}..."
+          # Strip everything except the base64 key (remove "untrusted comment:" line if present)
+          # Also remove any whitespace, newlines, carriage returns
+          BASE64_KEY=$(echo "$RAW_KEY" | grep -v "^untrusted comment:" | tr -d '[:space:]')
 
-          # Check if key contains newlines
-          if [[ "$RAW_KEY" == *$'\n'* ]]; then
-            echo "Key contains newlines, using as-is."
-            FINAL_KEY="$RAW_KEY"
-          elif [[ "$RAW_KEY" == "untrusted comment:"* ]]; then
-            # Key has header but no newline - need to split
-            echo "Key has header but no newline, attempting to split..."
-            # Tách phần header và phần base64
-            HEADER=$(echo "$RAW_KEY" | grep -oP '^untrusted comment:[^A-Z0-9+/=]+' | sed 's/ *$//')
-            BASE64_PART=$(echo "$RAW_KEY" | sed 's/^untrusted comment:[^A-Z0-9+/=]*//')
-            if [ -n "$BASE64_PART" ]; then
-              FINAL_KEY="${HEADER}"$'\n'"${BASE64_PART}"
-              echo "Split successful. Header: ${HEADER}"
-            else
-              echo "::error:: TAURI_SIGNING_PRIVATE_KEY is not valid. Please check the 'Repository secrets'."
-              exit 1
-            fi
-          else
-            # Key is base64 only, need to add header
-            echo "Key is base64 only, adding header..."
-            FINAL_KEY="untrusted comment: tauri signing key"$'\n'"$RAW_KEY"
+          echo "Base64 key length: ${#BASE64_KEY} characters"
+          echo "Base64 key preview: ${BASE64_KEY:0:10}...${BASE64_KEY: -10}"
+
+          if [ -z "$BASE64_KEY" ]; then
+            echo "::error:: Could not extract base64 key from TAURI_SIGNING_PRIVATE_KEY."
+            exit 1
           fi
 
-          # Write key to GITHUB_ENV using heredoc
+          # Always create fresh key with proper format (header + newline + base64)
           {
             echo "TAURI_SIGNING_PRIVATE_KEY<<SIGNING_KEY_EOF"
-            printf '%s\n' "$FINAL_KEY"
+            echo "untrusted comment: tauri signing key"
+            echo "$BASE64_KEY"
             echo "SIGNING_KEY_EOF"
           } >> $GITHUB_ENV
 
-          echo "Key prepared successfully."
+          echo "Signing key prepared successfully."
         env:
           RAW_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
 
