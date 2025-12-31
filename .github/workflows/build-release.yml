@@ -200,14 +200,15 @@ jobs:
           # Recursive Signature Extraction (Tauri v2)
           echo "Extracting signatures..."
           
-          # Use for loop instead of pipe to avoid subshell issues
-          for sig in $(find src-tauri/target/$TARGET/release/bundle -name "*.sig" 2>/dev/null); do
+          # Use find with -print0 and read with IFS to handle filenames with spaces
+          find src-tauri/target/$TARGET/release/bundle -name "*.sig" -print0 2>/dev/null | while IFS= read -r -d '' sig; do
             echo "Found signature file: $sig"
             binary_name=$(basename "$sig" .sig)
             
             # Debug: show file content
             echo "=== Content of $sig ==="
             cat "$sig"
+            echo ""
             echo "=== End of $sig ==="
             
             # Try to extract signature - Tauri v2 .sig files may have different formats
@@ -247,8 +248,8 @@ jobs:
             fi
           done
 
-          # Create legacy signature fallback
-          SIG_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.sig" 2>/dev/null | head -n 1)
+          # Create legacy signature fallback (also handle spaces in filename)
+          SIG_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.sig" -print 2>/dev/null | head -n 1)
           if [ -n "$SIG_FILE" ]; then
             echo "Creating legacy signature from: $SIG_FILE"
             if grep -q "^untrusted comment:" "$SIG_FILE" 2>/dev/null; then
