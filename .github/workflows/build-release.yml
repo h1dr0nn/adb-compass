@@ -393,12 +393,10 @@ jobs:
             // Fallback patterns for each platform
             if (!binaryFile) {
                 if (updaterKey === 'windows-x86_64') {
-                    // Windows: try .nsis.zip, .msi.zip, or just .msi
                     binaryFile = files.find(f => f.includes('windows') && f.endsWith('.nsis.zip'));
                     if (!binaryFile) binaryFile = files.find(f => f.includes('windows') && f.endsWith('.msi.zip'));
                     if (!binaryFile) binaryFile = files.find(f => f.includes('windows') && f.endsWith('.msi'));
                 } else if (updaterKey === 'linux-x86_64') {
-                    // Linux: try .AppImage.tar.gz or just .AppImage
                     binaryFile = files.find(f => f.includes('linux') && f.endsWith('.AppImage.tar.gz'));
                     if (!binaryFile) binaryFile = files.find(f => f.includes('linux') && f.endsWith('.AppImage'));
                 } else if (updaterKey === 'darwin-x86_64') {
@@ -416,45 +414,35 @@ jobs:
                 let sigContent = '';
                 
                 // Pattern 1: Exact match for renamed binary
-                let sigFile = `artifacts/${binaryFile}.sig.txt`;
-                if (fs.existsSync(sigFile)) {
-                    sigContent = fs.readFileSync(sigFile, 'utf8').trim();
-                    console.log(`  Signature found: ${binaryFile}.sig.txt`);
-                }
-                
-                // Pattern 2: Look for any .sig.txt that matches the platform
-                if (!sigContent) {
-                    const platformSigs = files.filter(f => f.endsWith('.sig.txt') && !f.includes('legacy'));
-                    for (const sig of platformSigs) {
-                        // Match by checking if sig relates to this platform
-                        const sigLower = sig.toLowerCase();
-                        if ((updaterKey.includes('windows') && (sigLower.includes('msi') || sigLower.includes('exe'))) ||
-                            (updaterKey.includes('linux') && sigLower.includes('appimage')) ||
-                            (updaterKey === 'darwin-x86_64' && sigLower.includes('app.tar.gz') && !sigLower.includes('aarch64') && !sigLower.includes('arm64')) ||
-                            (updaterKey === 'darwin-aarch64' && sigLower.includes('app.tar.gz'))) {
-                            const content = fs.readFileSync(`artifacts/${sig}`, 'utf8').trim();
-                            if (content) {
-                                sigContent = content;
-                                console.log(`  Signature found via pattern match: ${sig}`);
-                                break;
-                            }
-                        }
+                const sigFileName = `${binaryFile}.sig.txt`;
+                const sigFilePath = `artifacts/${sigFileName}`;
+                if (fs.existsSync(sigFilePath)) {
+                    const content = fs.readFileSync(sigFilePath, 'utf8').trim();
+                    console.log(`  Checking ${sigFileName}: length=${content.length}, content="${content.substring(0, 50)}..."`);
+                    if (content) {
+                        sigContent = content;
+                        console.log(`  Signature loaded from: ${sigFileName}`);
                     }
                 }
                 
-                // Pattern 3: Legacy fallback
+                // Pattern 2: Legacy fallback (more reliable since it's created from Tauri's .sig files)
                 if (!sigContent) {
                     const legacySigFile = `artifacts/${key}.legacy.sig.txt`;
                     if (fs.existsSync(legacySigFile)) {
-                        sigContent = fs.readFileSync(legacySigFile, 'utf8').trim();
-                        console.log(`  Signature found via legacy: ${key}.legacy.sig.txt`);
+                        const content = fs.readFileSync(legacySigFile, 'utf8').trim();
+                        console.log(`  Checking legacy ${key}.legacy.sig.txt: length=${content.length}, content="${content.substring(0, 50)}..."`);
+                        if (content) {
+                            sigContent = content;
+                            console.log(`  Signature loaded from legacy: ${key}.legacy.sig.txt`);
+                        }
                     }
                 }
 
                 if (sigContent) {
                     updater.platforms[updaterKey].signature = sigContent;
+                    console.log(`  SUCCESS: Signature set for ${updaterKey}`);
                 } else {
-                    console.log(`  WARNING: No signature found for ${binaryFile}`);
+                    console.log(`  WARNING: No signature content found for ${binaryFile}`);
                 }
             } else {
                 console.log(`  WARNING: No updater binary found for ${updaterKey}`);
