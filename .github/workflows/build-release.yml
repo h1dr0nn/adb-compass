@@ -199,31 +199,63 @@ jobs:
 
           # Recursive Signature Extraction (Tauri v2)
           echo "Extracting signatures..."
-          find src-tauri/target/$TARGET/release/bundle -name "*.sig" | while read -r sig; do
-            echo "Found signature: $sig"
+          
+          # Use for loop instead of pipe to avoid subshell issues
+          for sig in $(find src-tauri/target/$TARGET/release/bundle -name "*.sig" 2>/dev/null); do
+            echo "Found signature file: $sig"
             binary_name=$(basename "$sig" .sig)
-            # Extract just the base64 signature (line 2 of minisign format)
-            SIG_CONTENT=$(sed -n '2p' "$sig")
-            echo "$SIG_CONTENT" > "release-artifacts/${binary_name}.sig.txt"
             
-            # Also create signature for our renamed updater files
-            case "$binary_name" in
-              *.msi)
-                echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip.sig.txt"
-                ;;
-              *.AppImage)
-                echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt"
-                ;;
-              *.app.tar.gz)
-                echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}-updater.app.tar.gz.sig.txt"
-                ;;
-            esac
+            # Debug: show file content
+            echo "=== Content of $sig ==="
+            cat "$sig"
+            echo "=== End of $sig ==="
+            
+            # Try to extract signature - Tauri v2 .sig files may have different formats
+            # Format 1: minisign (line 1 = untrusted comment, line 2 = signature)
+            # Format 2: just base64 signature
+            
+            if grep -q "^untrusted comment:" "$sig" 2>/dev/null; then
+              # Minisign format - extract line 2
+              SIG_CONTENT=$(sed -n '2p' "$sig" | tr -d '\r\n')
+            else
+              # Single line base64 format - use entire content
+              SIG_CONTENT=$(cat "$sig" | tr -d '\r\n')
+            fi
+            
+            echo "Extracted signature (length=${#SIG_CONTENT}): ${SIG_CONTENT:0:50}..."
+            
+            if [ -n "$SIG_CONTENT" ]; then
+              echo "$SIG_CONTENT" > "release-artifacts/${binary_name}.sig.txt"
+              
+              # Also create signature for our renamed updater files
+              case "$binary_name" in
+                *_en-US.msi|*.msi)
+                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip.sig.txt"
+                  echo "Created Windows updater signature"
+                  ;;
+                *.AppImage)
+                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt"
+                  echo "Created Linux updater signature"
+                  ;;
+                *.app.tar.gz)
+                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}-updater.app.tar.gz.sig.txt"
+                  echo "Created macOS updater signature"
+                  ;;
+              esac
+            else
+              echo "WARNING: Empty signature content for $sig"
+            fi
           done
 
-          # Fallback for old signature mapping if new one fails
-          SIG_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.sig" | head -n 1)
+          # Create legacy signature fallback
+          SIG_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.sig" 2>/dev/null | head -n 1)
           if [ -n "$SIG_FILE" ]; then
-            sed -n '2p' "$SIG_FILE" > "release-artifacts/${PLATFORM}-${ARCH}.legacy.sig.txt"
+            echo "Creating legacy signature from: $SIG_FILE"
+            if grep -q "^untrusted comment:" "$SIG_FILE" 2>/dev/null; then
+              sed -n '2p' "$SIG_FILE" | tr -d '\r\n' > "release-artifacts/${PLATFORM}-${ARCH}.legacy.sig.txt"
+            else
+              cat "$SIG_FILE" | tr -d '\r\n' > "release-artifacts/${PLATFORM}-${ARCH}.legacy.sig.txt"
+            fi
           fi
 
           echo "Artifacts prepared:"
