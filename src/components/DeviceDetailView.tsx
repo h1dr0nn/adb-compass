@@ -1,10 +1,10 @@
-// Device Detail View - Full screen device management panel
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     ArrowLeft, Monitor, Smartphone, AppWindow,
     FolderOpen
 } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
 import { DeviceInfo, getDeviceStatusText } from '../types';
 import { pageTransition, tabContent } from '../lib/animations';
 import { DeviceOverview } from './device/DeviceOverview';
@@ -28,6 +28,16 @@ interface DeviceDetailViewProps {
 
 export function DeviceDetailView({ device, onBack }: DeviceDetailViewProps) {
     const [activeTab, setActiveTab] = useState<TabId>('overview');
+
+    // Eagerly initialize service (Agent) as soon as we enter detail view
+    useEffect(() => {
+        if (device.status === 'Device') {
+            console.log(`[DeviceDetailView] Eagerly connecting to agent for ${device.id}...`);
+            invoke('test_agent_connection', { deviceId: device.id })
+                .then(() => console.log(`[DeviceDetailView] Agent connected for ${device.id}`))
+                .catch((err) => console.error(`[DeviceDetailView] Failed to eagerly connect to agent:`, err));
+        }
+    }, [device.id, device.status]);
 
     const tabs: Tab[] = [
         { id: 'overview', label: 'Overview', icon: <Smartphone size={18} /> },

@@ -510,8 +510,12 @@ jobs:
       - name: Prepare Release Files
         run: |
           mkdir -p release-files
-          # Copy only installers and portable versions, exclude .sig.txt files
-          find artifacts -type f ! -name "*.sig.txt" -exec cp {} release-files/ \;
+          # Copy only installers and portable versions
+          # Exclude: .sig.txt files and -updater.* files (used internally for auto-update)
+          find artifacts -type f \
+            ! -name "*.sig.txt" \
+            ! -name "*-updater.*" \
+            -exec cp {} release-files/ \;
           echo "Files to be uploaded to release:"
           ls -la release-files/
 

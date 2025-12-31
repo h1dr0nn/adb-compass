@@ -1,4 +1,5 @@
 use crate::adb::executor::AdbExecutor;
+use crate::command_utils::TokioCommandExt;
 use crate::error::AppError;
 use serde_json::{json, Value};
 use std::time::Duration;
@@ -28,6 +29,7 @@ impl AgentManager {
 
         // Push command: adb -s <id> push <path> /data/local/tmp/agent.jar
         let output = tokio::process::Command::new(adb_path)
+            .hide_window()
             .args([
                 "-s",
                 device_id,
@@ -53,12 +55,14 @@ impl AgentManager {
 
         // We start it in background
         tokio::process::Command::new(adb_path)
+            .hide_window()
             .args(["-s", device_id, "shell", &start_cmd])
             .spawn()
             .map_err(|e| AppError::from(crate::error::AdbError::ExecutionFailed(e.to_string())))?;
 
         // 3. Setup port forwarding
         let forward_output = tokio::process::Command::new(adb_path)
+            .hide_window()
             .args([
                 "-s",
                 device_id,

@@ -35,3 +35,21 @@ pub fn hidden_command<S: AsRef<std::ffi::OsStr>>(program: S) -> Command {
     cmd.hide_window();
     cmd
 }
+
+/// Extension trait for Tokio Command to hide console window on Windows
+pub trait TokioCommandExt {
+    fn hide_window(&mut self) -> &mut Self;
+}
+
+impl TokioCommandExt for tokio::process::Command {
+    #[cfg(target_os = "windows")]
+    fn hide_window(&mut self) -> &mut Self {
+        self.creation_flags(CREATE_NO_WINDOW);
+        self
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    fn hide_window(&mut self) -> &mut Self {
+        self
+    }
+}
