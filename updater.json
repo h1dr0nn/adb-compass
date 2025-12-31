@@ -1,23 +1,23 @@
 {
-  "version": "0.0.8",
+  "version": "0.0.9",
   "notes": "Initial release with UI improvements and updater support.",
-  "pub_date": "2025-12-30T10:15:27.134Z",
+  "pub_date": "2025-12-31T01:57:36.871Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/v0.1.0/adb-compass_0.1.0_x64-setup.exe.sig"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/develop-v0.0.9/adbcompass-0.0.9-windows-x64-updater.msi.zip"
     },
     "linux-x86_64": {
       "signature": "",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/v0.1.0/adb-compass_0.1.0_amd64.AppImage.tar.gz.sig"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/develop-v0.0.9/adbcompass-0.0.9-linux-x64-updater.AppImage.tar.gz"
     },
     "darwin-x86_64": {
       "signature": "",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/develop-v0.0.8/adbcompass-0.0.8-macos-x64-updater.app.tar.gz"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/develop-v0.0.9/adbcompass-0.0.9-macos-x64-updater.app.tar.gz"
     },
     "darwin-aarch64": {
       "signature": "",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/develop-v0.0.8/adbcompass-0.0.8-macos-arm64-updater.app.tar.gz"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/develop-v0.0.9/adbcompass-0.0.9-macos-arm64-updater.app.tar.gz"
     }
   }
 }
