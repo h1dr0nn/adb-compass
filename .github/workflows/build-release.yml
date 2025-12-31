@@ -159,13 +159,11 @@ jobs:
             if [ -n "$BUNDLE" ]; then
               cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip"
             else
-              # Fallback: Create updater bundle by zipping .msi file
+              # Fallback: Create updater bundle by zipping .msi file using 7z (available on Windows runner)
               MSI_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.msi" | head -n 1)
               if [ -n "$MSI_FILE" ]; then
                 echo "Creating Windows updater bundle from .msi..."
-                cd src-tauri/target/$TARGET/release/bundle/msi
-                zip -j "../../../../../../release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip" *.msi
-                cd -
+                7z a -tzip "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip" "$MSI_FILE"
               fi
             fi
             
