@@ -32,6 +32,20 @@
             document.documentElement.classList.remove("dark");
           }
         } catch (e) {}
+
+        // Disable right-click context menu for native app feel
+        document.addEventListener("contextmenu", function (e) {
+          // Allow context menu on input, textarea, and elements with .allow-context-menu class
+          if (
+            e.target.tagName === "INPUT" ||
+            e.target.tagName === "TEXTAREA" ||
+            e.target.isContentEditable ||
+            e.target.closest(".allow-context-menu")
+          ) {
+            return;
+          }
+          e.preventDefault();
+        });
       })();
     </script>
   </head>
