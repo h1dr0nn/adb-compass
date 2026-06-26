@@ -162,7 +162,7 @@ jobs:
             cp src-tauri/target/$TARGET/release/bundle/msi/*.msi "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}.msi" 2>/dev/null || true
             
             # Find Windows Updater Bundle (Tauri may create .nsis.zip or .msi.zip)
-            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle -name "*.nsis.zip" -o -name "*.msi.zip" | head -n 1)
+            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle \( -name "*.nsis.zip" -o -name "*.msi.zip" \) | head -n 1)
             if [ -n "$BUNDLE" ]; then
               cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip"
             else
@@ -170,7 +170,7 @@ jobs:
               MSI_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.msi" | head -n 1)
               if [ -n "$MSI_FILE" ]; then
                 echo "Creating Windows updater bundle from .msi..."
-                7z a -tzip "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip" "$MSI_FILE"
+                7z a -tzip "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip" "$MSI_FILE"
               fi
             fi
             
@@ -237,13 +237,26 @@ jobs:
               
               # Also create signature for our renamed updater files
               case "$binary_name" in
-                *_en-US.msi|*.msi)
-                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.msi.zip.sig.txt"
-                  echo "Created Windows updater signature"
+                *.nsis.zip|*.msi.zip)
+                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip.sig.txt"
+                  echo "Created Windows ZIP updater signature"
+                  ;;
+                *.msi)
+                  # Only use MSI signature if the ZIP signature hasn't been created yet
+                  if [ ! -f "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip.sig.txt" ]; then
+                    echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip.sig.txt"
+                    echo "Created Windows MSI-fallback updater signature"
+                  fi
+                  ;;
+                *.AppImage.tar.gz)
+                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt"
+                  echo "Created Linux tar.gz updater signature"
                   ;;
                 *.AppImage)
-                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt"
-                  echo "Created Linux updater signature"
+                  if [ ! -f "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt" ]; then
+                    echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt"
+                    echo "Created Linux AppImage-fallback updater signature"
+                  fi
                   ;;
                 *.app.tar.gz)
                   echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}-updater.app.tar.gz.sig.txt"
@@ -517,11 +530,10 @@ jobs:
       - name: Prepare Release Files
         run: |
           mkdir -p release-files
-          # Copy only installers and portable versions
-          # Exclude: .sig.txt files and -updater.* files (used internally for auto-update)
+          # Copy installers, portable versions, and updater files
+          # Exclude only .sig.txt files (read during updater.json generation, not needed as release assets)
           find artifacts -type f \
             ! -name "*.sig.txt" \
-            ! -name "*-updater.*" \
             -exec cp {} release-files/ \;
           echo "Files to be uploaded to release:"
           ls -la release-files/
