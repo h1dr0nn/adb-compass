@@ -1,23 +1,23 @@
 {
-  "version": "2.0.1",
+  "version": "2.0.2",
   "notes": "Initial release with UI improvements and updater support.",
-  "pub_date": "2026-06-26T07:42:17.117Z",
+  "pub_date": "2026-06-26T08:44:47.582Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHZUZWZzOVBjb0hQTFBOcDMrdTdLYlJpRGl4KzhiaE5ZOTU1dFkwT21DR3k0TjVLazFYRjArUzVGcG4yaU5tRUU4RTRHVTFoT0ZIR0RmL3lmeENiemc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDU5NjY4CWZpbGU6QURCIENvbXBhc3NfMi4wLjFfeDY0X2VuLVVTLm1zaQpaODhxd3RuWENCRVI0Z3NiQUpTdGh1V1dxbGJGckhaYldtWUZCQmZVZ3VCUzZHWXM1dTZ0dGt1NVgxcjU2YW1PMzcwSWo3enhaMUs3U3FqQkRETnJBQT09Cg==",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.1/adbcompass-2.0.1-windows-x64-updater.msi.zip"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHRkQm1jV05XZDRtLzRzUTBEbEhjN1Z5djhsblVsNWtTaVlpZ1QzclFHK3ZJMllPc1pzMWU4L0lIa2FTbFZLemhxMlB4ejAyNGREY245MmwweDgwSkFZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDYzMDI0CWZpbGU6QURCIENvbXBhc3NfMi4wLjJfeDY0X2VuLVVTLm1zaQp4a3ZjZ2creW5iUG56UklvS0dRSktSSFRrU1F6dXk3a3pVaGtvaVVLWFd0YWJZV1NibE82YVFORC9jS01IZzUvUGZvS1Z4Q3JUT0htUDk0Sm03amNBdz09Cg==",
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.2/adbcompass-2.0.2-windows-x64-updater.zip"
     },
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHR6SHFKeVhyVlFMMlZpMThqQnVmR1BjTVJSSzQ2S1NRS2gyK01pdFRoN212WWlSdFpGeitPZmhwc2NiQnhHd2hldUlZcFdqVCtvaEFPL05nbjhxY1E0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDU5NTc0CWZpbGU6QURCIENvbXBhc3NfMi4wLjFfYW1kNjQuQXBwSW1hZ2UKY3IwSDNENzdSNlNlMXNYbFdkejN6ZWpuRTg5U1lFNmt6MkN5c0xBb2lxeHdFeVJKc0o5NE1SaS9WeTF6dkQrd0dxZXhXYlhsc1Y0M2xROXQ5TkM3QVE9PQo=",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.1/adbcompass-2.0.1-linux-x64-updater.AppImage.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaG5yMjFkTVRJTU5nZndad1dEdytqMzU1dnZabTZTdUhaMUFHaDVvb0NrUWRLYitZWjc4QmoydmxOUDRBMEV6NmlHWXdrY2lXSkJpT2IvWkRDamwzdVFvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDYyODk0CWZpbGU6QURCIENvbXBhc3NfMi4wLjJfYW1kNjQuQXBwSW1hZ2UKQnIyMndJMnZwbHBPRFFlbjZQWlRQd3ZqdmowNVZ6bWlRSjlBSzBjLzNHUkRvcXlXV2pZdlhScVo3cXNxSGVkMVlaOE9uL05yNDNaZFhuL01CcW5iQXc9PQo=",
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.2/adbcompass-2.0.2-linux-x64-updater.AppImage.tar.gz"
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHEvRUw0QUxPc2t0bVVBU2R3MGRMWDdEaHBRamRpNmxNTnhXa2NtZXUvWWxrQzQzVWs2TU5DSDZpLzVUV3gwZllPRFJIMlpjeTFrcVh3REMzUGQxdkFJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDU5NTk5CWZpbGU6QURCIENvbXBhc3MuYXBwLnRhci5negprUHRGOWFNaE5tWm55Lzc3T3JRT3lwZXJTQXFUS1FJUEZnMW9KcUhuVjNVS2hoL3NqdHRqbUdjY2lrWldLVTV1TFVzQkRxcjV2WkQ3RWE2MzlqelNCdz09Cg==",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.1/adbcompass-2.0.1-macos-x64-updater.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaG9XcmdIYzgzS0djb3hRQ2JjWnV4bGFKTVJiRERxTWdIdmkzVUdhcDcrdlR4eHRTZ28wSyt1ZFVuaDh2YVNhTHdPR1Fia29SWE1sT2VlZTk4NUNyWVFVPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDYzMzI2CWZpbGU6QURCIENvbXBhc3MuYXBwLnRhci5negozbGhOaHhaRVpHUitrS25PT2IyWUN0S3lXVC9tVFZPNEdJOGk5eExUNFhRZ2ZpdktFRSs0dlZhNGxIaVNzQk1VY3RPdVhoOUZtR2tvMXFzcGdNaXlCdz09Cg==",
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.2/adbcompass-2.0.2-macos-x64-updater.app.tar.gz"
     },
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaG96TGdqYTJGUlp6ZDNqV3lqMzFzdkpjNVBEeEt2ZCthK3J4ejF1MkZ4ajdMdG9WMXRVOVdkSTNrclpHTFVNN2NGTktXeHErTEdoeUdxM0NyR2lIZkFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDU5NDQyCWZpbGU6QURCIENvbXBhc3MuYXBwLnRhci5negpqeHVKTUF6Y1EwRkNTNkpNdGlYNVM5YndQbmZVNDlPcnhhUHFqNDJyUGl4eVJQemd4UTlQM01ZMkNYRFlxVko0OWVwamFOeFV6ZkZpNWlLb2hmZWFBUT09Cg==",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.1/adbcompass-2.0.1-macos-arm64-updater.app.tar.gz"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHVBQ0RCZUZyR0lVVWoydit4TFpnc0l2M3ZJemhMRUE2Nk5MR3I0eVFrZjhoZWh4MHJoU2JwOURueHB2dXcvT1duRG5qcU8xOVczWFVXY3RXMWdQTkFjPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDYyNzE3CWZpbGU6QURCIENvbXBhc3MuYXBwLnRhci5negoxS3NKb3NEZVZxK2I1K3NHU1RpSGpHc3AvRVpEeDZPbnA5UjVMNm9hRnYxc09GRkhTZG9WMnFMME1RTmVSc1prYnJWaXUvcmgvbXhnZndHRll1bzlEdz09Cg==",
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.2/adbcompass-2.0.2-macos-arm64-updater.app.tar.gz"
     }
   }
 }
