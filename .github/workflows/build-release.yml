@@ -153,133 +153,55 @@ jobs:
           TARGET: ${{ matrix.target }}
         run: |
           mkdir -p release-artifacts
-          echo "=== Debug: Listing bundle directory ==="
-          ls -R src-tauri/target/$TARGET/release/bundle || true
+          BUNDLE="src-tauri/target/${TARGET}/release/bundle"
+          APP_SLUG="adbcompass"
+          PREFIX="${APP_SLUG}-${VERSION}-${PLATFORM}-${ARCH}"
 
-          # Windows
-          if [ "$PLATFORM" == "windows" ]; then
-            cp src-tauri/target/$TARGET/release/bundle/nsis/*.exe "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-setup.exe" 2>/dev/null || true
-            cp src-tauri/target/$TARGET/release/bundle/msi/*.msi "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}.msi" 2>/dev/null || true
-            
-            # Find Windows Updater Bundle (Tauri may create .nsis.zip or .msi.zip)
-            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle \( -name "*.nsis.zip" -o -name "*.msi.zip" \) | head -n 1)
-            if [ -n "$BUNDLE" ]; then
-              cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip"
-            else
-              # Fallback: Create updater bundle by zipping .msi file using 7z (available on Windows runner)
-              MSI_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.msi" | head -n 1)
-              if [ -n "$MSI_FILE" ]; then
-                echo "Creating Windows updater bundle from .msi..."
-                7z a -tzip "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip" "$MSI_FILE"
-              fi
-            fi
-            
-          # Linux
-          elif [ "$PLATFORM" == "linux" ]; then
-            cp src-tauri/target/$TARGET/release/bundle/appimage/*.AppImage "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.AppImage" 2>/dev/null || true
-            cp src-tauri/target/$TARGET/release/bundle/deb/*.deb "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}.deb" 2>/dev/null || true
-            
-            # Find Linux Updater Bundle
-            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle -name "*.AppImage.tar.gz" | head -n 1)
-            if [ -n "$BUNDLE" ]; then
-              cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz"
-            else
-              # Fallback: Create updater bundle by compressing .AppImage file
-              APPIMAGE_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.AppImage" | head -n 1)
-              if [ -n "$APPIMAGE_FILE" ]; then
-                echo "Creating Linux updater bundle from .AppImage..."
-                APPIMAGE_NAME=$(basename "$APPIMAGE_FILE")
-                tar -czvf "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz" -C "$(dirname "$APPIMAGE_FILE")" "$APPIMAGE_NAME"
-              fi
-            fi
+          echo "=== Bundle tree ==="
+          ls -R "$BUNDLE" || true
+          echo ""
+          echo "=== Updater bundles (.sig pairs) found ==="
+          find "$BUNDLE" -name "*.sig" -print || true
+          echo ""
 
-          # macOS
-          elif [ "$PLATFORM" == "macos" ]; then
-            cp src-tauri/target/$TARGET/release/bundle/dmg/*.dmg "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}.dmg" 2>/dev/null || true
-            
-            # Find and rename macOS Updater Bundle
-            BUNDLE=$(find src-tauri/target/$TARGET/release/bundle -name "*.app.tar.gz" | head -n 1)
-            if [ -n "$BUNDLE" ]; then
-              cp "$BUNDLE" "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}-updater.app.tar.gz"
+          if [ "$PLATFORM" = "windows" ]; then
+            # NSIS — the .exe is both the installer AND the updater bundle.
+            EXE=$(find "$BUNDLE/nsis" -name "*-setup.exe" -not -name "*.sig" | head -n 1)
+            SIG=$(find "$BUNDLE/nsis" -name "*-setup.exe.sig" | head -n 1)
+            [ -n "$EXE" ] && cp "$EXE" "release-artifacts/${PREFIX}-setup.exe"
+            [ -n "$SIG" ] && cp "$SIG" "release-artifacts/${PREFIX}-setup.exe.sig"
+            # MSI — secondary installer, no updater wiring.
+            cp "$BUNDLE"/msi/*.msi "release-artifacts/${PREFIX}.msi" 2>/dev/null || true
+            if [ -z "$EXE" ] || [ -z "$SIG" ]; then
+              echo "::error::Windows NSIS bundle missing — exe='$EXE' sig='$SIG'."
+              exit 1
+            fi
+          elif [ "$PLATFORM" = "linux" ]; then
+            # AppImage — the file is both the installer and updater bundle.
+            APP=$(find "$BUNDLE/appimage" -name "*.AppImage" -not -name "*.sig" | head -n 1)
+            SIG=$(find "$BUNDLE/appimage" -name "*.AppImage.sig" | head -n 1)
+            [ -n "$APP" ] && cp "$APP" "release-artifacts/${PREFIX}.AppImage"
+            [ -n "$SIG" ] && cp "$SIG" "release-artifacts/${PREFIX}.AppImage.sig"
+            chmod +x "release-artifacts/${PREFIX}.AppImage" 2>/dev/null || true
+            cp "$BUNDLE"/deb/*.deb "release-artifacts/${PREFIX}.deb" 2>/dev/null || true
+            if [ -z "$APP" ] || [ -z "$SIG" ]; then
+              echo "::error::Linux AppImage bundle missing — app='$APP' sig='$SIG'."
+              exit 1
+            fi
+          elif [ "$PLATFORM" = "macos" ]; then
+            # macOS — DMG for download, .app.tar.gz for the updater bundle.
+            cp "$BUNDLE"/dmg/*.dmg "release-artifacts/${PREFIX}.dmg" 2>/dev/null || true
+            APP=$(find "$BUNDLE" -name "*.app.tar.gz" -not -name "*.sig" | head -n 1)
+            SIG=$(find "$BUNDLE" -name "*.app.tar.gz.sig" | head -n 1)
+            [ -n "$APP" ] && cp "$APP" "release-artifacts/${PREFIX}-updater.app.tar.gz"
+            [ -n "$SIG" ] && cp "$SIG" "release-artifacts/${PREFIX}-updater.app.tar.gz.sig"
+            if [ -z "$APP" ] || [ -z "$SIG" ]; then
+              echo "::error::macOS updater bundle missing — app='$APP' sig='$SIG'."
+              exit 1
             fi
           fi
 
-          # Recursive Signature Extraction (Tauri v2)
-          echo "Extracting signatures..."
-          
-          # Use find with -print0 and read with IFS to handle filenames with spaces
-          find src-tauri/target/$TARGET/release/bundle -name "*.sig" -print0 2>/dev/null | while IFS= read -r -d '' sig; do
-            echo "Found signature file: $sig"
-            binary_name=$(basename "$sig" .sig)
-            
-            # Debug: show file content
-            echo "=== Content of $sig ==="
-            cat "$sig"
-            echo ""
-            echo "=== End of $sig ==="
-            
-            # Try to extract signature - Tauri v2 .sig files may have different formats
-            # Format 1: minisign (line 1 = untrusted comment, line 2 = signature)
-            # Format 2: just base64 signature
-            
-            if grep -q "^untrusted comment:" "$sig" 2>/dev/null; then
-              # Minisign format - extract line 2
-              SIG_CONTENT=$(sed -n '2p' "$sig" | tr -d '\r\n')
-            else
-              # Single line base64 format - use entire content
-              SIG_CONTENT=$(cat "$sig" | tr -d '\r\n')
-            fi
-            
-            echo "Extracted signature (length=${#SIG_CONTENT}): ${SIG_CONTENT:0:50}..."
-            
-            if [ -n "$SIG_CONTENT" ]; then
-              echo "$SIG_CONTENT" > "release-artifacts/${binary_name}.sig.txt"
-              
-              # Also create signature for our renamed updater files
-              case "$binary_name" in
-                *.nsis.zip|*.msi.zip)
-                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip.sig.txt"
-                  echo "Created Windows ZIP updater signature"
-                  ;;
-                *.msi)
-                  # Only use MSI signature if the ZIP signature hasn't been created yet
-                  if [ ! -f "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip.sig.txt" ]; then
-                    echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-windows-${ARCH}-updater.zip.sig.txt"
-                    echo "Created Windows MSI-fallback updater signature"
-                  fi
-                  ;;
-                *.AppImage.tar.gz)
-                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt"
-                  echo "Created Linux tar.gz updater signature"
-                  ;;
-                *.AppImage)
-                  if [ ! -f "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt" ]; then
-                    echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-linux-${ARCH}-updater.AppImage.tar.gz.sig.txt"
-                    echo "Created Linux AppImage-fallback updater signature"
-                  fi
-                  ;;
-                *.app.tar.gz)
-                  echo "$SIG_CONTENT" > "release-artifacts/adbcompass-${VERSION}-macos-${ARCH}-updater.app.tar.gz.sig.txt"
-                  echo "Created macOS updater signature"
-                  ;;
-              esac
-            else
-              echo "WARNING: Empty signature content for $sig"
-            fi
-          done
-
-          # Create legacy signature fallback (also handle spaces in filename)
-          SIG_FILE=$(find src-tauri/target/$TARGET/release/bundle -name "*.sig" -print 2>/dev/null | head -n 1)
-          if [ -n "$SIG_FILE" ]; then
-            echo "Creating legacy signature from: $SIG_FILE"
-            if grep -q "^untrusted comment:" "$SIG_FILE" 2>/dev/null; then
-              sed -n '2p' "$SIG_FILE" | tr -d '\r\n' > "release-artifacts/${PLATFORM}-${ARCH}.legacy.sig.txt"
-            else
-              cat "$SIG_FILE" | tr -d '\r\n' > "release-artifacts/${PLATFORM}-${ARCH}.legacy.sig.txt"
-            fi
-          fi
-
-          echo "Artifacts prepared:"
+          echo "=== Final artifacts ==="
           ls -la release-artifacts/
 
       - name: Create Windows Portable ZIP
@@ -412,98 +334,66 @@ jobs:
           TAG_NAME: ${{ github.ref_name }}
         run: |
           node << 'EOF'
-          const fs = require('fs');
-          const updater = JSON.parse(fs.readFileSync('updater.json', 'utf8'));
-          const version = process.env.VERSION;
-          const tagName = process.env.TAG_NAME;
+          const fs = require("fs");
+          const path = require("path");
 
+          const version = process.env.VERSION;
+          const tag = process.env.TAG_NAME;
+          const repo = process.env.GITHUB_REPOSITORY;
+          const baseUrl = `https://github.com/${repo}/releases/download/${tag}`;
+
+          const updater = JSON.parse(fs.readFileSync("updater.json", "utf8"));
           updater.version = version;
           updater.pub_date = new Date().toISOString();
 
-          const platformMap = {
-            'windows-x64': 'windows-x86_64',
-            'linux-x64': 'linux-x86_64',
-            'macos-x64': 'darwin-x86_64',
-            'macos-arm64': 'darwin-aarch64'
+          // Map our artifact naming → tauri's platform keys.
+          const platforms = {
+            "windows-x86_64": {
+              ext: "windows-x64-setup.exe",
+              keys: ["windows-x86_64-nsis", "windows-x86_64"],
+            },
+            "linux-x86_64": {
+              ext: "linux-x64.AppImage",
+              keys: ["linux-x86_64-appimage", "linux-x86_64"],
+            },
+            "darwin-x86_64": {
+              ext: "macos-x64-updater.app.tar.gz",
+              keys: ["darwin-x86_64"],
+            },
+            "darwin-aarch64": {
+              ext: "macos-arm64-updater.app.tar.gz",
+              keys: ["darwin-aarch64"],
+            },
           };
 
-          const files = fs.readdirSync('artifacts');
-          console.log('Available artifacts:', files);
-
-          Object.entries(platformMap).forEach(([key, updaterKey]) => {
-            console.log(`Processing platform: ${key} (${updaterKey})`);
-            
-            if (!updater.platforms[updaterKey]) return;
-
-            const baseUrl = `https://github.com/${process.env.GITHUB_REPOSITORY}/releases/download/${tagName}`;
-            
-            // 1. Find the updater binary with multiple fallbacks
-            let binaryFile = null;
-            
-            // Try standardized naming first
-            binaryFile = files.find(f => f.includes(`${key}-updater`));
-            
-            // Fallback patterns for each platform
-            if (!binaryFile) {
-                if (updaterKey === 'windows-x86_64') {
-                    binaryFile = files.find(f => f.includes('windows') && f.endsWith('.nsis.zip'));
-                    if (!binaryFile) binaryFile = files.find(f => f.includes('windows') && f.endsWith('.msi.zip'));
-                    if (!binaryFile) binaryFile = files.find(f => f.includes('windows') && f.endsWith('.msi'));
-                } else if (updaterKey === 'linux-x86_64') {
-                    binaryFile = files.find(f => f.includes('linux') && f.endsWith('.AppImage.tar.gz'));
-                    if (!binaryFile) binaryFile = files.find(f => f.includes('linux') && f.endsWith('.AppImage'));
-                } else if (updaterKey === 'darwin-x86_64') {
-                    binaryFile = files.find(f => f.includes('macos-x64') && f.endsWith('.app.tar.gz'));
-                } else if (updaterKey === 'darwin-aarch64') {
-                    binaryFile = files.find(f => f.includes('macos-arm64') && f.endsWith('.app.tar.gz'));
-                }
+          // Rebuild platforms from scratch to clear any old stale values
+          updater.platforms = {};
+          const files = fs.readdirSync("artifacts");
+          for (const [name, { ext, keys }] of Object.entries(platforms)) {
+            const bundle = files.find((f) => f.endsWith(ext));
+            const sig = bundle && files.find((f) => f === `${bundle}.sig`);
+            if (!bundle) {
+              console.warn(`! Missing bundle for ${name} (looking for *${ext})`);
+              continue;
             }
-
-            if (binaryFile) {
-                updater.platforms[updaterKey].url = `${baseUrl}/${binaryFile}`;
-                console.log(`  Binary matched: ${binaryFile}`);
-
-                // 2. Find signature - try multiple patterns
-                let sigContent = '';
-                
-                // Pattern 1: Exact match for renamed binary
-                const sigFileName = `${binaryFile}.sig.txt`;
-                const sigFilePath = `artifacts/${sigFileName}`;
-                if (fs.existsSync(sigFilePath)) {
-                    const content = fs.readFileSync(sigFilePath, 'utf8').trim();
-                    console.log(`  Checking ${sigFileName}: length=${content.length}, content="${content.substring(0, 50)}..."`);
-                    if (content) {
-                        sigContent = content;
-                        console.log(`  Signature loaded from: ${sigFileName}`);
-                    }
-                }
-                
-                // Pattern 2: Legacy fallback (more reliable since it's created from Tauri's .sig files)
-                if (!sigContent) {
-                    const legacySigFile = `artifacts/${key}.legacy.sig.txt`;
-                    if (fs.existsSync(legacySigFile)) {
-                        const content = fs.readFileSync(legacySigFile, 'utf8').trim();
-                        console.log(`  Checking legacy ${key}.legacy.sig.txt: length=${content.length}, content="${content.substring(0, 50)}..."`);
-                        if (content) {
-                            sigContent = content;
-                            console.log(`  Signature loaded from legacy: ${key}.legacy.sig.txt`);
-                        }
-                    }
-                }
-
-                if (sigContent) {
-                    updater.platforms[updaterKey].signature = sigContent;
-                    console.log(`  SUCCESS: Signature set for ${updaterKey}`);
-                } else {
-                    console.log(`  WARNING: No signature content found for ${binaryFile}`);
-                }
-            } else {
-                console.log(`  WARNING: No updater binary found for ${updaterKey}`);
+            const sigContent = sig
+              ? fs.readFileSync(path.join("artifacts", sig), "utf8").trim()
+              : "";
+            const entry = {
+              url: `${baseUrl}/${bundle}`,
+              signature: sigContent,
+            };
+            for (const k of keys) {
+              updater.platforms[k] = entry;
             }
-          });
+            console.log(
+              `✓ ${name} (${keys.join(", ")}) → ${bundle}${sig ? "" : "  (no sig!)"}`,
+            );
+          }
 
-          fs.writeFileSync('updater.json', JSON.stringify(updater, null, 2));
-          console.log('Update of updater.json completed.');
+          fs.writeFileSync("updater.json", JSON.stringify(updater, null, 2));
+          console.log("\nUpdated updater.json:");
+          console.log(fs.readFileSync("updater.json", "utf8"));
           EOF
 
       - name: Commit and Push updater.json
@@ -530,11 +420,9 @@ jobs:
       - name: Prepare Release Files
         run: |
           mkdir -p release-files
-          # Copy installers, portable versions, and updater files
-          # Exclude only .sig.txt files (read during updater.json generation, not needed as release assets)
-          find artifacts -type f \
-            ! -name "*.sig.txt" \
-            -exec cp {} release-files/ \;
+          # Upload installers + updater bundles. Skip .sig files — those are
+          # already embedded in updater.json and don't need a public URL.
+          find artifacts -type f ! -name "*.sig" -exec cp {} release-files/ \;
           echo "Files to be uploaded to release:"
           ls -la release-files/
 
