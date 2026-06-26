@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Smartphone, Home, Triangle, Square, Power, Volume2, Volume1, Sun, Camera, Video } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from "../../lib/tauri";
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { StreamPlayer } from '../device/StreamPlayer';
 import { save } from '@tauri-apps/plugin-dialog';
@@ -43,7 +43,7 @@ export function MirrorWindow() {
         const initScrcpy = async () => {
             try {
                 // Fetch resolution
-                const props = await invoke<{ screen_resolution: string | null }>('get_device_props', { deviceId });
+                const props = await tauri.getDeviceProps<{ screen_resolution: string | null }>(deviceId);
                 if (props.screen_resolution) {
                     const clean = props.screen_resolution.replace('Physical size: ', '').replace('Override size: ', '');
                     const [w, h] = clean.split('x').map(Number);
@@ -56,9 +56,9 @@ export function MirrorWindow() {
                 setIsLoadingRes(false);
 
                 // Check if server already running
-                const status = await invoke<{ running: boolean }>('get_scrcpy_status', { deviceId });
+                const status = await tauri.getScrcpyStatus(deviceId);
                 if (!status.running) {
-                    await invoke('start_scrcpy_server', {
+                    await tauri.startScrcpyServer({
                         deviceId,
                         maxSize: 1024,
                         bitRate: 4000000,
@@ -118,7 +118,7 @@ export function MirrorWindow() {
                 absolutePath = selected;
             }
 
-            const result = await invoke<{ success: boolean; path?: string; error?: string }>('save_capture_file', {
+            const result = await tauri.saveCaptureFile<{ success: boolean; path?: string; error?: string }>({
                 dataBase64: base64Data,
                 filename,
                 subfolder: 'screenshots',
@@ -172,7 +172,7 @@ export function MirrorWindow() {
                             absolutePath = selected;
                         }
 
-                        const result = await invoke<{ success: boolean; path?: string; error?: string }>('save_capture_file', {
+                        const result = await tauri.saveCaptureFile<{ success: boolean; path?: string; error?: string }>({
                             dataBase64: base64Data,
                             filename,
                             subfolder: 'recordings',
@@ -204,7 +204,7 @@ export function MirrorWindow() {
         if (!allowTouch || !deviceId) return;
         const actionMap = { down: 0, up: 1, move: 2 };
         try {
-            await invoke('scrcpy_touch', {
+            await tauri.scrcpyTouch({
                 deviceId,
                 action: actionMap[action],
                 x,
@@ -220,7 +220,7 @@ export function MirrorWindow() {
     const handleScroll = useCallback(async (x: number, y: number, deltaX: number, deltaY: number) => {
         if (!allowTouch || !deviceId) return;
         try {
-            await invoke('scrcpy_scroll', {
+            await tauri.scrcpyScroll({
                 deviceId,
                 x,
                 y,
@@ -237,10 +237,7 @@ export function MirrorWindow() {
     const handleKeyEvent = async (keycode: number) => {
         if (!deviceId) return;
         try {
-            await invoke('execute_shell', {
-                deviceId,
-                command: `input keyevent ${keycode}`
-            });
+            await tauri.executeShell(deviceId, `input keyevent ${keycode}`);
         } catch (error) {
             console.error('Key event failed:', error);
         }

@@ -13,11 +13,11 @@ import {
   List as ListIcon,
   ArrowLeft,
 } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
+import * as tauri from "../../lib/tauri";
 import { toast } from "sonner";
 import { DeviceInfo } from "../../types";
-import { useDeviceCache } from "../../contexts/DeviceCacheContext";
-import { useLanguage } from "../../contexts/LanguageContext";
+import { useDeviceCache } from "../../hooks/useDeviceCache";
+import { useLanguage } from "../../hooks/useLanguage";
 
 interface AppManagerProps {
   device: DeviceInfo;
@@ -291,10 +291,7 @@ export function AppManager({ device }: AppManagerProps) {
     const spinStart = Date.now();
 
     try {
-      const result = await invoke<AppPackage[]>("get_apps_full", {
-        deviceId: device.id,
-        includeSystem: showSystem,
-      });
+      const result = await tauri.getAppsFull<AppPackage[]>(device.id, showSystem);
 
       // Pre-process packages (map labels once)
       const processed = result.map((pkg) => ({
@@ -343,10 +340,7 @@ export function AppManager({ device }: AppManagerProps) {
     setUninstalling(packageName);
     setConfirmUninstall(null);
     try {
-      await invoke("uninstall_app", {
-        deviceId: device.id,
-        packageName,
-      });
+      await tauri.uninstallApp(device.id, packageName);
       toast.success(t.appUninstalled, { description: packageName });
       setPackages((prev) => prev.filter((p) => p.id !== packageName));
     } catch (e) {

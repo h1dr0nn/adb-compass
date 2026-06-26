@@ -5,7 +5,7 @@ import {
     RefreshCcw, Power,
     ChevronRight, Loader2, Sparkles
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from "../../lib/tauri";
 import { toast } from 'sonner';
 
 interface QuickActionMenuProps {
@@ -83,25 +83,25 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
                                     id="toggle-dark"
                                     icon={<Moon size={16} />}
                                     label="Force Dark Mode"
-                                    onClick={() => runAction('Dark Mode', invoke('set_dark_mode', { deviceId, enabled: true }))}
+                                    onClick={() => runAction('Dark Mode', tauri.setDarkMode(deviceId, true))}
                                 />
                                 <ActionItem
                                     id="toggle-light"
                                     icon={<Sun size={16} />}
                                     label="Force Light Mode"
-                                    onClick={() => runAction('Light Mode', invoke('set_dark_mode', { deviceId, enabled: false }))}
+                                    onClick={() => runAction('Light Mode', tauri.setDarkMode(deviceId, false))}
                                 />
                                 <ActionItem
                                     id="toggle-taps"
                                     icon={<MousePointer2 size={16} />}
                                     label="Toggle Show Taps"
-                                    onClick={() => runAction('Show Taps', invoke('set_show_taps', { deviceId, enabled: true }))}
+                                    onClick={() => runAction('Show Taps', tauri.setShowTaps(deviceId, true))}
                                 />
                                 <ActionItem
                                     id="toggle-anim"
                                     icon={<FastForward size={16} />}
                                     label="Speed up Anims (0.5x)"
-                                    onClick={() => runAction('Animations', invoke('set_animations', { deviceId, scale: 0.5 }))}
+                                    onClick={() => runAction('Animations', tauri.setAnimations(deviceId, 0.5))}
                                 />
                             </div>
 
@@ -115,14 +115,14 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
                                     id="reboot-recovery"
                                     icon={<RefreshCcw size={16} />}
                                     label="Reboot to Recovery"
-                                    onClick={() => runAction('Reboot Recovery', invoke('reboot_device', { deviceId, mode: 'recovery' }))}
+                                    onClick={() => runAction('Reboot Recovery', tauri.rebootDevice(deviceId, 'recovery'))}
                                     color="text-warning"
                                 />
                                 <ActionItem
                                     id="reboot-bootloader"
                                     icon={<Power size={16} />}
                                     label="Reboot to Bootloader"
-                                    onClick={() => runAction('Reboot Bootloader', invoke('reboot_device', { deviceId, mode: 'bootloader' }))}
+                                    onClick={() => runAction('Reboot Bootloader', tauri.rebootDevice(deviceId, 'bootloader'))}
                                     color="text-error"
                                 />
                             </div>

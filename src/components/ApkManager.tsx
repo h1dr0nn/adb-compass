@@ -1,13 +1,12 @@
 import { useState } from 'react';
-import { motion } from 'framer-motion';
 import {
     FolderOpen, RefreshCw, Package, FileCheck, X
 } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
+import * as tauri from '../lib/tauri';
 import type { ApkInfo } from '../types';
 import { ApkDropzone } from './ApkDropzone';
-import { ToolsPanel, type ActiveToolView } from './ToolsPanel';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface ApkManagerProps {
     apkInfo: ApkInfo | null;
@@ -15,7 +14,6 @@ interface ApkManagerProps {
     onClear: () => void;
     onScan: (path: string) => Promise<ApkInfo[]>;
     onSelectFromList: (info: ApkInfo) => void;
-    onOpenToolView: (view: ActiveToolView) => void;
 }
 
 export function ApkManager({
@@ -23,10 +21,7 @@ export function ApkManager({
     onClear,
     onScan,
     onSelectFromList,
-    onOpenToolView
 }: ApkManagerProps) {
-    // unified 'apk' tab vs 'tools' placeholder
-    const [activeTab, setActiveTab] = useState<'apk' | 'tools'>('apk');
     const { t } = useLanguage();
 
     // Folder state
@@ -75,8 +70,7 @@ export function ApkManager({
             }
 
             // Invoke validation to get info
-            const { invoke } = await import('@tauri-apps/api/core');
-            const info = await invoke<ApkInfo | null>('validate_apk', { path });
+            const info = await tauri.validateApk(path);
 
             if (info && info.valid) {
                 setManualApks(prev => [...prev, info]);
@@ -92,45 +86,8 @@ export function ApkManager({
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            {/* Tab Switcher with sliding background */}
-            <div className="flex p-1 mb-4 bg-surface-elevated rounded-xl border border-border/50">
-                <button
-                    className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg transition-colors ${activeTab === 'apk'
-                        ? 'text-text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                        }`}
-                    onClick={() => setActiveTab('apk')}
-                >
-                    {activeTab === 'apk' && (
-                        <motion.div
-                            layoutId="sidebarActiveTab"
-                            className="absolute inset-0 bg-surface-card rounded-lg shadow-sm border border-border/50"
-                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                        />
-                    )}
-                    <span className="relative z-10">{t.apk}</span>
-                </button>
-                <button
-                    className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg transition-colors ${activeTab === 'tools'
-                        ? 'text-text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                        }`}
-                    onClick={() => setActiveTab('tools')}
-                >
-                    {activeTab === 'tools' && (
-                        <motion.div
-                            layoutId="sidebarActiveTab"
-                            className="absolute inset-0 bg-surface-card rounded-lg shadow-sm border border-border/50"
-                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                        />
-                    )}
-                    <span className="relative z-10">{t.tabAdvanced}</span>
-                </button>
-            </div>
-
             <div className="flex-1 overflow-y-auto px-1">
-                {activeTab === 'apk' && (
-                    <div className="flex flex-col gap-6 pb-4">
+                <div className="flex flex-col gap-6 pb-4">
                         {/* Section 1: Folder Selection */}
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
@@ -216,13 +173,9 @@ export function ApkManager({
                                 </div>
                             )}
                         </div>
-                    </div>
-                )}
-                {activeTab === 'tools' && (
-                    <ToolsPanel onOpenToolView={onOpenToolView} />
-                )}
+                </div>
             </div>
-        </div >
+        </div>
     );
 }
 

@@ -1,14 +1,9 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, Terminal, Loader2, Trash2, Smartphone, Command, ChevronRight, Sparkles } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
-import { useDevices } from '../hooks/useDevices';
-import { Select } from './ui/Select';
+import { Terminal, Loader2, Trash2, Command, ChevronRight, Sparkles } from 'lucide-react';
+import * as tauri from '../lib/tauri';
+import { useDeviceStore } from '../stores/deviceStore';
 import { QuickActionMenu } from './device/QuickActionMenu';
-
-interface TerminalViewProps {
-    onBack: () => void;
-}
 
 interface CommandHistory {
     command: string;
@@ -31,12 +26,12 @@ const COMMON_COMMANDS = [
     { label: 'CPU Info', cmd: 'cat /proc/cpuinfo' },
 ];
 
-export function TerminalView({ onBack }: TerminalViewProps) {
-    const { devices, loading: devicesLoading } = useDevices();
+export function TerminalView() {
+    const selectedDevice = useDeviceStore((s) => s.selectedDeviceId) ?? '';
+    const devicesLoading = useDeviceStore((s) => s.loading);
     const [command, setCommand] = useState('');
     const [history, setHistory] = useState<CommandHistory[]>([]);
     const [loading, setLoading] = useState(false);
-    const [selectedDevice, setSelectedDevice] = useState<string>('');
     const [historyIndex, setHistoryIndex] = useState(-1);
     
     // Suggestion states
@@ -58,14 +53,6 @@ export function TerminalView({ onBack }: TerminalViewProps) {
         }
     }, [suggestionIndex, showSuggestions]);
 
-    // Set initial device if not set
-    useEffect(() => {
-        if (!selectedDevice && devices.length > 0) {
-            const firstAuthorized = devices.find(d => d.status === 'Device');
-            if (firstAuthorized) setSelectedDevice(firstAuthorized.id);
-        }
-    }, [devices, selectedDevice]);
-
     useEffect(() => {
         outputRef.current?.scrollTo({ top: outputRef.current.scrollHeight, behavior: 'smooth' });
     }, [history]);
@@ -80,10 +67,7 @@ export function TerminalView({ onBack }: TerminalViewProps) {
         setShowSuggestions(false);
 
         try {
-            const output = await invoke<string>('execute_shell', {
-                deviceId: selectedDevice,
-                command: cmd,
-            });
+            const output = await tauri.executeShell(selectedDevice, cmd);
             setHistory((prev) => [...prev, { command: cmd, output }]);
         } catch (err) {
             setHistory((prev) => [...prev, { command: cmd, output: String(err), isError: true }]);
@@ -160,14 +144,6 @@ export function TerminalView({ onBack }: TerminalViewProps) {
         setHistory([]);
     };
 
-    // Prepare options for Select component
-    const deviceOptions = devices.map((d) => ({
-        value: d.id,
-        label: `${d.model || d.id}${d.status !== 'Device' ? ` (${d.status})` : ''}`,
-        icon: <Smartphone size={14} className={d.status === 'Device' ? 'text-accent' : 'text-text-muted'} />,
-        disabled: d.status !== 'Device'
-    }));
-
     return (
         <motion.div
             className="flex flex-col h-full"
@@ -175,36 +151,8 @@ export function TerminalView({ onBack }: TerminalViewProps) {
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
         >
-            {/* Header */}
-            <div className="flex items-center gap-4 mb-4">
-                <button
-                    onClick={onBack}
-                    className="p-2.5 rounded-xl hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-all duration-200 border border-transparent hover:border-border"
-                >
-                    <ArrowLeft size={22} />
-                </button>
-                <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-                        <Terminal className="text-accent" size={20} />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-bold text-text-primary">Shell Terminal</h2>
-                        <p className="text-sm text-text-muted">Execute ADB shell commands</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Controls - Device Selector and Clear Button */}
+            {/* Controls */}
             <div className="flex items-center gap-3 mb-4">
-                <div className="w-64">
-                    <Select
-                        options={deviceOptions}
-                        value={selectedDevice}
-                        onChange={setSelectedDevice}
-                        placeholder="Select device..."
-                    />
-                </div>
-
                 <div className="flex-1" />
 
                 {selectedDevice && (

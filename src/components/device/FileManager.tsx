@@ -6,13 +6,13 @@ import {
     Trash2, FolderPlus, Loader2, AlertTriangle, HardDrive,
     Image, Film, Music, DownloadCloud, Camera
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { toast } from 'sonner';
+import * as tauri from '../../lib/tauri';
 import { DeviceInfo } from '../../types';
 import { listContainer, listItem } from '../../lib/animations';
-import { useDeviceCache } from '../../contexts/DeviceCacheContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useDeviceCache } from '../../hooks/useDeviceCache';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface FileManagerProps {
     device: DeviceInfo;
@@ -70,10 +70,7 @@ export function FileManager({ device }: FileManagerProps) {
         const spinStart = Date.now();
 
         try {
-            const result = await invoke<FileInfo[]>('list_files_fast', {
-                deviceId: device.id,
-                path
-            });
+            const result = await tauri.listFilesFast(device.id, path);
             setFiles(result);
             setCurrentPath(path);
             setData(cacheKey, result);
@@ -131,11 +128,7 @@ export function FileManager({ device }: FileManagerProps) {
                 const fileName = selected.split(/[/\\]/).pop() || 'file';
                 const remotePath = `${currentPath}/${fileName}`;
 
-                await invoke('push_file', {
-                    deviceId: device.id,
-                    localPath: selected,
-                    remotePath
-                });
+                await tauri.pushFile(device.id, selected, remotePath);
 
                 toast.success(t.fileUploaded, { description: fileName });
                 fetchFiles();
@@ -158,11 +151,7 @@ export function FileManager({ device }: FileManagerProps) {
                 setActionLoading(file.name);
                 const remotePath = `${currentPath}/${file.name}`;
 
-                await invoke('pull_file', {
-                    deviceId: device.id,
-                    remotePath,
-                    localPath
-                });
+                await tauri.pullFile(device.id, remotePath, localPath);
 
                 toast.success(t.fileDownloaded, { description: file.name });
             }
@@ -178,10 +167,7 @@ export function FileManager({ device }: FileManagerProps) {
         setConfirmDelete(null);
         try {
             const remotePath = `${currentPath}/${file.name}`;
-            await invoke('delete_remote_file', {
-                deviceId: device.id,
-                remotePath
-            });
+            await tauri.deleteRemoteFile(device.id, remotePath);
             toast.success(t.deleted, { description: file.name });
             setFiles(prev => prev.filter(f => f.name !== file.name));
         } catch (e) {
@@ -197,10 +183,7 @@ export function FileManager({ device }: FileManagerProps) {
         setActionLoading('newfolder');
         try {
             const remotePath = `${currentPath}/${newFolderName}`;
-            await invoke('create_remote_directory', {
-                deviceId: device.id,
-                remotePath
-            });
+            await tauri.createRemoteDirectory(device.id, remotePath);
             toast.success(t.folderCreated, { description: newFolderName });
             setNewFolderMode(false);
             setNewFolderName('');

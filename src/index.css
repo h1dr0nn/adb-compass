@@ -1,195 +1,399 @@
-@import "./styles/tokens.css";
+@import "tailwindcss";
+@import "@fontsource-variable/inter";
+@import "@fontsource-variable/jetbrains-mono";
 
-/* Import Apple-style design tokens */
-@import "tailwindcss/base";
-@import "tailwindcss/components";
-@import "tailwindcss/utilities";
+/* Tailwind v4 dark variant — utilities like `dark:bg-X` resolve via the
+ * `data-theme="dark"` attribute set on <html> by useThemeSync. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
-/* Base layer - global styles */
-@layer base {
-  :root {
-    /* Light Theme Variables - Improved Contrast & Less Glare */
-    --color-surface-bg: 241 245 249;
-    /* slate-100 */
-    --color-surface-card: 255 255 255;
-    /* white */
-    --color-surface-elevated: 226 232 240;
-    /* slate-200 */
-    --color-surface-hover: 203 213 225;
-    /* slate-300 */
+:root {
+  --font-sans:
+    "Inter Variable", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono:
+    "JetBrains Mono Variable", "JetBrains Mono", "SF Mono", Consolas,
+    ui-monospace, monospace;
 
-    --color-border: 203 213 225;
-    /* slate-300 */
+  /* ---- Titlebar palette ----
+   * Titlebar floats over the dark acrylic backdrop (Color(0,0,0,219) in
+   * Rust), so its icons stay light in BOTH themes. Do not theme-swap. */
+  --color-titlebar-text: rgba(255, 255, 255, 0.92);
+  --color-titlebar-text-dim: rgba(255, 255, 255, 0.55);
+  --color-titlebar-hover-bg: rgba(255, 255, 255, 0.12);
+  --color-titlebar-sep: rgba(255, 255, 255, 0.18);
+  --color-titlebar-close-hover: #c0392b;
 
-    --color-text-primary: 15 23 42;
-    /* slate-900 */
-    --color-text-secondary: 51 65 85;
-    /* slate-700 */
-    --color-text-muted: 100 116 139;
-    /* slate-500 */
+  /* ---- Spacing / radius / motion tokens (kept from prior tokens.css) ---- */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 48px;
+
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+  --radius-full: 9999px;
+
+  --shadow-xs: 0 1px 2px rgba(20, 20, 19, 0.05);
+  --shadow-sm: 0 2px 4px rgba(20, 20, 19, 0.06), 0 1px 2px rgba(20, 20, 19, 0.04);
+  --shadow-md: 0 4px 8px rgba(20, 20, 19, 0.08), 0 2px 4px rgba(20, 20, 19, 0.04);
+  --shadow-lg: 0 8px 16px rgba(20, 20, 19, 0.1), 0 4px 8px rgba(20, 20, 19, 0.06);
+  --shadow-xl: 0 16px 32px rgba(20, 20, 19, 0.12), 0 8px 16px rgba(20, 20, 19, 0.08);
+
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 200ms;
+  --duration-slow: 300ms;
+}
+
+/* ---- Tailwind v4 theme registration ----
+ * Tokens declared here are emitted as utilities AND hold the light-mode
+ * defaults. The legacy class names (surface-bg, text-primary, accent, ...)
+ * are intentionally preserved but re-pointed to the warm cream/coral
+ * palette, so the existing className soup adopts the new look untouched.
+ * Dark mode overrides live in :root[data-theme="dark"] below. */
+@theme {
+  --font-sans: var(--font-sans);
+  --font-mono: var(--font-mono);
+
+  /* ── Warm palette (game-pilot / rct-launch-kit names) ── */
+  --color-canvas: #faf9f5;
+  --color-ivory: #faf9f5;
+  --color-warm-white: #ffffff;
+  --color-sand: #efe9de;
+  --color-ink: #141413;
+  --color-body: #3d3d3a;
+  --color-muted-warm: #6c6a64;
+  --color-stone: #8e8b82;
+  --color-primary: #cc785c;
+  --color-primary-active: #a9583e;
+  --color-coral: #cc785c;
+  --color-on-primary: #ffffff;
+
+  /* ── Legacy token names re-pointed to the warm palette ──
+   * (kept so existing utility classes keep resolving) */
+  --color-surface-bg: #faf9f5;
+  --color-surface-card: #ffffff;
+  --color-surface-elevated: #efe9de;
+  --color-surface-hover: #e8e0d2;
+  --color-border: #e6dfd8;
+  --color-text-primary: #141413;
+  --color-text-secondary: #3d3d3a;
+  --color-text-muted: #6c6a64;
+  --color-accent: #cc785c;
+  --color-accent-secondary: #a9583e;
+
+  /* ── Semantic ── */
+  --color-success: #5db872;
+  --color-warning: #d4a017;
+  --color-error: #c64545;
+
+  /* ── Overlay / inverse (do not flip) ── */
+  --color-overlay: rgba(20, 20, 19, 0.55);
+  --color-inverse-bg: #1f1e1b;
+  --color-inverse-text: #faf9f5;
+  --color-inverse-muted: #a09d96;
+}
+
+/* ---- Dark mode: override the @theme variables; utilities re-resolve at
+ * runtime via the var() references Tailwind v4 emits. ---- */
+:root[data-theme="dark"] {
+  --color-canvas: #2a2724;
+  --color-ivory: #322f2b;
+  --color-warm-white: #322f2b;
+  --color-sand: #3a3733;
+  --color-ink: #faf9f5;
+  --color-body: #d4d2cc;
+  --color-muted-warm: #a09d96;
+  --color-stone: #8e8b82;
+
+  --color-surface-bg: #2a2724;
+  --color-surface-card: #322f2b;
+  --color-surface-elevated: #3a3733;
+  --color-surface-hover: #44403a;
+  --color-border: rgba(250, 249, 245, 0.12);
+  --color-text-primary: #faf9f5;
+  --color-text-secondary: #d4d2cc;
+  --color-text-muted: #a09d96;
+
+  --color-success: #5db872;
+  --color-warning: #d4a017;
+  --color-error: #c64545;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.25), 0 1px 2px rgba(0, 0, 0, 0.15);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3), 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.35), 0 4px 8px rgba(0, 0, 0, 0.25);
+  --shadow-xl: 0 16px 32px rgba(0, 0, 0, 0.4), 0 8px 16px rgba(0, 0, 0, 0.3);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Transparent window: html/body fully see-through so the OS acrylic shows
+ * in the gutters; #root + glass panels paint the floating surfaces. */
+html {
+  font-size: 16px;
+}
+
+html,
+body {
+  font-family: var(--font-sans);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.55;
+  color: var(--color-text-primary);
+  background: transparent;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  /* Desktop-app feel: no text selection on chrome. */
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+body {
+  font-size: 14px;
+}
+
+#root {
+  background: transparent;
+  position: relative;
+}
+
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+input,
+textarea,
+select {
+  font-family: inherit;
+  color: inherit;
+}
+
+/* Allow selection in editable / log / code surfaces. */
+input,
+textarea,
+[contenteditable="true"],
+.selectable,
+.allow-select,
+.log-line,
+.font-mono,
+pre,
+code {
+  -webkit-user-select: text;
+  user-select: text;
+  cursor: auto;
+}
+
+/* ---- Floating glass panels (game-pilot / rct-launch-kit style) ---- */
+.glass-panel {
+  background: rgba(250, 249, 245, 0.72);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 1px rgba(20, 20, 19, 0.04),
+    0 2px 4px rgba(20, 20, 19, 0.06),
+    0 8px 16px rgba(20, 20, 19, 0.06),
+    inset 0 1px 0 rgba(255, 255, 255, 0.55);
+}
+
+:root[data-theme="dark"] .glass-panel {
+  background: rgba(42, 39, 36, 0.68);
+  border-color: rgba(255, 255, 255, 0.06);
+  box-shadow:
+    0 1px 1px rgba(0, 0, 0, 0.2),
+    0 2px 4px rgba(0, 0, 0, 0.24),
+    0 8px 16px rgba(0, 0, 0, 0.22),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .glass-panel {
+    background: rgba(245, 244, 237, 0.96);
   }
-
-  .dark {
-    /* Dark Theme Variables */
-    --color-surface-bg: 10 10 15;
-    --color-surface-card: 20 20 30;
-    --color-surface-elevated: 30 30 45;
-    --color-surface-hover: 40 40 60;
-
-    --color-border: 100 116 139;
-    /* slate-500 */
-
-    --color-text-primary: 248 250 252;
-    --color-text-secondary: 148 163 184;
-    --color-text-muted: 100 116 139;
-  }
-
-  html,
-  body {
-    @apply bg-surface-bg text-text-primary font-sans antialiased;
-    transition: background-color 0.3s ease, color 0.3s ease,
-      border-color 0.3s ease;
-    background-color: rgb(var(--color-surface-bg));
-
-    /* Disable text selection for native app feel */
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-  }
-
-  /* Allow text selection for input elements */
-  input,
-  textarea,
-  [contenteditable="true"],
-  .selectable,
-  pre,
-  code {
-    user-select: text;
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-  }
-
-  /* Apply smooth transition to all themed elements */
-  *,
-  *::before,
-  *::after {
-    transition-property: background-color, border-color, color, fill, stroke;
-    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-    transition-duration: 300ms;
-  }
-
-  /* Global Custom Scrollbar */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(var(--color-border)) transparent;
-  }
-
-  *::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
-  }
-
-  *::-webkit-scrollbar-track {
-    background: transparent;
-    border-radius: 3px;
-  }
-
-  *::-webkit-scrollbar-thumb {
-    background: transparent;
-    border-radius: 3px;
-    transition: background 0.2s ease;
-  }
-
-  *:hover::-webkit-scrollbar-thumb {
-    background: rgb(var(--color-border));
-  }
-
-  *::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--color-text-muted));
-  }
-
-  /* Disable transitions for performance-heavy or non-themed elements if needed */
-  .no-transition,
-  .no-transition * {
-    transition: none !important;
+  :root[data-theme="dark"] .glass-panel {
+    background: rgba(42, 39, 36, 0.96);
   }
 }
 
-/* Component layer - reusable component classes */
+/* ---- App shell: fixed regions with 8px gutters so the acrylic backdrop
+ * stays visible between the titlebar and the floating panels. ---- */
+.app-shell {
+  position: fixed;
+  inset: 0;
+}
+
+.app-shell__topbar {
+  position: fixed;
+  top: calc(32px + 8px);
+  left: 8px;
+  right: 8px;
+  height: 64px;
+  /* visible so the device picker dropdown can escape the bar */
+  overflow: visible;
+  z-index: 20;
+}
+
+.app-shell__main {
+  position: fixed;
+  top: calc(32px + 8px + 64px + 8px);
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  overflow: hidden;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(20, 20, 19, 0.18);
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(20, 20, 19, 0.32);
+  background-clip: padding-box;
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb {
+  background: rgba(250, 249, 245, 0.18);
+  background-clip: padding-box;
+}
+:root[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: rgba(250, 249, 245, 0.32);
+  background-clip: padding-box;
+}
+
+::selection {
+  background: rgba(204, 120, 92, 0.22);
+  color: var(--color-text-primary);
+}
+
+/* ---- Keyframes used by dropdowns/popovers ---- */
+@keyframes fadeSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes fadeSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes soft-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---- Reusable component classes (ported from v3 @layer components) ---- */
 @layer components {
   .btn-primary {
-    @apply flex items-center justify-center gap-2 px-5 py-2.5 bg-gradient-to-br from-accent to-accent-secondary text-white font-semibold rounded-lg shadow-lg shadow-accent/30 hover:shadow-xl hover:shadow-accent/40 transition-all duration-200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.625rem 1.25rem;
+    background: linear-gradient(
+      135deg,
+      var(--color-primary),
+      var(--color-primary-active)
+    );
+    color: var(--color-on-primary);
+    font-weight: 600;
+    border-radius: 0.5rem;
+    box-shadow: var(--shadow-lg);
+    transition: box-shadow var(--duration-normal) var(--ease-out);
+  }
+  .btn-primary:hover {
+    box-shadow: var(--shadow-xl);
   }
 
   .card {
-    @apply bg-surface-card border border-border rounded-2xl p-5 transition-all duration-300;
+    background: var(--color-surface-card);
+    border: 1px solid var(--color-border);
+    border-radius: 1rem;
+    padding: 1.25rem;
+    transition: all var(--duration-slow);
   }
 
-  .card-hover {
-    @apply hover:-translate-y-1 hover:shadow-xl hover:border-accent;
+  .card-hover:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-xl);
+    border-color: var(--color-accent);
   }
 
-  /* Custom Scrollbar - Consistent across all modals */
-  .custom-scrollbar {
-    scrollbar-width: thin;
-    scrollbar-color: rgb(var(--color-border)) transparent;
+  .animate-soft-spin {
+    animation: soft-spin 10s linear infinite;
   }
 
   .custom-scrollbar::-webkit-scrollbar {
     width: 6px;
     height: 6px;
   }
-
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
-    border-radius: 3px;
   }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb {
-    background: rgb(var(--color-border));
-    border-radius: 3px;
-    transition: background 0.2s ease;
-  }
-
-  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--color-text-muted));
-  }
-
-  /* Hide scrollbar until hover */
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: transparent;
+    border-radius: 3px;
   }
-
   .custom-scrollbar:hover::-webkit-scrollbar-thumb {
-    background: rgb(var(--color-border));
+    background: var(--color-border);
   }
-
   .custom-scrollbar:hover::-webkit-scrollbar-thumb:hover {
-    background: rgb(var(--color-text-muted));
+    background: var(--color-text-muted);
   }
 
-  /* Hide scrollbar completely but keep scroll functionality */
   .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-
   .no-scrollbar::-webkit-scrollbar {
     display: none;
-  }
-
-  @keyframes soft-spin {
-    from {
-      transform: rotate(0deg);
-    }
-    to {
-      transform: rotate(360deg);
-    }
-  }
-
-  .animate-soft-spin {
-    animation: soft-spin 10s linear infinite;
   }
 }

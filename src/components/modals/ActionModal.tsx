@@ -24,7 +24,7 @@ export function ActionModal({ isOpen, onClose, title, children }: ActionModalPro
                     />
 
                     {/* Modal Container - Centered */}
-                    <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+                    <div className="fixed top-8 left-0 right-0 bottom-0 flex items-center justify-center z-50 pointer-events-none p-4">
                         <motion.div
                             className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-lg pointer-events-auto flex flex-col max-h-[85vh]"
                             initial={{ opacity: 0, scale: 0.95, y: 20 }}

@@ -1,27 +1,21 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
   FileText,
   Trash2,
   Pause,
   Play,
-  Smartphone,
   Download,
   Search,
   X,
   FastForward,
 } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { type UnlistenFn } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import { Select } from "./ui/Select";
-import { useDevices } from "../hooks/useDevices";
-
-interface LogcatViewProps {
-  onBack: () => void;
-}
+import { useDeviceStore } from "../stores/deviceStore";
+import * as tauri from "../lib/tauri";
 
 type LogLevel = "V" | "D" | "I" | "W" | "E";
 
@@ -31,11 +25,10 @@ interface LogLine {
   level: LogLevel;
 }
 
-export function LogcatView({ onBack }: LogcatViewProps) {
-  const { devices } = useDevices();
+export function LogcatView() {
+  const selectedDevice = useDeviceStore((s) => s.selectedDeviceId) ?? "";
   const [logLines, setLogLines] = useState<LogLine[]>([]);
   const [paused, setPaused] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<string>("");
   const [logLevel, setLogLevel] = useState<LogLevel>("V");
   const [searchQuery, setSearchQuery] = useState("");
   const [maxLines, setMaxLines] = useState(1000);
@@ -82,13 +75,12 @@ export function LogcatView({ onBack }: LogcatViewProps) {
     }
   }, [paused, maxLines]);
 
-  // Set initial device if not set
+  // Reset log buffers when the active device changes.
   useEffect(() => {
-    if (!selectedDevice && devices.length > 0) {
-      const firstAuthorized = devices.find((d) => d.status === "Device");
-      if (firstAuthorized) setSelectedDevice(firstAuthorized.id);
-    }
-  }, [devices, selectedDevice]);
+    setLogLines([]);
+    logBufferRef.current = [];
+    logCounter.current = 0;
+  }, [selectedDevice]);
 
   // Streaming logic linked to selectedDevice
   useEffect(() => {
@@ -98,20 +90,19 @@ export function LogcatView({ onBack }: LogcatViewProps) {
     let currentUnlisten: UnlistenFn | null = null;
 
         const startStream = async () => {
-          const sanitizedId = selectedDevice.replace(/[^a-zA-Z0-9]/g, "_");
           try {
             // 1. Clean up existing stream for THIS device first (just in case)
-            await invoke("stop_logcat_stream", { deviceId: selectedDevice });
+            await tauri.stopLogcatStream(selectedDevice);
 
             if (!isMounted) return;
 
             // 2. Start listening FIRST to avoid missing early logs
-            currentUnlisten = await listen<any>(
-              `logcat-line-${sanitizedId}`,
-              (event) => {
+            currentUnlisten = await tauri.onLogcatLine(
+              selectedDevice,
+              (lines) => {
             if (!isMounted) return;
 
-            const newLines = event.payload.lines.map((text: string) => ({
+            const newLines = lines.map((text: string) => ({
               id: logCounter.current++,
               text,
               level: parseLogLevel(text),
@@ -138,7 +129,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
         unlistenRef.current = currentUnlisten;
 
         // 3. Invoke backend to start streaming
-        await invoke("start_logcat_stream", { deviceId: selectedDevice });
+        await tauri.startLogcatStream(selectedDevice);
       } catch (err) {
         if (isMounted) {
           console.error("Streaming error:", err);
@@ -155,7 +146,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
         currentUnlisten();
         unlistenRef.current = null;
       }
-      invoke("stop_logcat_stream", { deviceId: selectedDevice }).catch(
+      tauri.stopLogcatStream(selectedDevice).catch(
         console.error
       );
     };
@@ -168,11 +159,11 @@ export function LogcatView({ onBack }: LogcatViewProps) {
     const fetchHistory = async () => {
       try {
         const filterStr = logLevel === "V" ? undefined : `*:${logLevel}`;
-        const history = await invoke<string>("get_logcat", {
-          deviceId: selectedDevice,
-          lines: maxLinesRef.current,
-          filter: filterStr,
-        });
+        const history = await tauri.getLogcat(
+          selectedDevice,
+          maxLinesRef.current,
+          filterStr,
+        );
 
         if (history) {
           const processedLines = history
@@ -237,7 +228,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
   const handleClear = async () => {
     if (!selectedDevice) return;
     try {
-      await invoke("clear_logcat", { deviceId: selectedDevice });
+      await tauri.clearLogcat(selectedDevice);
       setLogLines([]);
       logBufferRef.current = [];
       toast.success("Logcat buffer cleared");
@@ -255,7 +246,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
       });
 
       if (path) {
-        await invoke("save_capture_file", {
+        await tauri.saveCaptureFile({
           path,
           content: btoa(unescape(encodeURIComponent(content))),
         });
@@ -289,18 +280,6 @@ export function LogcatView({ onBack }: LogcatViewProps) {
     { value: "E", label: "Error", color: "text-error" },
   ];
 
-  const deviceOptions = devices.map((d) => ({
-    value: d.id,
-    label: `${d.model || d.id}${d.status !== "Device" ? ` (${d.status})` : ""}`,
-    icon: (
-      <Smartphone
-        size={14}
-        className={d.status === "Device" ? "text-accent" : "text-text-muted"}
-      />
-    ),
-    disabled: d.status !== "Device",
-  }));
-
   const limitOptions = [
     { value: "500", label: "500 lines" },
     { value: "1000", label: "1000 lines" },
@@ -314,36 +293,22 @@ export function LogcatView({ onBack }: LogcatViewProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      {/* Header */}
+      {/* Status + actions */}
       <div className="flex items-center gap-4 mb-4">
-        <button
-          onClick={onBack}
-          className="p-2.5 rounded-xl hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-all duration-200 border border-transparent hover:border-border"
-        >
-          <ArrowLeft size={22} />
-        </button>
-        <div className="flex-1 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-            <FileText className="text-accent" size={20} />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-text-primary">
-              Logcat Viewer
-            </h2>
-            <div className="flex items-center gap-2">
-              <span
-                className={`flex h-1.5 w-1.5 rounded-full ${
-                  !paused && selectedDevice
-                    ? "bg-success animate-pulse"
-                    : "bg-text-muted"
-                }`}
-              />
-              <p className="text-xs text-text-muted">
-                {!paused && selectedDevice ? "Live Streaming" : "Paused"}
-              </p>
-            </div>
-          </div>
+        <div className="flex items-center gap-2">
+          <span
+            className={`flex h-2 w-2 rounded-full ${
+              !paused && selectedDevice
+                ? "bg-success animate-pulse"
+                : "bg-text-muted"
+            }`}
+          />
+          <p className="text-xs font-medium text-text-muted">
+            {!paused && selectedDevice ? "Live Streaming" : "Paused"}
+          </p>
         </div>
+
+        <div className="flex-1" />
 
         <div className="flex items-center gap-2">
           <button
@@ -382,20 +347,6 @@ export function LogcatView({ onBack }: LogcatViewProps) {
       {/* Controls */}
       <div className="bg-surface-elevated border border-border rounded-xl p-3 mb-4 space-y-3 shadow-sm">
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="w-56">
-            <Select
-              options={deviceOptions}
-              value={selectedDevice}
-              onChange={(val) => {
-                setSelectedDevice(val);
-                setLogLines([]);
-                logBufferRef.current = [];
-                logCounter.current = 0;
-              }}
-              placeholder="Select device..."
-            />
-          </div>
-
           <div className="flex-1 relative group">
             <Search
               size={14}

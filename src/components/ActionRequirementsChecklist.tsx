@@ -2,9 +2,9 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, ChevronDown, Zap } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from '../lib/tauri';
 import type { RequirementCheck } from '../types';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface ActionRequirementsChecklistProps {
     deviceId: string;
@@ -28,7 +28,7 @@ export function ActionRequirementsChecklist({ deviceId, isAuthorized, expanded, 
     const checkRequirements = async () => {
         setLoading(true);
         try {
-            const checks = await invoke<RequirementCheck[]>('check_action_requirements', { deviceId });
+            const checks = await tauri.checkActionRequirements(deviceId);
             setRequirements(checks);
         } catch (error) {
             console.error('Failed to check action requirements:', error);

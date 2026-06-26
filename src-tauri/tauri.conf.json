@@ -18,7 +18,9 @@
         "minWidth": 960,
         "minHeight": 600,
         "center": true,
-        "decorations": true,
+        "decorations": false,
+        "transparent": true,
+        "shadow": true,
         "resizable": true,
         "dragDropEnabled": true
       }

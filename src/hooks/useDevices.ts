@@ -1,6 +1,6 @@
-import { useDeviceContext } from '../contexts/DeviceContext';
+import { useDeviceStore } from "../stores/deviceStore";
 
+/** Backwards-compatible accessor for device state, now backed by Zustand. */
 export function useDevices() {
-    return useDeviceContext();
+  return useDeviceStore();
 }
-

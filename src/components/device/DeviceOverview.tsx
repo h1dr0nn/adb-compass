@@ -6,12 +6,12 @@ import {
     Wifi, Signal, Monitor, MemoryStick, Building2,
     Shield, Hash, Loader2
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from "../../lib/tauri";
 import { DeviceInfo } from '../../types';
 import { listContainer, listItem } from '../../lib/animations';
-import { useDeviceCache } from '../../contexts/DeviceCacheContext';
+import { useDeviceCache } from '../../hooks/useDeviceCache';
 import { useDeviceStatus } from '../../hooks/useDeviceStatus';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface DeviceOverviewProps {
     device: DeviceInfo;
@@ -103,7 +103,7 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
             if (!data) setLoading(true);
 
             try {
-                const result = await invoke<DeviceProps>('get_device_props', { deviceId: device.id });
+                const result = await tauri.getDeviceProps<DeviceProps>(device.id);
                 setProps(result);
                 setData(cacheKey, result);
             } catch (e) {

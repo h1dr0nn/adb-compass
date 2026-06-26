@@ -93,6 +93,13 @@ export interface DeviceProps {
   security_patch: string | null;
 }
 
+// Status of a bundled binary/resource (from get_binaries)
+export interface BinaryStatus {
+  name: string;
+  ok: boolean;
+  detail: string | null;
+}
+
 // File info from file transfer commands
 export interface FileInfo {
   name: string;

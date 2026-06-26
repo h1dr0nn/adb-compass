@@ -14,13 +14,17 @@ interface SelectProps {
     onChange: (value: string) => void;
     placeholder?: string;
     className?: string;
+    size?: "sm" | "md";
+    disabled?: boolean;
 }
 
-export function Select({ options, value, onChange, placeholder = "Select...", className = "" }: SelectProps) {
+export function Select({ options, value, onChange, placeholder = "Select...", className = "", size = "md", disabled = false }: SelectProps) {
     const [isOpen, setIsOpen] = useState(false);
     const containerRef = useRef<HTMLDivElement>(null);
 
     const selectedOption = options.find(opt => opt.value === value);
+    // sm matches the 9px header buttons; md matches the 8px modal buttons/inputs.
+    const triggerSize = size === "sm" ? "h-8 px-2.5 text-[13px] rounded-[9px]" : "px-3 py-2 text-sm rounded-lg";
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -36,9 +40,10 @@ export function Select({ options, value, onChange, placeholder = "Select...", cl
     return (
         <div className={`relative ${className}`} ref={containerRef}>
             <motion.button
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setIsOpen(!isOpen)}
-                className={`w-full flex items-center justify-between px-3 py-2 bg-surface-elevated border border-border rounded-lg text-sm text-text-primary hover:border-accent/50 transition-colors ${isOpen ? 'border-accent ring-1 ring-accent/20' : ''}`}
+                whileTap={disabled ? undefined : { scale: 0.98 }}
+                onClick={() => { if (!disabled) setIsOpen(!isOpen); }}
+                disabled={disabled}
+                className={`w-full flex items-center justify-between ${triggerSize} bg-surface-elevated border border-border text-text-primary transition-colors ${disabled ? 'opacity-60 cursor-not-allowed' : 'hover:border-accent/50'} ${isOpen ? 'border-accent ring-1 ring-accent/20' : ''}`}
             >
                 <span className="flex items-center gap-2 truncate">
                     {selectedOption?.icon}

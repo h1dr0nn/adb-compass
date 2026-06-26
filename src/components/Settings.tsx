@@ -8,11 +8,11 @@ import {
 import { toast } from 'sonner';
 import { open as openDialog, confirm } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from '../lib/tauri';
 import { Select } from './ui/Select';
 import { check } from '@tauri-apps/plugin-updater';
-import { useLanguage } from '../contexts/LanguageContext';
-import { useTheme } from '../contexts/ThemeContext';
+import { useLanguage } from '../hooks/useLanguage';
+import { useTheme } from '../hooks/useTheme';
 
 interface SettingsProps {
     onBack: () => void;
@@ -47,7 +47,7 @@ export function Settings({ onBack }: SettingsProps) {
         if (storedCapturePath) {
             setCaptureSavePath(storedCapturePath);
         } else {
-            invoke<string>('get_default_media_dir').then(path => {
+            tauri.getDefaultMediaDir().then(path => {
                 setCaptureSavePath(path);
                 localStorage.setItem('captureSavePath', path);
             }).catch(console.error);

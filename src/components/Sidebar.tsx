@@ -1,8 +1,7 @@
 import { ApkManager } from './ApkManager';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 import type { ApkInfo } from '../types';
 import { Settings } from 'lucide-react';
-import type { ActiveToolView } from './ToolsPanel';
 
 interface SidebarProps {
     apkInfo: ApkInfo | null;
@@ -11,7 +10,6 @@ interface SidebarProps {
     onScanApk: (path: string) => Promise<ApkInfo[]>;
     onSelectApkFromList: (info: ApkInfo) => void;
     onOpenSettings: () => void;
-    onOpenToolView: (view: ActiveToolView) => void;
 }
 
 export function Sidebar({
@@ -21,7 +19,6 @@ export function Sidebar({
     onScanApk,
     onSelectApkFromList,
     onOpenSettings,
-    onOpenToolView
 }: SidebarProps) {
     const { t } = useLanguage();
 
@@ -48,7 +45,6 @@ export function Sidebar({
                         onClear={onClearApk}
                         onScan={onScanApk}
                         onSelectFromList={onSelectApkFromList}
-                        onOpenToolView={onOpenToolView}
                     />
                 </div>
             </div>

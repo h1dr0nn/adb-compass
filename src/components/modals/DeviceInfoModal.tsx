@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Smartphone, Battery, BatteryCharging, Cpu, Hash, Loader2 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
-import { useLanguage } from '../../contexts/LanguageContext';
+import * as tauri from "../../lib/tauri";
+import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 
 interface DeviceProps {
@@ -28,7 +28,7 @@ export function DeviceInfoModal({ deviceId, onClose }: DeviceInfoModalProps) {
     useEffect(() => {
         const fetchProps = async () => {
             try {
-                const result = await invoke<DeviceProps>('get_device_props', { deviceId });
+                const result = await tauri.getDeviceProps<DeviceProps>(deviceId);
                 setProps(result);
             } catch (e) {
                 setError(String(e));
@@ -59,7 +59,7 @@ export function DeviceInfoModal({ deviceId, onClose }: DeviceInfoModalProps) {
             />
 
             {/* Modal */}
-            <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+            <div className="fixed top-8 left-0 right-0 bottom-0 flex items-center justify-center z-50 pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto"
                     variants={modalContent}

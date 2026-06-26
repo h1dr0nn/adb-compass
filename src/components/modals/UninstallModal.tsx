@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Search, Package, Loader2, AlertTriangle, ToggleLeft, ToggleRight } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from "../../lib/tauri";
 import { toast } from 'sonner';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 
 interface UninstallModalProps {
@@ -28,10 +28,7 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
     const loadPackages = async () => {
         setLoading(true);
         try {
-            const result = await invoke<string[]>('list_packages', {
-                deviceId,
-                includeSystem: showSystemApps
-            });
+            const result = await tauri.listPackages(deviceId, showSystemApps);
             setPackages(result.sort());
         } catch (e) {
             toast.error(String(e));
@@ -49,7 +46,7 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
     const handleUninstall = async (packageName: string) => {
         setUninstalling(packageName);
         try {
-            await invoke('uninstall_app', { deviceId, packageName });
+            await tauri.uninstallApp(deviceId, packageName);
             toast.success(t.uninstallSuccess, { description: packageName });
             setPackages(prev => prev.filter(p => p !== packageName));
         } catch (e) {
@@ -73,7 +70,7 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
             />
 
             {/* Modal */}
-            <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+            <div className="fixed top-8 left-0 right-0 bottom-0 flex items-center justify-center z-50 pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-lg pointer-events-auto flex flex-col max-h-[80vh]"
                     variants={modalContent}

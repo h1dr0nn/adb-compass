@@ -4,7 +4,7 @@ import {
     ArrowLeft, Monitor, Smartphone, AppWindow,
     FolderOpen
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from '../lib/tauri';
 import { DeviceInfo, getDeviceStatusText } from '../types';
 import { pageTransition, tabContent } from '../lib/animations';
 import { DeviceOverview } from './device/DeviceOverview';
@@ -33,7 +33,7 @@ export function DeviceDetailView({ device, onBack }: DeviceDetailViewProps) {
     useEffect(() => {
         if (device.status === 'Device') {
             console.log(`[DeviceDetailView] Eagerly connecting to agent for ${device.id}...`);
-            invoke('test_agent_connection', { deviceId: device.id })
+            tauri.testAgentConnection(device.id)
                 .then(() => console.log(`[DeviceDetailView] Agent connected for ${device.id}`))
                 .catch((err) => console.error(`[DeviceDetailView] Failed to eagerly connect to agent:`, err));
         }

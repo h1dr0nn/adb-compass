@@ -33,6 +33,7 @@ use commands::{
     get_default_media_dir,
     get_device_ip,
     get_device_property,
+    get_binaries,
     get_device_props,
     get_devices,
     get_logcat,
@@ -84,6 +85,7 @@ use commands::{
     uninstall_app,
     validate_apk,
 };
+use tauri::window::{Color, Effect, EffectsBuilder};
 use tauri::{Manager, RunEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -93,6 +95,20 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            // Apply acrylic backdrop to the main window so the frontend's
+            // translucent glass panels read against a blurred dark surface.
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_effects(
+                    EffectsBuilder::new()
+                        .effect(Effect::Acrylic)
+                        .color(Color(0, 0, 0, 219))
+                        .build(),
+                );
+                // Set the window/taskbar icon at runtime so the recolored icon
+                // shows regardless of any stale embedded/cached icon.
+                let _ = window.set_icon(tauri::include_image!("icons/128x128.png"));
+            }
+
             // Manage state
             app.manage(LogcatState::new());
 
@@ -103,6 +119,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             check_adb_status,
             get_devices,
+            get_binaries,
             refresh_devices,
             get_device_property,
             start_adb_server,

@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { RefreshCw, Circle, CheckCircle2, XCircle } from 'lucide-react';
 import type { AdbStatus } from '../types';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface StatusBarProps {
     adbStatus: AdbStatus | null;

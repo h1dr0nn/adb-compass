@@ -2,10 +2,9 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Loader2, CheckCircle2, XCircle } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from '../lib/tauri';
 import { toast } from 'sonner';
-import type { InstallResult } from '../types';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface InstallButtonProps {
     deviceId: string;
@@ -24,7 +23,7 @@ export function InstallButton({ deviceId, apkPath, disabled, customRender }: Ins
         setResult(null);
 
         try {
-            const installResult = await invoke<InstallResult>('install_apk', { deviceId, apkPath });
+            const installResult = await tauri.installApk(deviceId, apkPath);
 
             if (installResult.success) {
                 setResult('success');

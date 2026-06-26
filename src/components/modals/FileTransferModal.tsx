@@ -5,10 +5,10 @@ import {
     X, FolderOpen, File, ChevronRight, Home, RefreshCw,
     Upload, Download, Trash2, FolderPlus, Loader2, AlertTriangle
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { toast } from 'sonner';
-import { useLanguage } from '../../contexts/LanguageContext';
+import * as tauri from '../../lib/tauri';
+import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 
 interface FileInfo {
@@ -45,10 +45,7 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
         try {
             // Add minimum 500ms delay for better UX feedback
             const [result] = await Promise.all([
-                invoke<FileInfo[]>('list_files', {
-                    deviceId,
-                    path: currentPath
-                }),
+                tauri.listFiles(deviceId, currentPath),
                 new Promise(resolve => setTimeout(resolve, 500))
             ]);
             setFiles(result);
@@ -90,7 +87,7 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
             const fileName = localPath.split(/[\\/]/).pop() || 'file';
             const remotePath = `${currentPath}/${fileName}`;
 
-            await invoke('push_file', { deviceId, localPath, remotePath });
+            await tauri.pushFile(deviceId, localPath, remotePath);
             toast.success(t.uploadFile, { description: fileName });
             loadFiles();
         } catch (e) {
@@ -112,7 +109,7 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
             setActionLoading('download');
             const remotePath = `${currentPath}/${selectedFile.name}`;
 
-            await invoke('pull_file', { deviceId, remotePath, localPath });
+            await tauri.pullFile(deviceId, remotePath, localPath);
             toast.success(t.downloadFile, { description: selectedFile.name });
         } catch (e) {
             toast.error(String(e));
@@ -127,7 +124,7 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
         setActionLoading('delete');
         try {
             const remotePath = `${currentPath}/${selectedFile.name}`;
-            await invoke('delete_remote_file', { deviceId, remotePath });
+            await tauri.deleteRemoteFile(deviceId, remotePath);
             toast.success(t.deleteFile, { description: selectedFile.name });
             setSelectedFile(null);
             loadFiles();
@@ -145,7 +142,7 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
         setActionLoading('mkdir');
         try {
             const remotePath = `${currentPath}/${newFolderName.trim()}`;
-            await invoke('create_remote_directory', { deviceId, remotePath });
+            await tauri.createRemoteDirectory(deviceId, remotePath);
             toast.success(t.createFolder, { description: newFolderName });
             setNewFolderName('');
             setShowNewFolderDialog(false);
@@ -180,7 +177,7 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
             />
 
             {/* Modal */}
-            <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+            <div className="fixed top-8 left-0 right-0 bottom-0 flex items-center justify-center z-50 pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-2xl pointer-events-auto flex flex-col max-h-[85vh]"
                     variants={modalContent}
