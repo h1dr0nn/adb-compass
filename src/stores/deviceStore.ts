@@ -55,6 +55,7 @@ interface DeviceState {
   removeDevice: (deviceId: string) => void;
   addManualDevice: (ip: string) => void;
   setSelectedDevice: (deviceId: string | null) => void;
+  clearCache: (keyPrefix?: string) => void;
   /** Ensure a sensible selection: keep current if still authorized,
    * otherwise fall back to the first authorized device (or null). */
   ensureSelection: () => void;
@@ -118,6 +119,7 @@ export const useDeviceStore = create<DeviceState>()(
       set((s) => {
         s.devices = s.devices.filter((d) => d.id !== deviceId);
       });
+      get().clearCache(deviceId);
       persist(get().devices);
     },
 
@@ -138,6 +140,10 @@ export const useDeviceStore = create<DeviceState>()(
       set((s) => {
         s.selectedDeviceId = deviceId;
       });
+    },
+
+    clearCache: (keyPrefix) => {
+      deviceCacheApi.clearCache(keyPrefix);
     },
 
     ensureSelection: () => {

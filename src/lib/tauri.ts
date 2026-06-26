@@ -293,6 +293,13 @@ export const onDeviceChanged = (
     cb(e.payload.devices),
   );
 
+export const onApkFolderChanged = (
+  cb: (path: string) => void,
+): Promise<UnlistenFn> =>
+  listen<string>("apk-folder-changed", (e) =>
+    cb(e.payload),
+  );
+
 export const onLogcatLine = (
   deviceId: string,
   cb: (lines: string[]) => void,

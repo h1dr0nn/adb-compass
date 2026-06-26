@@ -29,6 +29,11 @@ pub async fn connect_wireless(ip: String, port: String) -> Result<String, String
     let adb = AdbExecutor::new();
     let address = format!("{}:{}", ip, port);
 
+    // Disconnect first to clear any stuck offline socket state
+    let _ = hidden_command(adb.get_adb_path())
+        .args(["disconnect", &address])
+        .output();
+
     let output = hidden_command(adb.get_adb_path())
         .args(["connect", &address])
         .output()

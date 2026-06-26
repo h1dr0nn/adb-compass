@@ -147,14 +147,22 @@ pub fn kill_adb_server() -> Result<(), AppError> {
 
 /// Check device requirements for APK installation
 #[tauri::command]
-pub fn check_device_requirements(device_id: String) -> Vec<crate::requirements::RequirementCheck> {
-    let executor = AdbExecutor::new();
-    executor.check_device_requirements(&device_id)
+pub async fn check_device_requirements(device_id: String) -> Result<Vec<crate::requirements::RequirementCheck>, String> {
+    tokio::task::spawn_blocking(move || {
+        let executor = AdbExecutor::new();
+        executor.check_device_requirements(&device_id)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))
 }
 
 /// Check advanced requirements for action buttons (Input Text, etc.)
 #[tauri::command]
-pub fn check_action_requirements(device_id: String) -> Vec<crate::requirements::RequirementCheck> {
-    let executor = AdbExecutor::new();
-    executor.check_action_requirements(&device_id)
+pub async fn check_action_requirements(device_id: String) -> Result<Vec<crate::requirements::RequirementCheck>, String> {
+    tokio::task::spawn_blocking(move || {
+        let executor = AdbExecutor::new();
+        executor.check_action_requirements(&device_id)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))
 }

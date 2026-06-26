@@ -45,7 +45,7 @@ export function FileManager({ device }: FileManagerProps) {
     const [newFolderName, setNewFolderName] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-    const { getCached, setData } = useDeviceCache();
+    const { getCached, setData, clearCache } = useDeviceCache();
     const { t } = useLanguage();
 
     const fetchFiles = async (path: string = currentPath) => {
@@ -130,6 +130,7 @@ export function FileManager({ device }: FileManagerProps) {
 
                 await tauri.pushFile(device.id, selected, remotePath);
 
+                clearCache(`files_${device.id}_${currentPath}`);
                 toast.success(t.fileUploaded, { description: fileName });
                 fetchFiles();
             }
@@ -168,6 +169,7 @@ export function FileManager({ device }: FileManagerProps) {
         try {
             const remotePath = `${currentPath}/${file.name}`;
             await tauri.deleteRemoteFile(device.id, remotePath);
+            clearCache(`files_${device.id}_${currentPath}`);
             toast.success(t.deleted, { description: file.name });
             setFiles(prev => prev.filter(f => f.name !== file.name));
         } catch (e) {
@@ -184,6 +186,7 @@ export function FileManager({ device }: FileManagerProps) {
         try {
             const remotePath = `${currentPath}/${newFolderName}`;
             await tauri.createRemoteDirectory(device.id, remotePath);
+            clearCache(`files_${device.id}_${currentPath}`);
             toast.success(t.folderCreated, { description: newFolderName });
             setNewFolderMode(false);
             setNewFolderName('');

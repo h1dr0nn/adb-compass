@@ -268,7 +268,7 @@ export function AppManager({ device }: AppManagerProps) {
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  const { getCached, setData } = useDeviceCache();
+  const { getCached, setData, clearCache } = useDeviceCache();
   const { t } = useLanguage();
 
   const fetchPackages = async () => {
@@ -341,6 +341,7 @@ export function AppManager({ device }: AppManagerProps) {
     setConfirmUninstall(null);
     try {
       await tauri.uninstallApp(device.id, packageName);
+      clearCache(`packages_${device.id}`);
       toast.success(t.appUninstalled, { description: packageName });
       setPackages((prev) => prev.filter((p) => p.id !== packageName));
     } catch (e) {

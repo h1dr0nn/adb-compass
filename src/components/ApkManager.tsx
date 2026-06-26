@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
     FolderOpen, RefreshCw, Package, FileCheck, X
 } from 'lucide-react';
@@ -48,6 +48,21 @@ export function ApkManager() {
             setScanning(false);
         }
     };
+
+    useEffect(() => {
+        if (!folderPath) return;
+
+        const unlistenPromise = tauri.onApkFolderChanged((changedPath) => {
+            if (changedPath === folderPath) {
+                console.log(`[ApkManager] APK folder changed: ${changedPath}, auto-reloading...`);
+                handleScan(changedPath);
+            }
+        });
+
+        return () => {
+            unlistenPromise.then((fn) => fn());
+        };
+    }, [folderPath]);
 
     const handleManualApkSelected = async (path: string) => {
         try {

@@ -11,6 +11,7 @@ pub mod services;
 
 use adb::{start_device_tracker, AdbExecutor};
 use commands::logcat::LogcatState;
+use commands::apk::ApkWatcherState;
 use commands::{
     build_index,
     check_action_requirements,
@@ -90,6 +91,10 @@ use tauri::{Manager, RunEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Isolate our ADB commands by using a custom port (50337)
+    // so they don't conflict with other ADB servers (like Unity, Android Studio, etc.)
+    std::env::set_var("ANDROID_ADB_SERVER_PORT", "50337");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
@@ -111,6 +116,9 @@ pub fn run() {
 
             // Manage state
             app.manage(LogcatState::new());
+            app.manage(ApkWatcherState {
+                watcher: std::sync::Mutex::new(None),
+            });
 
             // Start real-time device tracking
             start_device_tracker(app.handle().clone());

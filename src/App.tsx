@@ -102,45 +102,60 @@ function AppContent() {
             )}
 
             <div className="flex-1 overflow-hidden px-3 pb-3">
-              <div className="h-full rounded-[12px] overflow-hidden flex flex-col">
-                <AnimatePresence mode="wait">
-                  {showSettings ? (
-                    <motion.div key="settings" className="h-full overflow-auto custom-scrollbar" {...fadeView}>
+              <div className="h-full rounded-[12px] overflow-hidden flex flex-col relative">
+                {/* Settings overlay — transient, so still uses AnimatePresence */}
+                <AnimatePresence>
+                  {showSettings && (
+                    <motion.div
+                      key="settings"
+                      className="absolute inset-0 z-10 h-full overflow-auto custom-scrollbar bg-surface-elevated"
+                      {...fadeView}
+                    >
                       <Settings onBack={() => setShowSettings(false)} />
-                    </motion.div>
-                  ) : activeTab === "logcat" ? (
-                    <motion.div key="logcat" className="h-full" {...fadeView}>
-                      <LogcatView />
-                    </motion.div>
-                  ) : activeTab === "terminal" ? (
-                    <motion.div key="terminal" className="h-full" {...fadeView}>
-                      <TerminalView />
-                    </motion.div>
-                  ) : (
-                    <motion.div key="devices" className="h-full flex gap-3 min-h-0" {...fadeView}>
-                      <Sidebar />
-                      {activeDevice ? (
-                        <div className="flex-1 min-w-0 bg-surface-card border border-border rounded-[12px] p-4 overflow-hidden flex flex-col">
-                          <DeviceDetailView device={activeDevice} />
-                        </div>
-                      ) : (
-                        <div className="flex-1 min-w-0 flex items-center justify-center bg-surface-card border border-border rounded-[12px] p-6">
-                          <div className="flex flex-col items-center justify-center max-w-sm text-center">
-                            <Smartphone size={64} className="text-text-muted opacity-40 animate-pulse mb-4" />
-                            <h3 className="text-lg font-semibold mb-1 text-text-secondary">{t.noDevices}</h3>
-                            <p className="text-text-muted text-sm mb-6">{t.connectDevices || 'Connect a device via USB or Wi-Fi to get started.'}</p>
-                            <button
-                              onClick={() => setShowManualConnect(true)}
-                              className="px-4 py-2 bg-accent text-white hover:bg-accent-secondary rounded-lg transition-colors text-sm font-medium shadow-md cursor-pointer"
-                            >
-                              {t.connectViaIp || 'Connect via IP'}
-                            </button>
-                          </div>
-                        </div>
-                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>
+
+                {/* === Tab panels — always mounted, visibility via CSS === */}
+                <div
+                  className="h-full flex gap-3 min-h-0"
+                  style={{ display: activeTab === "devices" && !showSettings ? "flex" : "none" }}
+                >
+                  <Sidebar />
+                  {activeDevice ? (
+                    <div className="flex-1 min-w-0 bg-surface-card border border-border rounded-[12px] p-4 overflow-hidden flex flex-col">
+                      <DeviceDetailView device={activeDevice} />
+                    </div>
+                  ) : (
+                    <div className="flex-1 min-w-0 flex items-center justify-center bg-surface-card border border-border rounded-[12px] p-6">
+                      <div className="flex flex-col items-center justify-center max-w-sm text-center">
+                        <Smartphone size={64} className="text-text-muted opacity-40 animate-pulse mb-4" />
+                        <h3 className="text-lg font-semibold mb-1 text-text-secondary">{t.noDevices}</h3>
+                        <p className="text-text-muted text-sm mb-6">{t.connectDevices || 'Connect a device via USB or Wi-Fi to get started.'}</p>
+                        <button
+                          onClick={() => setShowManualConnect(true)}
+                          className="px-4 py-2 bg-accent text-white hover:bg-accent-secondary rounded-lg transition-colors text-sm font-medium shadow-md cursor-pointer"
+                        >
+                          {t.connectViaIp || 'Connect via IP'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div
+                  className="h-full w-full"
+                  style={{ display: activeTab === "logcat" && !showSettings ? "block" : "none" }}
+                >
+                  <LogcatView />
+                </div>
+
+                <div
+                  className="h-full w-full"
+                  style={{ display: activeTab === "terminal" && !showSettings ? "block" : "none" }}
+                >
+                  <TerminalView />
+                </div>
               </div>
             </div>
           </main>

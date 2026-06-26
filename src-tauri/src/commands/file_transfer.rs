@@ -98,7 +98,7 @@ fn parse_ls_output(output: &str) -> Vec<FileInfo> {
 
 /// Push a file from local to device
 #[tauri::command]
-pub fn push_file(
+pub async fn push_file(
     device_id: String,
     local_path: String,
     remote_path: String,
@@ -125,7 +125,7 @@ pub fn push_file(
 
 /// Pull a file from device to local
 #[tauri::command]
-pub fn pull_file(
+pub async fn pull_file(
     device_id: String,
     remote_path: String,
     local_path: String,

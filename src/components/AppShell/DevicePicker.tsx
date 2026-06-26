@@ -8,11 +8,13 @@ export function DevicePicker() {
   const devices = useDeviceStore((s) => s.devices);
   const selectedDeviceId = useDeviceStore((s) => s.selectedDeviceId);
   const setSelectedDevice = useDeviceStore((s) => s.setSelectedDevice);
+  const removeDevice = useDeviceStore((s) => s.removeDevice);
 
   const options = devices.map((d) => ({
     value: d.id,
     label: d.model || d.id,
     disabled: d.status !== "Device",
+    onRemove: () => removeDevice(d.id),
     icon: (
       <Smartphone
         size={14}

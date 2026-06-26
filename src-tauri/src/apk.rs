@@ -5,13 +5,32 @@ use serde::Serialize;
 use std::path::Path;
 
 /// Information about an APK file
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct ApkInfo {
     pub path: String,
     pub file_name: String,
     pub size_bytes: u64,
     pub valid: bool,
     pub last_modified: Option<u128>,
+    pub package_id: Option<String>,
+}
+
+fn extract_package_id(apk_path: &str) -> Option<String> {
+    let file = std::fs::File::open(apk_path).ok()?;
+    let mut archive = zip::ZipArchive::new(file).ok()?;
+    let mut manifest_file = archive.by_name("AndroidManifest.xml").ok()?;
+    let mut bytes = Vec::new();
+    std::io::Read::read_to_end(&mut manifest_file, &mut bytes).ok()?;
+    
+    let doc = axmldecoder::parse(&bytes).ok()?;
+    if let Some(axmldecoder::Node::Element(ref root)) = doc.get_root() {
+        if root.get_tag() == "manifest" {
+            if let Some(package) = root.get_attributes().get("package") {
+                return Some(package.to_string());
+            }
+        }
+    }
+    None
 }
 
 impl ApkInfo {
@@ -43,12 +62,19 @@ impl ApkInfo {
             .map(|e| e.to_lowercase() == "apk")
             .unwrap_or(false);
 
+        let package_id = if valid {
+            extract_package_id(path)
+        } else {
+            None
+        };
+
         Some(Self {
             path: path.to_string(),
             file_name,
             size_bytes,
             valid,
             last_modified,
+            package_id,
         })
     }
 }

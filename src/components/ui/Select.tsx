@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, Check } from 'lucide-react';
+import { ChevronDown, Check, X } from 'lucide-react';
 
 interface SelectOption {
     value: string;
     label: string;
     icon?: React.ReactNode;
     disabled?: boolean;
+    onRemove?: () => void;
 }
 
 interface SelectProps {
@@ -73,28 +74,48 @@ export function Select({ options, value, onChange, placeholder = "Select...", cl
                         transition={{ duration: 0.15, ease: "easeOut" }}
                         className={`absolute z-50 w-full mt-1 bg-surface-card border border-border ${dropdownRadius} shadow-2xl max-h-60 overflow-y-auto p-1.5 flex flex-col gap-0.5`}
                     >
-                        {options.map((option) => (
-                            <button
-                                key={option.value}
-                                disabled={option.disabled}
-                                onClick={() => {
-                                    if (!option.disabled) {
-                                        onChange(option.value);
-                                        setIsOpen(false);
-                                    }
-                                }}
-                                className={`w-full flex items-center justify-between text-left transition-colors
-                                          ${optionSize}
-                                          ${option.disabled ? 'opacity-40 cursor-not-allowed hover:bg-transparent' : 'hover:bg-surface-hover'}
-                                          ${option.value === value ? 'text-accent bg-accent/5 font-medium' : 'text-text-primary'}`}
-                            >
-                                <span className="flex items-center gap-2 min-w-0 flex-1">
-                                    {option.icon}
-                                    <span className="truncate">{option.label}</span>
-                                </span>
-                                {option.value === value && <Check size={14} className="shrink-0" />}
-                            </button>
-                        ))}
+                        {options.map((option) => {
+                            const isSelected = option.value === value;
+                            return (
+                                <div
+                                    key={option.value}
+                                    className={`w-full flex items-center justify-between text-left transition-colors group/opt
+                                              ${optionSize}
+                                              ${option.disabled ? 'opacity-60' : 'hover:bg-surface-hover'}
+                                              ${isSelected ? 'text-accent bg-accent/5 font-medium' : 'text-text-primary'}`}
+                                >
+                                    <button
+                                        onClick={() => {
+                                            if (!option.disabled) {
+                                                onChange(option.value);
+                                                setIsOpen(false);
+                                            }
+                                        }}
+                                        className={`flex-1 flex items-center gap-2 min-w-0 text-left ${option.disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+                                    >
+                                        {option.icon}
+                                        <span className="truncate">{option.label}</span>
+                                    </button>
+
+                                    {isSelected ? (
+                                        <Check size={14} className="shrink-0 ml-2" />
+                                    ) : (
+                                        option.onRemove && (
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    option.onRemove?.();
+                                                }}
+                                                className="p-0.5 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover shrink-0 transition-colors ml-2 cursor-pointer"
+                                                title="Remove device"
+                                            >
+                                                <X size={13} />
+                                            </button>
+                                        )
+                                    )}
+                                </div>
+                            );
+                        })}
                     </motion.div>
                 )}
             </AnimatePresence>

@@ -5,6 +5,7 @@ import { Download, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import * as tauri from '../lib/tauri';
 import { toast } from 'sonner';
 import { useLanguage } from '../hooks/useLanguage';
+import { useDeviceCache } from '../hooks/useDeviceCache';
 
 interface InstallButtonProps {
     deviceId: string;
@@ -17,6 +18,7 @@ export function InstallButton({ deviceId, apkPath, disabled, customRender }: Ins
     const [installing, setInstalling] = useState(false);
     const [result, setResult] = useState<'success' | 'error' | null>(null);
     const { t } = useLanguage();
+    const { clearCache } = useDeviceCache();
 
     const handleInstall = async () => {
         setInstalling(true);
@@ -26,6 +28,7 @@ export function InstallButton({ deviceId, apkPath, disabled, customRender }: Ins
             const installResult = await tauri.installApk(deviceId, apkPath);
 
             if (installResult.success) {
+                clearCache(`packages_${deviceId}`);
                 setResult('success');
                 toast.success(t.apkInstalled, { description: installResult.message });
             } else {

@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
     Monitor, Smartphone, AppWindow, FolderOpen, Download
 } from 'lucide-react';
 import * as tauri from '../lib/tauri';
 import { DeviceInfo } from '../types';
-import { pageTransition, tabContent } from '../lib/animations';
+import { pageTransition } from '../lib/animations';
 import { DeviceOverview } from './device/DeviceOverview';
 import { ScreenCapture } from './device/ScreenCapture';
 import { AppManager } from './device/AppManager';
@@ -59,21 +59,6 @@ export function DeviceDetailView({ device }: DeviceDetailViewProps) {
         { id: 'apps', label: 'Apps', icon: <AppWindow size={16} /> },
         { id: 'files', label: 'Files', icon: <FolderOpen size={16} /> },
     ];
-
-    const renderTabContent = () => {
-        switch (activeTab) {
-            case 'overview':
-                return <DeviceOverview device={device} />;
-            case 'screen':
-                return <ScreenCapture device={device} />;
-            case 'apps':
-                return <AppManager device={device} />;
-            case 'files':
-                return <FileManager device={device} />;
-            default:
-                return null;
-        }
-    };
 
     return (
         <motion.div
@@ -144,19 +129,19 @@ export function DeviceDetailView({ device }: DeviceDetailViewProps) {
             </div>
 
             {/* Tab Content */}
-            <div className="flex-1 w-full min-w-0 overflow-hidden">
-                <AnimatePresence mode="wait">
-                    <motion.div
-                        key={activeTab}
-                        variants={tabContent}
-                        initial="initial"
-                        animate="animate"
-                        exit="exit"
-                        className="h-full w-full min-w-0"
-                    >
-                        {renderTabContent()}
-                    </motion.div>
-                </AnimatePresence>
+            <div className="flex-1 w-full min-w-0 overflow-hidden relative">
+                <div className={`h-full w-full min-w-0 ${activeTab === 'overview' ? '' : 'hidden'}`}>
+                    <DeviceOverview device={device} />
+                </div>
+                <div className={`h-full w-full min-w-0 ${activeTab === 'screen' ? '' : 'hidden'}`}>
+                    <ScreenCapture device={device} />
+                </div>
+                <div className={`h-full w-full min-w-0 ${activeTab === 'apps' ? '' : 'hidden'}`}>
+                    <AppManager device={device} />
+                </div>
+                <div className={`h-full w-full min-w-0 ${activeTab === 'files' ? '' : 'hidden'}`}>
+                    <FileManager device={device} />
+                </div>
             </div>
         </motion.div>
     );
