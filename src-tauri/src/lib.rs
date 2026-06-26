@@ -99,6 +99,7 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_window_state::Builder::new().build())
         .setup(|app| {
             // Apply acrylic backdrop to the main window so the frontend's
             // translucent glass panels read against a blurred dark surface.
