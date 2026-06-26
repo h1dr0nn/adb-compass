@@ -4,6 +4,8 @@ import { persist } from "zustand/middleware";
 import * as tauri from "../lib/tauri";
 import type { ApkInfo } from "../types";
 
+export type ApkSortType = 'name-asc' | 'name-desc' | 'date-desc' | 'date-asc' | 'size-desc' | 'size-asc';
+
 interface ApkState {
   apkInfo: ApkInfo | null;
   folderPath: string | null;
@@ -12,6 +14,8 @@ interface ApkState {
   folderHistory: string[];
   loading: boolean;
   error: string | null;
+  sortType: ApkSortType;
+  setSortType: (type: ApkSortType) => void;
   selectApk: (path: string) => Promise<void>;
   clearApk: () => void;
   scanFolder: (path: string) => Promise<ApkInfo[]>;
@@ -32,6 +36,13 @@ export const useApkStore = create<ApkState>()(
       folderHistory: [],
       loading: false,
       error: null,
+      sortType: 'name-asc',
+
+      setSortType: (type) => {
+        set((s) => {
+          s.sortType = type;
+        });
+      },
 
       selectApk: async (path) => {
         set((s) => {
@@ -147,6 +158,7 @@ export const useApkStore = create<ApkState>()(
         scannedApks: state.scannedApks,
         manualApks: state.manualApks,
         folderHistory: state.folderHistory,
+        sortType: state.sortType,
       }),
     }
   )

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     FolderOpen, RefreshCw, Package, FileCheck, X
 } from 'lucide-react';
@@ -17,12 +17,61 @@ export function ApkManager() {
     const folderPath = useApkStore((s) => s.folderPath);
     const scannedApks = useApkStore((s) => s.scannedApks);
     const manualApks = useApkStore((s) => s.manualApks);
+    const sortType = useApkStore((s) => s.sortType);
     const clearApk = useApkStore((s) => s.clearApk);
     const scanFolder = useApkStore((s) => s.scanFolder);
     const setApkFromList = useApkStore((s) => s.setApkFromList);
     const setManualApks = useApkStore((s) => s.setManualApks);
 
     const [scanning, setScanning] = useState(false);
+
+    const sortedScannedApks = useMemo(() => {
+        return [...scannedApks].sort((a, b) => {
+            if (sortType === 'name-asc') {
+                return a.file_name.localeCompare(b.file_name);
+            }
+            if (sortType === 'name-desc') {
+                return b.file_name.localeCompare(a.file_name);
+            }
+            if (sortType === 'date-desc') {
+                return (b.last_modified || 0) - (a.last_modified || 0);
+            }
+            if (sortType === 'date-asc') {
+                return (a.last_modified || 0) - (b.last_modified || 0);
+            }
+            if (sortType === 'size-desc') {
+                return b.size_bytes - a.size_bytes;
+            }
+            if (sortType === 'size-asc') {
+                return a.size_bytes - b.size_bytes;
+            }
+            return 0;
+        });
+    }, [scannedApks, sortType]);
+
+    const sortedManualApks = useMemo(() => {
+        return [...manualApks].sort((a, b) => {
+            if (sortType === 'name-asc') {
+                return a.file_name.localeCompare(b.file_name);
+            }
+            if (sortType === 'name-desc') {
+                return b.file_name.localeCompare(a.file_name);
+            }
+            if (sortType === 'date-desc') {
+                return (b.last_modified || 0) - (a.last_modified || 0);
+            }
+            if (sortType === 'date-asc') {
+                return (a.last_modified || 0) - (b.last_modified || 0);
+            }
+            if (sortType === 'size-desc') {
+                return b.size_bytes - a.size_bytes;
+            }
+            if (sortType === 'size-asc') {
+                return a.size_bytes - b.size_bytes;
+            }
+            return 0;
+        });
+    }, [manualApks, sortType]);
 
     const handleSelectFolder = async () => {
         try {
@@ -121,12 +170,12 @@ export function ApkManager() {
                             {/* Folder List */}
                             {folderPath && (
                                 <div className="space-y-2">
-                                    {scannedApks.length === 0 && !scanning && (
+                                    {sortedScannedApks.length === 0 && !scanning && (
                                         <div className="text-center text-text-muted text-xs italic">
                                             {t.noValidApks}
                                         </div>
                                     )}
-                                    {scannedApks.map((apk) => (
+                                    {sortedScannedApks.map((apk) => (
                                         <ApkListItem
                                             key={apk.path}
                                             apk={apk}
@@ -155,7 +204,7 @@ export function ApkManager() {
                             {/* Manual List */}
                             {manualApks.length > 0 && (
                                 <div className="space-y-2">
-                                    {manualApks.map((apk) => (
+                                    {sortedManualApks.map((apk) => (
                                         <ApkListItem
                                             key={apk.path}
                                             apk={apk}
