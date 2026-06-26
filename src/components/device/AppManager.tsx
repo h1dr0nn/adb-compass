@@ -18,6 +18,7 @@ import { toast } from "sonner";
 import { DeviceInfo } from "../../types";
 import { useDeviceCache } from "../../hooks/useDeviceCache";
 import { useLanguage } from "../../hooks/useLanguage";
+import { AppTooltip } from "../ui/Tooltip";
 
 interface AppManagerProps {
   device: DeviceInfo;
@@ -204,30 +205,29 @@ const AppCard = memo(
         </div>
 
         <div className="flex-1 min-w-0">
-          <p
-            className="text-sm font-semibold text-text-primary truncate"
-            title={displayLabel}
-          >
-            {displayLabel}
-          </p>
-          <p
-            className="text-xs text-text-muted truncate font-mono opacity-80"
-            title={pkg.id}
-          >
-            {pkg.id}
-          </p>
+          <AppTooltip content={displayLabel}>
+            <p className="text-sm font-semibold text-text-primary truncate">
+              {displayLabel}
+            </p>
+          </AppTooltip>
+          <AppTooltip content={pkg.id}>
+            <p className="text-xs text-text-muted truncate font-mono opacity-80">
+              {pkg.id}
+            </p>
+          </AppTooltip>
         </div>
 
         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           {confirmUninstall === pkg.id ? (
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => onUninstall(pkg.id)}
-                className="p-1.5 rounded-lg bg-error/20 text-error hover:bg-error/30 transition-colors"
-                title={t.confirm}
-              >
-                <Trash2 size={16} />
-              </button>
+              <AppTooltip content={t.confirm}>
+                <button
+                  onClick={() => onUninstall(pkg.id)}
+                  className="p-1.5 rounded-lg bg-error/20 text-error hover:bg-error/30 transition-colors"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </AppTooltip>
               <button
                 onClick={() => setConfirmUninstall(null)}
                 className="p-1.5 rounded-lg bg-surface-elevated text-text-muted hover:text-text-primary transition-colors"
@@ -236,14 +236,15 @@ const AppCard = memo(
               </button>
             </div>
           ) : (
-            <button
-              onClick={() => setConfirmUninstall(pkg.id)}
-              disabled={isUninstalling !== null}
-              className="p-2 rounded-lg hover:bg-error/10 text-text-muted hover:text-error transition-all duration-200"
-              title={t.uninstall}
-            >
-              <Trash2 size={18} />
-            </button>
+            <AppTooltip content={t.uninstall}>
+              <button
+                onClick={() => setConfirmUninstall(pkg.id)}
+                disabled={isUninstalling !== null}
+                className="p-2 rounded-lg hover:bg-error/10 text-text-muted hover:text-error transition-all duration-200"
+              >
+                <Trash2 size={18} />
+              </button>
+            </AppTooltip>
           )}
         </div>
 
@@ -267,11 +268,20 @@ export function AppManager({ device }: AppManagerProps) {
   const [confirmUninstall, setConfirmUninstall] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"list" | "grid">("list");
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const requestIdRef = useRef(0);
 
   const { getCached, setData, clearCache } = useDeviceCache();
   const { t } = useLanguage();
 
   const fetchPackages = async () => {
+    const requestId = ++requestIdRef.current;
+
+    if (device.status !== "Device") {
+      setLoading(false);
+      setError("Device is not connected.");
+      return;
+    }
+
     const cacheKey = `packages_${device.id}_${showSystem}`;
 
     // 1. Try cache
@@ -280,6 +290,7 @@ export function AppManager({ device }: AppManagerProps) {
       setPackages(data);
       if (!isStale) {
         setLoading(false);
+        setError(null);
         return;
       }
     }
@@ -292,6 +303,7 @@ export function AppManager({ device }: AppManagerProps) {
 
     try {
       const result = await tauri.getAppsFull<AppPackage[]>(device.id, showSystem);
+      if (requestId !== requestIdRef.current) return;
 
       // Pre-process packages (map labels once)
       const processed = result.map((pkg) => ({
@@ -306,23 +318,38 @@ export function AppManager({ device }: AppManagerProps) {
 
       setPackages(sorted);
       setData(cacheKey, sorted);
+      setError(null);
       // Reset scroll position when new data is set
       if (scrollContainerRef.current) {
         scrollContainerRef.current.scrollTop = 0;
       }
     } catch (e) {
+      if (requestId !== requestIdRef.current) return;
       setError(String(e));
     } finally {
+      if (requestId !== requestIdRef.current) return;
       // Ensure minimum 500ms spin
       const elapsed = Date.now() - spinStart;
       const remaining = Math.max(0, 500 - elapsed);
-      setTimeout(() => setLoading(false), remaining);
+      setTimeout(() => {
+        if (requestId === requestIdRef.current) setLoading(false);
+      }, remaining);
     }
   };
 
   useEffect(() => {
     fetchPackages();
-  }, [device.id, showSystem]);
+  }, [device.id, device.status, showSystem]);
+
+  useEffect(() => {
+    if (device.status !== "Device" || !error || loading) return;
+
+    const retry = setTimeout(() => {
+      fetchPackages();
+    }, 2000);
+
+    return () => clearTimeout(retry);
+  }, [device.id, device.status, showSystem, error, loading]);
 
   const filteredPackages = useMemo(() => {
     if (!searchQuery.trim()) return packages;
@@ -392,18 +419,19 @@ export function AppManager({ device }: AppManagerProps) {
           </button>
         </div>
 
-        <button
-          onClick={() => setShowSystem(!showSystem)}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
-            showSystem
-              ? "bg-accent/10 border-accent/30 text-accent"
-              : "bg-surface-elevated border-border text-text-muted hover:text-text-secondary"
-          }`}
-          title={showSystem ? t.showingAllApps : t.showingUserAppsOnly}
-        >
-          {showSystem ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
-          {t.system}
-        </button>
+        <AppTooltip content={showSystem ? t.showingAllApps : t.showingUserAppsOnly}>
+          <button
+            onClick={() => setShowSystem(!showSystem)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-all ${
+              showSystem
+                ? "bg-accent/10 border-accent/30 text-accent"
+                : "bg-surface-elevated border-border text-text-muted hover:text-text-secondary"
+            }`}
+          >
+            {showSystem ? <ToggleRight size={18} /> : <ToggleLeft size={18} />}
+            {t.system}
+          </button>
+        </AppTooltip>
 
         <button
           onClick={fetchPackages}

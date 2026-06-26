@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { RefreshCw, Circle, CheckCircle2, XCircle } from 'lucide-react';
 import type { AdbStatus } from '../types';
 import { useLanguage } from '../hooks/useLanguage';
+import { AppTooltip } from './ui/Tooltip';
 
 interface StatusBarProps {
     adbStatus: AdbStatus | null;
@@ -56,16 +57,17 @@ export function StatusBar({ adbStatus, loading, onRefresh }: StatusBarProps) {
             </div>
 
             <div>
-                <button
-                    className={`p-2 rounded-lg bg-surface-elevated hover:bg-surface-hover
+                <AppTooltip content={t.refresh}>
+                    <button
+                        className={`p-2 rounded-lg bg-surface-elevated hover:bg-surface-hover
                                text-text-secondary hover:text-accent
                                transition-all duration-200 disabled:opacity-50`}
-                    onClick={handleRefresh}
-                    disabled={isSpinning}
-                    title={t.refresh}
-                >
-                    <RefreshCw size={18} className={isSpinning ? 'animate-spin' : ''} />
-                </button>
+                        onClick={handleRefresh}
+                        disabled={isSpinning}
+                    >
+                        <RefreshCw size={18} className={isSpinning ? 'animate-spin' : ''} />
+                    </button>
+                </AppTooltip>
             </div>
         </motion.div>
     );

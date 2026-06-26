@@ -14,6 +14,7 @@ import { DeviceInfo } from '../../types';
 import { listItem } from '../../lib/animations';
 import { StreamPlayer } from './StreamPlayer';
 import { useLanguage } from '../../hooks/useLanguage';
+import { AppTooltip } from '../ui/Tooltip';
 
 interface ScreenCaptureProps {
     device: DeviceInfo;
@@ -32,6 +33,18 @@ interface ScrcpyStatus {
 }
 
 type StreamMode = 'standard' | 'high-perf';
+
+function TooltipIconButton({
+    tooltip,
+    children,
+    ...props
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & { tooltip: React.ReactNode }) {
+    return (
+        <AppTooltip content={tooltip}>
+            <button {...props}>{children}</button>
+        </AppTooltip>
+    );
+}
 
 export function ScreenCapture({ device }: ScreenCaptureProps) {
     const [isCapturing, setIsCapturing] = useState(false);
@@ -567,46 +580,46 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                     </h4>
                     <div className="grid grid-cols-4 gap-2">
                         {/* Row 1: Navigation */}
-                        <button onClick={() => handleKeyEvent(4)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.back}>
+                        <TooltipIconButton tooltip={t.back} onClick={() => handleKeyEvent(4)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Triangle size={18} className="text-text-secondary -rotate-90" />
-                        </button>
-                        <button onClick={() => handleKeyEvent(3)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.home}>
+                        </TooltipIconButton>
+                        <TooltipIconButton tooltip={t.home} onClick={() => handleKeyEvent(3)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Home size={18} className="text-text-secondary" />
-                        </button>
-                        <button onClick={() => handleKeyEvent(187)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.recents}>
+                        </TooltipIconButton>
+                        <TooltipIconButton tooltip={t.recents} onClick={() => handleKeyEvent(187)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Square size={18} className="text-text-secondary" />
-                        </button>
-                        <button onClick={() => handleKeyEvent(82)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.menu}>
+                        </TooltipIconButton>
+                        <TooltipIconButton tooltip={t.menu} onClick={() => handleKeyEvent(82)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Menu size={18} className="text-text-secondary" />
-                        </button>
+                        </TooltipIconButton>
 
                         {/* Row 2: Volume & Power */}
-                        <button onClick={() => handleKeyEvent(25)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.volumeDown}>
+                        <TooltipIconButton tooltip={t.volumeDown} onClick={() => handleKeyEvent(25)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Volume1 size={18} className="text-text-secondary" />
-                        </button>
-                        <button onClick={() => handleKeyEvent(24)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.volumeUp}>
+                        </TooltipIconButton>
+                        <TooltipIconButton tooltip={t.volumeUp} onClick={() => handleKeyEvent(24)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Volume2 size={18} className="text-text-secondary" />
-                        </button>
-                        <button onClick={() => handleKeyEvent(164)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.mute}>
+                        </TooltipIconButton>
+                        <TooltipIconButton tooltip={t.mute} onClick={() => handleKeyEvent(164)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <VolumeX size={18} className="text-text-secondary" />
-                        </button>
-                        <button onClick={() => handleKeyEvent(26)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.power}>
+                        </TooltipIconButton>
+                        <TooltipIconButton tooltip={t.power} onClick={() => handleKeyEvent(26)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Power size={18} className="text-error" />
-                        </button>
+                        </TooltipIconButton>
 
                         {/* Row 3: System & Media */}
-                        <button onClick={() => handleKeyEvent(220)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.brightnessDown}>
+                        <TooltipIconButton tooltip={t.brightnessDown} onClick={() => handleKeyEvent(220)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Moon size={18} className="text-text-secondary" />
-                        </button>
-                        <button onClick={() => handleKeyEvent(221)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.brightnessUp}>
+                        </TooltipIconButton>
+                        <TooltipIconButton tooltip={t.brightnessUp} onClick={() => handleKeyEvent(221)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Sun size={18} className="text-text-secondary" />
-                        </button>
-                        <button onClick={() => handleKeyEvent(83)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.notifications}>
+                        </TooltipIconButton>
+                        <TooltipIconButton tooltip={t.notifications} onClick={() => handleKeyEvent(83)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Bell size={18} className="text-text-secondary" />
-                        </button>
-                        <button onClick={() => handleKeyEvent(85)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors" title={t.playPause}>
+                        </TooltipIconButton>
+                        <TooltipIconButton tooltip={t.playPause} onClick={() => handleKeyEvent(85)} className="p-2 bg-surface-elevated hover:bg-surface-hover border border-border rounded-lg flex items-center justify-center transition-colors">
                             <Play size={18} className="text-success" />
-                        </button>
+                        </TooltipIconButton>
                     </div>
                 </motion.div>
             </div>
@@ -683,38 +696,38 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
 
                 {/* Vertical Controls Column */}
                 <div className="flex flex-col gap-2 self-stretch justify-start">
-                    <button
+                    <TooltipIconButton
+                        tooltip={streamMode === 'high-perf' ? 'Stop Live Preview' : 'Start Live Preview'}
                         onClick={toggleHighPerfMode}
                         disabled={isStartingScrcpy}
                         className={`p-2.5 rounded-lg border transition-all shadow-sm ${streamMode === 'high-perf'
                             ? 'bg-success text-white border-success shadow-success/20'
                             : 'bg-surface-elevated border-border text-text-muted hover:text-text-primary'
                             }`}
-                        title={streamMode === 'high-perf' ? 'Stop Live Preview' : 'Start Live Preview'}
                     >
                         {isStartingScrcpy ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} />}
-                    </button>
+                    </TooltipIconButton>
 
-                    <button
+                    <TooltipIconButton
+                        tooltip={t.refresh}
                         onClick={handleRefreshPreview}
                         disabled={isLoadingPreview || streamMode === 'high-perf'}
                         className={`p-2.5 rounded-lg border border-border text-text-secondary hover:text-accent disabled:opacity-20 shadow-sm bg-surface-elevated`}
-                        title={t.refresh}
                     >
                         <RefreshCw size={16} className={isLoadingPreview ? 'animate-spin' : ''} />
-                    </button>
+                    </TooltipIconButton>
 
-                    <button
+                    <TooltipIconButton
+                        tooltip="Mirror in popup"
                         onClick={handleStartMirror}
                         disabled={streamMode !== 'high-perf'}
                         className={`p-2.5 rounded-lg border transition-all shadow-sm ${isMirroring
                             ? 'bg-accent text-white border-accent'
                             : 'bg-surface-elevated border-border text-text-secondary hover:text-accent disabled:opacity-20'
                             }`}
-                        title="Mirror in popup"
                     >
                         <ExternalLink size={16} />
-                    </button>
+                    </TooltipIconButton>
                 </div>
             </div>
         </div>

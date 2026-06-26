@@ -6,13 +6,8 @@ pub async fn test_agent_connection(device_id: String) -> Result<serde_json::Valu
     let executor = AdbExecutor::new();
     let manager = AgentManager::new(executor);
 
-    // 1. Start agent
-    manager
-        .start_agent(&device_id)
-        .await
-        .map_err(|e| e.to_string())?;
-
-    // 2. Ping agent
+    // Ping through AgentManager so an already-running on-device agent is
+    // reused instead of starting a duplicate process on the same device port.
     let response = manager
         .send_command(&device_id, "PING", json!({}))
         .await

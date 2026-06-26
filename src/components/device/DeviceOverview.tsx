@@ -1,5 +1,5 @@
 // Device Overview Tab - Shows device information with live data
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
     Smartphone, Cpu, HardDrive, Battery, BatteryCharging,
@@ -80,9 +80,23 @@ function ValueWithSub({ main, sub, unknownLabel }: { main: string | null | undef
     );
 }
 
+function hasUsefulProps(props: DeviceProps | null): boolean {
+    if (!props) return false;
+    return [
+        props.manufacturer,
+        props.screen_resolution,
+        props.storage_total,
+        props.ram_total,
+        props.cpu,
+        props.build_number,
+        props.security_patch,
+    ].some((value) => Boolean(value && value !== 'Unknown'));
+}
+
 export function DeviceOverview({ device }: DeviceOverviewProps) {
     const [props, setProps] = useState<DeviceProps | null>(null);
     const [loading, setLoading] = useState(true);
+    const requestIdRef = useRef(0);
     const { getCached, setData } = useDeviceCache();
     const { getStatusTranslation } = useDeviceStatus();
     const { t } = useLanguage();
@@ -92,10 +106,16 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
 
     useEffect(() => {
         const loadProps = async () => {
+            const requestId = ++requestIdRef.current;
+            if (device.status !== 'Device') {
+                setLoading(false);
+                return;
+            }
+
             // 1. Try cache first
             const { data, isStale } = getCached<DeviceProps>(cacheKey);
 
-            if (data) {
+            if (hasUsefulProps(data)) {
                 setProps(data);
                 if (!isStale) {
                     setLoading(false);
@@ -108,17 +128,42 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
 
             try {
                 const result = await tauri.getDeviceProps<DeviceProps>(device.id);
+                if (requestId !== requestIdRef.current) return;
                 setProps(result);
-                setData(cacheKey, result);
+                if (hasUsefulProps(result)) setData(cacheKey, result);
             } catch (e) {
+                if (requestId !== requestIdRef.current) return;
                 console.error('Failed to fetch device props:', e);
             } finally {
-                setLoading(false);
+                if (requestId === requestIdRef.current) setLoading(false);
             }
         };
 
         loadProps();
-    }, [device.id, getCached, setData, cacheKey]);
+    }, [device.id, device.status, getCached, setData, cacheKey]);
+
+    useEffect(() => {
+        if (device.status !== 'Device' || loading || hasUsefulProps(props)) return;
+
+        const retry = setTimeout(async () => {
+            const requestId = ++requestIdRef.current;
+            setLoading(true);
+            try {
+                const result = await tauri.getDeviceProps<DeviceProps>(device.id);
+                if (requestId !== requestIdRef.current) return;
+                setProps(result);
+                if (hasUsefulProps(result)) setData(cacheKey, result);
+            } catch (e) {
+                if (requestId === requestIdRef.current) {
+                    console.error('Failed to retry device props:', e);
+                }
+            } finally {
+                if (requestId === requestIdRef.current) setLoading(false);
+            }
+        }, 3000);
+
+        return () => clearTimeout(retry);
+    }, [device.id, device.status, props, loading, cacheKey, setData]);
 
     const getBatteryIcon = () => {
         if (props?.is_charging) {

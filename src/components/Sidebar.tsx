@@ -4,6 +4,7 @@ import { History, X } from 'lucide-react';
 import { ApkManager } from './ApkManager';
 import { useLanguage } from '../hooks/useLanguage';
 import { useApkStore } from '../stores/apkStore';
+import { AppTooltip } from './ui/Tooltip';
 
 export function Sidebar() {
     const { t } = useLanguage();
@@ -35,13 +36,14 @@ export function Sidebar() {
                         {t.library}
                     </div>
                     <div className="relative">
-                        <button
-                            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
-                            className="text-text-muted hover:text-text-primary transition-colors p-1.5 rounded-md hover:bg-surface-elevated cursor-pointer"
-                            title="Folder History"
-                        >
-                            <History size={18} />
-                        </button>
+                        <AppTooltip content="Folder History">
+                            <button
+                                onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                                className="text-text-muted hover:text-text-primary transition-colors p-1.5 rounded-md hover:bg-surface-elevated cursor-pointer"
+                            >
+                                <History size={18} />
+                            </button>
+                        </AppTooltip>
 
                         <AnimatePresence>
                             {isHistoryOpen && (
@@ -77,20 +79,23 @@ export function Sidebar() {
                                                             <div className="text-xs font-semibold text-text-primary truncate">
                                                                 {name}
                                                             </div>
-                                                            <div className="text-[9px] text-text-muted truncate mt-0.5 font-mono" title={path}>
-                                                                {path}
-                                                            </div>
+                                                            <AppTooltip content={path} side="right">
+                                                                <div className="text-[9px] text-text-muted truncate mt-0.5 font-mono">
+                                                                    {path}
+                                                                </div>
+                                                            </AppTooltip>
                                                         </div>
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                removeFromHistory(path);
-                                                            }}
-                                                            className="shrink-0 p-1 text-text-muted hover:text-error rounded hover:bg-surface-elevated transition-colors cursor-pointer"
-                                                            title="Remove from history"
-                                                        >
-                                                            <X size={12} />
-                                                        </button>
+                                                        <AppTooltip content="Remove from history">
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    removeFromHistory(path);
+                                                                }}
+                                                                className="shrink-0 p-1 text-text-muted hover:text-error rounded hover:bg-surface-elevated transition-colors cursor-pointer"
+                                                            >
+                                                                <X size={12} />
+                                                            </button>
+                                                        </AppTooltip>
                                                     </div>
                                                 );
                                             })}

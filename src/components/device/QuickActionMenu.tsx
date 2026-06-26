@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import * as tauri from "../../lib/tauri";
 import { toast } from 'sonner';
+import { AppTooltip } from '../ui/Tooltip';
 
 interface QuickActionMenuProps {
     deviceId: string;
@@ -60,19 +61,20 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
 
     return (
         <div className="relative" ref={menuRef}>
-            <button
-                onClick={() => !isDisabled && setIsOpen(!isOpen)}
-                disabled={isDisabled}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-sm font-medium ${
-                    isOpen && !isDisabled
-                        ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20'
-                        : 'bg-surface-elevated border-border text-text-secondary hover:text-accent hover:border-accent'
-                } disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
-                title={isDisabled ? "Select a device first" : "Quick Actions"}
-            >
-                {triggerIcon || <Zap size={14} className={isOpen && !isDisabled ? 'fill-current' : ''} />}
-                <span>Action Menu</span>
-            </button>
+            <AppTooltip content={isDisabled ? "Select a device first" : "Quick Actions"} disabled={isOpen}>
+                <button
+                    onClick={() => !isDisabled && setIsOpen(!isOpen)}
+                    disabled={isDisabled}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-sm font-medium ${
+                        isOpen && !isDisabled
+                            ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20'
+                            : 'bg-surface-elevated border-border text-text-secondary hover:text-accent hover:border-accent'
+                    } disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
+                >
+                    {triggerIcon || <Zap size={14} className={isOpen && !isDisabled ? 'fill-current' : ''} />}
+                    <span>Action Menu</span>
+                </button>
+            </AppTooltip>
 
             <AnimatePresence>
                 {isOpen && (

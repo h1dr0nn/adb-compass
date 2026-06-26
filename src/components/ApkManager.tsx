@@ -8,6 +8,7 @@ import type { ApkInfo } from '../types';
 import { ApkDropzone } from './ApkDropzone';
 import { useLanguage } from '../hooks/useLanguage';
 import { useApkStore } from '../stores/apkStore';
+import { AppTooltip } from './ui/Tooltip';
 
 export function ApkManager() {
     const { t } = useLanguage();
@@ -104,15 +105,16 @@ export function ApkManager() {
                                     </span>
                                 </button>
                                 {folderPath && (
-                                    <button
-                                        onClick={() => handleScan(folderPath)}
-                                        className="p-2 bg-surface-elevated border border-border rounded-lg 
+                                    <AppTooltip content={t.reloadFolder}>
+                                        <button
+                                            onClick={() => handleScan(folderPath)}
+                                            className="p-2 bg-surface-elevated border border-border rounded-lg 
                                                 text-text-secondary hover:text-accent disabled:cursor-not-allowed"
-                                        disabled={scanning}
-                                        title={t.reloadFolder}
-                                    >
-                                        <RefreshCw size={14} className={scanning ? 'animate-spin text-accent' : ''} />
-                                    </button>
+                                            disabled={scanning}
+                                        >
+                                            <RefreshCw size={14} className={scanning ? 'animate-spin text-accent' : ''} />
+                                        </button>
+                                    </AppTooltip>
                                 )}
                             </div>
 
@@ -220,16 +222,17 @@ function ApkListItem({ apk, isSelected, onSelect, onRemove }: { apk: ApkInfo, is
                 )}
             </button>
             {onRemove && (
-                <button
-                    onClick={(e) => {
-                        e.stopPropagation();
-                        onRemove();
-                    }}
-                    className="absolute right-2 top-2 p-1 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
-                    title={t.removeFromList}
-                >
-                    <X size={14} />
-                </button>
+                <AppTooltip content={t.removeFromList}>
+                    <button
+                        onClick={(e) => {
+                            e.stopPropagation();
+                            onRemove();
+                        }}
+                        className="absolute right-2 top-2 p-1 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                        <X size={14} />
+                    </button>
+                </AppTooltip>
             )}
         </div>
     );

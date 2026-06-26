@@ -3,16 +3,18 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     ArrowLeft, Moon, Sun, Monitor, FolderOpen, Globe,
-    Settings as SettingsIcon, RotateCcw, Github
+    Settings as SettingsIcon, RotateCcw, Github, Download
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { open as openDialog, confirm } from '@tauri-apps/plugin-dialog';
+import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import * as tauri from '../lib/tauri';
 import { Select } from './ui/Select';
 import { check } from '@tauri-apps/plugin-updater';
 import { useLanguage } from '../hooks/useLanguage';
 import { useTheme } from '../hooks/useTheme';
+import { AppTooltip } from './ui/Tooltip';
+import { ActionModal } from './modals/ActionModal';
 
 interface SettingsProps {
     onBack: () => void;
@@ -25,6 +27,9 @@ export function Settings({ onBack }: SettingsProps) {
     const [adbPath, setAdbPath] = useState('');
     const [captureSavePath, setCaptureSavePath] = useState('');
     const [askBeforeSave, setAskBeforeSave] = useState(false);
+    const [showResetConfirm, setShowResetConfirm] = useState(false);
+    const [pendingUpdate, setPendingUpdate] = useState<Awaited<ReturnType<typeof check>> | null>(null);
+    const [installingUpdate, setInstallingUpdate] = useState(false);
 
     const { language, setLanguage, t } = useLanguage();
     const { theme, setTheme } = useTheme();
@@ -114,19 +119,13 @@ export function Settings({ onBack }: SettingsProps) {
         toast.success(`Ask before save ${newState ? 'Enabled' : 'Disabled'}`);
     };
 
-    const handleResetDefaults = async () => {
-        const confirmed = await confirm(t.resetConfirm, {
-            title: t.resetToDefaults,
-            kind: 'warning',
-        });
-
-        if (confirmed) {
-            localStorage.clear();
-            setTheme('system');
-            setLanguage('en');
-            loadSettings();
-            toast.success(t.resetSuccess);
-        }
+    const resetDefaults = () => {
+        localStorage.clear();
+        setTheme('system');
+        setLanguage('en');
+        loadSettings();
+        setShowResetConfirm(false);
+        toast.success(t.resetSuccess);
     };
 
 
@@ -134,15 +133,7 @@ export function Settings({ onBack }: SettingsProps) {
         try {
             const update = await check();
             if (update) {
-                const confirmed = await confirm(
-                    `New version ${update.version} is available! Would you like to update?`,
-                    { title: 'Update Available', kind: 'info' }
-                );
-                if (confirmed) {
-                    toast.info('Downloading update...');
-                    await update.downloadAndInstall();
-                    toast.success('Update installed! Please restart the app.');
-                }
+                setPendingUpdate(update);
             } else {
                 toast.success(t.latestVersion || 'You are on the latest version!');
             }
@@ -152,16 +143,33 @@ export function Settings({ onBack }: SettingsProps) {
         }
     };
 
+    const installUpdate = async () => {
+        if (!pendingUpdate) return;
+
+        setInstallingUpdate(true);
+        try {
+            toast.info('Downloading update...');
+            await pendingUpdate.downloadAndInstall();
+            setPendingUpdate(null);
+            toast.success('Update installed! Please restart the app.');
+        } catch (err) {
+            console.error('Failed to install update', err);
+            toast.error('Failed to install update.');
+        } finally {
+            setInstallingUpdate(false);
+        }
+    };
+
 
     return (
         <motion.div
-            className="flex flex-col h-full"
+            className="flex h-full min-h-0 flex-col overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 0.2 }}
         >
             {/* Header */}
-            <div className="flex items-center gap-4 pt-3 pb-1 mb-2 shrink-0 px-0">
+            <div className="flex items-center gap-4 px-4 pt-4 pb-3 shrink-0">
                 <button
                     onClick={onBack}
                     className="p-2.5 rounded-xl hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-all duration-200 border border-transparent hover:border-border"
@@ -179,37 +187,37 @@ export function Settings({ onBack }: SettingsProps) {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar pb-8 space-y-6 px-0">
+            <div className="min-h-0 flex-1 overflow-y-auto custom-scrollbar space-y-6 px-4 pb-4">
                 {/* Appearance Section */}
                 <section className="bg-surface-card border border-border rounded-2xl p-6 shadow-sm">
                     <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-5 flex items-center gap-2">
                         <Monitor size={16} className="text-accent" />
                         {t.appearance}
                     </h3>
-                    <div className="flex items-center justify-between">
-                        <div>
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                        <div className="min-w-0">
                             <p className="text-sm font-semibold text-text-primary">{t.appTheme}</p>
                             <p className="text-xs text-text-secondary mt-0.5">{t.selectTheme}</p>
                         </div>
-                        <div className="flex bg-surface-elevated rounded-xl p-1 border border-border/50 relative isolate">
+                        <div className="relative isolate flex shrink-0 rounded-xl border border-border/50 bg-surface-elevated p-1">
                             {themes.map((tItem) => (
-                                <button
-                                    key={tItem.value}
-                                    onClick={() => handleThemeChange(tItem.value)}
-                                    className={`relative px-4 py-2 rounded-lg transition-colors duration-200 flex items-center justify-center ${theme === tItem.value ? 'text-text-primary font-medium' : 'text-text-muted hover:text-text-primary'}`}
-                                    title={tItem.label}
-                                >
-                                    <span className="relative z-10 flex items-center gap-2">
-                                        {tItem.icon}
-                                    </span>
-                                    {theme === tItem.value && (
-                                        <motion.div
-                                            layoutId="activeTheme"
-                                            className="absolute inset-0 bg-surface-card rounded-lg shadow-sm border border-border/10 z-0"
-                                            transition={{ type: "spring", stiffness: 350, damping: 35 }}
-                                        />
-                                    )}
-                                </button>
+                                <AppTooltip key={tItem.value} content={tItem.label}>
+                                    <button
+                                        onClick={() => handleThemeChange(tItem.value)}
+                                        className={`relative flex h-8 w-10 items-center justify-center rounded-lg transition-colors duration-200 ${theme === tItem.value ? 'text-text-primary font-medium' : 'text-text-muted hover:text-text-primary'}`}
+                                    >
+                                        <span className="relative z-10 flex items-center gap-2">
+                                            {tItem.icon}
+                                        </span>
+                                        {theme === tItem.value && (
+                                            <motion.div
+                                                layoutId="activeTheme"
+                                                className="absolute inset-0 bg-surface-card rounded-lg shadow-sm border border-border/10 z-0"
+                                                transition={{ type: "spring", stiffness: 350, damping: 35 }}
+                                            />
+                                        )}
+                                    </button>
+                                </AppTooltip>
                             ))}
                         </div>
                     </div>
@@ -222,12 +230,12 @@ export function Settings({ onBack }: SettingsProps) {
                         {t.general}
                     </h3>
                     <div className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div>
+                        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
                                 <p className="text-sm font-semibold text-text-primary">{t.language}</p>
                                 <p className="text-xs text-text-secondary mt-0.5">{t.changeLang}</p>
                             </div>
-                            <div className="w-44">
+                            <div className="w-full shrink-0 sm:w-44">
                                 <Select
                                     options={languages}
                                     value={language}
@@ -235,12 +243,12 @@ export function Settings({ onBack }: SettingsProps) {
                                 />
                             </div>
                         </div>
-                        <div className="flex items-center justify-between pt-6 border-t border-border/50">
-                            <div>
+                        <div className="flex flex-col gap-4 border-t border-border/50 pt-6 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
                                 <p className="text-sm font-semibold text-text-primary">{t.notifications}</p>
                                 <p className="text-xs text-text-secondary mt-0.5">{t.showNotif}</p>
                             </div>
-                            <div className="flex items-center">
+                            <div className="flex shrink-0 items-center">
                                 <button
                                     onClick={handleNotificationToggle}
                                     className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none flex items-center ${notifications ? 'bg-accent border border-accent' : 'bg-surface-elevated border border-border'}`}
@@ -266,17 +274,17 @@ export function Settings({ onBack }: SettingsProps) {
                         {/* ADB Path */}
                         <div>
                             <label className="block text-sm font-semibold text-text-primary mb-2">{t.customPath}</label>
-                            <div className="flex gap-2">
+                            <div className="flex min-w-0 gap-2">
                                 <input
                                     type="text"
                                     placeholder={t.bundledAdb}
                                     value={adbPath}
-                                    className="flex-1 bg-surface-elevated border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all placeholder:text-text-muted/50"
+                                    className="min-w-0 flex-1 bg-surface-elevated border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all placeholder:text-text-muted/50"
                                     readOnly
                                 />
                                 <button
                                     onClick={handleBrowseAdb}
-                                    className="px-5 py-2.5 bg-surface-elevated border border-border rounded-xl text-text-secondary hover:text-text-primary hover:border-text-secondary transition-all hover:bg-surface-hover font-medium text-sm"
+                                    className="shrink-0 px-5 py-2.5 bg-surface-elevated border border-border rounded-xl text-text-secondary hover:text-text-primary hover:border-text-secondary transition-all hover:bg-surface-hover font-medium text-sm"
                                 >
                                     {t.browse}
                                 </button>
@@ -289,17 +297,17 @@ export function Settings({ onBack }: SettingsProps) {
                             <label className="block text-sm font-semibold text-text-primary mb-2">
                                 Capture Save Path
                             </label>
-                            <div className="flex gap-2">
+                            <div className="flex min-w-0 gap-2">
                                 <input
                                     type="text"
                                     placeholder="~/Pictures/ADB Compass"
                                     value={captureSavePath}
-                                    className="flex-1 bg-surface-elevated border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all placeholder:text-text-muted/50"
+                                    className="min-w-0 flex-1 bg-surface-elevated border border-border rounded-xl px-4 py-2.5 text-sm text-text-primary focus:outline-none focus:border-accent focus:ring-2 focus:ring-accent/10 transition-all placeholder:text-text-muted/50"
                                     readOnly
                                 />
                                 <button
                                     onClick={handleBrowseCapturePath}
-                                    className="px-5 py-2.5 bg-accent text-white font-medium rounded-xl hover:bg-accent-light transition-all shadow-sm active:scale-95 text-sm"
+                                    className="shrink-0 px-5 py-2.5 bg-accent text-white font-medium rounded-xl hover:bg-accent-light transition-all shadow-sm active:scale-95 text-sm"
                                 >
                                     {t.browse}
                                 </button>
@@ -308,12 +316,12 @@ export function Settings({ onBack }: SettingsProps) {
                         </div>
 
                         {/* Ask Before Save Toggle */}
-                        <div className="pt-5 border-t border-border/50 flex items-center justify-between">
-                            <div>
+                        <div className="flex flex-col gap-4 border-t border-border/50 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="min-w-0">
                                 <p className="text-sm font-semibold text-text-primary">{t.askBeforeSave}</p>
                                 <p className="text-xs text-text-secondary mt-0.5">{t.askBeforeSaveDesc}</p>
                             </div>
-                            <div className="flex items-center">
+                            <div className="flex shrink-0 items-center">
                                 <button
                                     onClick={handleAskBeforeSaveToggle}
                                     className={`relative w-11 h-6 rounded-full transition-colors duration-200 focus:outline-none flex items-center ${askBeforeSave ? 'bg-accent border border-accent' : 'bg-surface-elevated border border-border'}`}
@@ -330,7 +338,7 @@ export function Settings({ onBack }: SettingsProps) {
                 </section>
 
                 {/* About Section - Simplified */}
-                <section className="bg-surface-card border border-border rounded-xl p-6 shadow-sm overflow-hidden">
+                <section className="bg-surface-card border border-border rounded-xl p-5 shadow-sm overflow-hidden">
                     <div className="flex flex-col md:flex-row items-start gap-6">
                         <div className="flex-1">
                             <div className="flex items-center gap-3 mb-2">
@@ -340,20 +348,20 @@ export function Settings({ onBack }: SettingsProps) {
                                     v{t.version.split(':')[1].trim()}
                                 </span>
                             </div>
-                            <p className="text-sm text-text-secondary leading-relaxed mb-4">
+                            <p className="text-sm text-text-secondary leading-relaxed mb-3">
                                 {t.aboutDesc}
                             </p>
                             <div className="flex flex-wrap gap-2">
                                 <button
                                     onClick={() => openUrl('https://github.com/h1dr0nn/adb-compass')}
-                                    className="text-xs font-medium text-text-secondary hover:text-accent transition-colors bg-surface-elevated px-3 py-1.5 rounded-lg border border-border/50 flex items-center gap-2"
+                                    className="text-xs font-medium text-text-secondary hover:text-accent hover:border-accent/40 hover:bg-surface-hover transition-colors bg-surface-elevated px-3 py-1.5 rounded-lg border border-border/50 flex items-center gap-2"
                                 >
                                     <Github size={14} />
                                     GitHub
                                 </button>
                                 <button
                                     onClick={() => openUrl('https://github.com/h1dr0nn')}
-                                    className="text-xs font-medium text-text-secondary hover:text-accent transition-colors bg-surface-elevated px-3 py-1.5 rounded-lg border border-border/50 flex items-center gap-2"
+                                    className="text-xs font-medium text-text-secondary hover:text-accent hover:border-accent/40 hover:bg-surface-hover transition-colors bg-surface-elevated px-3 py-1.5 rounded-lg border border-border/50 flex items-center gap-2"
                                 >
                                     <Globe size={14} />
                                     {t.officialWebsite}
@@ -362,7 +370,7 @@ export function Settings({ onBack }: SettingsProps) {
                         </div>
                     </div>
 
-                    <div className="mt-6 pt-6 border-t border-border/50 flex flex-wrap items-center justify-between gap-4">
+                    <div className="mt-4 pt-4 border-t border-border/50 flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-2 text-xs text-text-secondary">
                             <span className="text-text-muted">{t.developedBy}</span>
                             <button
@@ -374,8 +382,8 @@ export function Settings({ onBack }: SettingsProps) {
                         </div>
                         <div className="flex items-center gap-4">
                             <button
-                                onClick={handleResetDefaults}
-                                className="text-[11px] font-bold text-error/60 hover:text-error transition-colors flex items-center gap-1"
+                                onClick={() => setShowResetConfirm(true)}
+                                className="flex items-center gap-1 text-[11px] font-bold text-text-secondary transition-colors hover:text-error active:text-error/80"
                             >
                                 <RotateCcw size={12} />
                                 {t.resetToDefaults}
@@ -383,8 +391,9 @@ export function Settings({ onBack }: SettingsProps) {
                             <span className="text-text-muted/20">|</span>
                             <button
                                 onClick={handleCheckUpdates}
-                                className="text-[11px] font-bold text-accent/60 hover:text-accent transition-colors"
+                                className="flex items-center gap-1 text-[11px] font-bold text-text-secondary transition-colors hover:text-accent active:text-accent/80"
                             >
+                                <Download size={12} />
                                 {t.checkUpdates}
                             </button>
                         </div>
@@ -392,6 +401,60 @@ export function Settings({ onBack }: SettingsProps) {
                 </section>
 
             </div>
+
+            <ActionModal
+                isOpen={showResetConfirm}
+                onClose={() => setShowResetConfirm(false)}
+                title={t.resetToDefaults}
+            >
+                <div className="space-y-5">
+                    <p className="text-sm text-text-secondary leading-relaxed">
+                        {t.resetConfirm}
+                    </p>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={() => setShowResetConfirm(false)}
+                            className="rounded-lg border border-border bg-surface-elevated px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary"
+                        >
+                            {t.cancel}
+                        </button>
+                        <button
+                            onClick={resetDefaults}
+                            className="rounded-lg border border-error bg-error px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-error/90 active:scale-[0.98]"
+                        >
+                            {t.resetToDefaults}
+                        </button>
+                    </div>
+                </div>
+            </ActionModal>
+
+            <ActionModal
+                isOpen={Boolean(pendingUpdate)}
+                onClose={() => !installingUpdate && setPendingUpdate(null)}
+                title="Update Available"
+            >
+                <div className="space-y-5">
+                    <p className="text-sm text-text-secondary leading-relaxed">
+                        New version {pendingUpdate?.version} is available. Would you like to download and install it now?
+                    </p>
+                    <div className="flex justify-end gap-2">
+                        <button
+                            onClick={() => setPendingUpdate(null)}
+                            disabled={installingUpdate}
+                            className="rounded-lg border border-border bg-surface-elevated px-4 py-2 text-sm font-medium text-text-secondary transition-colors hover:bg-surface-hover hover:text-text-primary disabled:opacity-50"
+                        >
+                            {t.cancel}
+                        </button>
+                        <button
+                            onClick={installUpdate}
+                            disabled={installingUpdate}
+                            className="rounded-lg border border-accent bg-accent px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:bg-accent-secondary disabled:opacity-50 active:scale-[0.98]"
+                        >
+                            {installingUpdate ? 'Installing...' : 'Install Update'}
+                        </button>
+                    </div>
+                </div>
+            </ActionModal>
         </motion.div>
     );
 }

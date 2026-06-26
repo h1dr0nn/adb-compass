@@ -6,6 +6,7 @@ import * as tauri from "../../lib/tauri";
 import { toast } from 'sonner';
 import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
+import { AppTooltip } from '../ui/Tooltip';
 
 interface UninstallModalProps {
     deviceId: string;
@@ -170,14 +171,15 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
                                                 </button>
                                             </div>
                                         ) : (
-                                            <button
-                                                onClick={() => setConfirmPackage(pkg)}
-                                                className="p-2 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 
+                                            <AppTooltip content={t.uninstallApp}>
+                                                <button
+                                                    onClick={() => setConfirmPackage(pkg)}
+                                                    className="p-2 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 
                                                            transition-all rounded-lg hover:bg-error/10 shrink-0"
-                                                title={t.uninstallApp}
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </AppTooltip>
                                         )}
                                     </div>
                                 ))}

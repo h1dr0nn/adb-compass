@@ -10,8 +10,8 @@ pub mod requirements;
 pub mod services;
 
 use adb::{start_device_tracker, AdbExecutor};
-use commands::logcat::LogcatState;
 use commands::apk::ApkWatcherState;
+use commands::logcat::LogcatState;
 use commands::{
     build_index,
     check_action_requirements,
@@ -30,11 +30,11 @@ use commands::{
     export_logcat,
     get_app_icon,
     get_apps_full,
+    get_binaries,
     get_clipboard,
     get_default_media_dir,
     get_device_ip,
     get_device_property,
-    get_binaries,
     get_device_props,
     get_devices,
     get_logcat,

@@ -17,6 +17,7 @@ import { FileTransferModal } from './modals/FileTransferModal';
 import { useLanguage } from '../hooks/useLanguage';
 import { useDeviceStatus } from '../hooks/useDeviceStatus';
 import { listContainer, listItem } from '../lib/animations';
+import { AppTooltip } from './ui/Tooltip';
 
 interface DeviceListProps {
     devices: DeviceInfo[];
@@ -137,28 +138,32 @@ export function DeviceList({ devices, loading, error, apkInfo, onRefresh, onDevi
                     </span>
                     {/* Show offline count if any */}
                     {devices.filter(d => d.status === 'Offline').length > 0 && (
-                        <span className="w-6 h-6 rounded-full bg-surface-elevated text-text-muted text-sm font-semibold flex items-center justify-center ml-2" title={t.offlineDevices}>
-                            {devices.filter(d => d.status === 'Offline').length}
-                        </span>
+                        <AppTooltip content={t.offlineDevices}>
+                            <span className="w-6 h-6 rounded-full bg-surface-elevated text-text-muted text-sm font-semibold flex items-center justify-center ml-2">
+                                {devices.filter(d => d.status === 'Offline').length}
+                            </span>
+                        </AppTooltip>
                     )}
                 </div>
 
                 <div className="flex gap-2">
-                    <button
-                        onClick={onAddDevice}
-                        className="p-2 bg-surface-elevated border border-border text-text-secondary hover:text-accent hover:border-accent rounded-lg transition-all"
-                        title={t.connectViaIp}
-                    >
-                        <Plus size={20} />
-                    </button>
-                    <button
-                        onClick={onRefresh}
-                        className="p-2 bg-surface-elevated border border-border text-text-secondary hover:text-accent hover:border-accent rounded-lg transition-all"
-                        title={t.refreshDevices}
-                        disabled={loading}
-                    >
-                        <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-                    </button>
+                    <AppTooltip content={t.connectViaIp}>
+                        <button
+                            onClick={onAddDevice}
+                            className="p-2 bg-surface-elevated border border-border text-text-secondary hover:text-accent hover:border-accent rounded-lg transition-all"
+                        >
+                            <Plus size={20} />
+                        </button>
+                    </AppTooltip>
+                    <AppTooltip content={t.refreshDevices}>
+                        <button
+                            onClick={onRefresh}
+                            className="p-2 bg-surface-elevated border border-border text-text-secondary hover:text-accent hover:border-accent rounded-lg transition-all"
+                            disabled={loading}
+                        >
+                            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
+                        </button>
+                    </AppTooltip>
                 </div>
             </motion.div>
 
@@ -249,13 +254,14 @@ function DeviceCard({ device, apkInfo, onSelect, onRemove }: DeviceCardProps) {
                 {/* Status or Remove Button */}
                 <div className="flex items-center gap-2">
                     {isOffline && onRemove ? (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); onRemove(device.id); }}
-                            className="p-2 text-text-muted hover:text-error hover:bg-error/10 rounded-lg transition-colors"
-                            title={t.removeDevice}
-                        >
-                            <Trash2 size={16} />
-                        </button>
+                        <AppTooltip content={t.removeDevice}>
+                            <button
+                                onClick={(e) => { e.stopPropagation(); onRemove(device.id); }}
+                                className="p-2 text-text-muted hover:text-error hover:bg-error/10 rounded-lg transition-colors"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+                        </AppTooltip>
                     ) : null}
 
                     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium ${getStatusColor()}`}>
@@ -365,14 +371,15 @@ function DeviceCard({ device, apkInfo, onSelect, onRemove }: DeviceCardProps) {
                     />
                 ) : (
                     // Placeholder Disabled Install Button
-                    <button
-                        disabled
-                        className={`${actionBtnBase} ${actionBtnDisabled}`}
-                        title={isOffline ? t.deviceOffline : t.selectApkToEnable}
-                    >
-                        <Package size={16} />
-                        <span>{t.btnInstall}</span>
-                    </button>
+                    <AppTooltip content={isOffline ? t.deviceOffline : t.selectApkToEnable}>
+                        <button
+                            disabled
+                            className={`${actionBtnBase} ${actionBtnDisabled}`}
+                        >
+                            <Package size={16} />
+                            <span>{t.btnInstall}</span>
+                        </button>
+                    </AppTooltip>
                 )}
             </div>
 

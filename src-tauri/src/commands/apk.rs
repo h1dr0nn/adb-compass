@@ -4,9 +4,9 @@
 use crate::adb::AdbExecutor;
 use crate::apk::{ApkInfo, InstallResult};
 
-use tauri::{AppHandle, State, Emitter};
+use notify::{RecommendedWatcher, RecursiveMode, Watcher};
 use std::sync::Mutex;
-use notify::{Watcher, RecursiveMode, RecommendedWatcher};
+use tauri::{AppHandle, Emitter, State};
 
 /// Global state to manage the active directory watcher for APK folder
 pub struct ApkWatcherState {
@@ -59,21 +59,22 @@ pub async fn scan_apks_in_folder(
     let app_clone = app.clone();
     let path_clone = path.clone();
 
-    let watcher_res = notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
-        if let Ok(event) = res {
-            // We care about file creation, deletion, or modification of .apk files
-            let has_apk_change = event.paths.iter().any(|p| {
-                p.extension()
-                    .map(|ext| ext.to_string_lossy().to_lowercase() == "apk")
-                    .unwrap_or(false)
-            });
+    let watcher_res =
+        notify::recommended_watcher(move |res: Result<notify::Event, notify::Error>| {
+            if let Ok(event) = res {
+                // We care about file creation, deletion, or modification of .apk files
+                let has_apk_change = event.paths.iter().any(|p| {
+                    p.extension()
+                        .map(|ext| ext.to_string_lossy().to_lowercase() == "apk")
+                        .unwrap_or(false)
+                });
 
-            if has_apk_change {
-                // Emit event to frontend
-                let _ = app_clone.emit("apk-folder-changed", path_clone.clone());
+                if has_apk_change {
+                    // Emit event to frontend
+                    let _ = app_clone.emit("apk-folder-changed", path_clone.clone());
+                }
             }
-        }
-    });
+        });
 
     match watcher_res {
         Ok(mut watcher) => {

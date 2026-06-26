@@ -101,7 +101,7 @@ function AppContent() {
               </div>
             )}
 
-            <div className="flex-1 overflow-hidden px-3 pb-3">
+            <div className={`flex-1 overflow-hidden px-3 pb-3 ${showSettings ? "pt-3" : ""}`}>
               <div className="h-full rounded-[12px] overflow-hidden flex flex-col relative">
                 {/* Settings overlay — transient, so still uses AnimatePresence */}
                 <AnimatePresence>

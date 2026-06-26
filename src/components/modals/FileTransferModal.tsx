@@ -10,6 +10,7 @@ import { toast } from 'sonner';
 import * as tauri from '../../lib/tauri';
 import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
+import { AppTooltip } from '../ui/Tooltip';
 
 interface FileInfo {
     name: string;
@@ -225,14 +226,15 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
 
                     {/* Toolbar */}
                     <div className="px-6 py-3 border-b border-border shrink-0 flex items-center gap-2">
-                        <button
-                            onClick={loadFiles}
-                            disabled={loading}
-                            className="p-2 rounded-lg border border-border text-text-secondary hover:text-accent hover:border-accent transition-colors"
-                            title={t.refresh}
-                        >
-                            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
-                        </button>
+                        <AppTooltip content={t.refresh}>
+                            <button
+                                onClick={loadFiles}
+                                disabled={loading}
+                                className="p-2 rounded-lg border border-border text-text-secondary hover:text-accent hover:border-accent transition-colors"
+                            >
+                                <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                            </button>
+                        </AppTooltip>
                         <button
                             onClick={handleUpload}
                             disabled={!!actionLoading}

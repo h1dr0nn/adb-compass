@@ -70,10 +70,32 @@ export const useDeviceStore = create<DeviceState>()(
     selectedDeviceId: null,
 
     mergeDevices: (fresh) => {
+      const prev = get().devices;
+      const merged = mergeLists(prev, fresh);
+
+      // Skip the update entirely when nothing changed, so the periodic
+      // safety-net poll doesn't trigger needless re-renders.
+      if (JSON.stringify(merged) === JSON.stringify(prev)) return;
+
+      const previouslyConnected = new Set(
+        prev.filter((d) => d.status === "Device").map((d) => d.id),
+      );
+      const newlyConnected = merged
+        .filter((d) => d.status === "Device" && !previouslyConnected.has(d.id))
+        .map((d) => d.id);
+
       set((s) => {
-        s.devices = mergeLists(s.devices, fresh);
+        s.devices = merged;
+        s.error = null;
       });
-      persist(get().devices);
+      newlyConnected.forEach((deviceId) => {
+        deviceCacheApi.clearCache(`requirements_${deviceId}`);
+        deviceCacheApi.clearCache(`action_requirements_${deviceId}`);
+        deviceCacheApi.clearCache(`packages_${deviceId}`);
+        deviceCacheApi.clearCache(`files_${deviceId}`);
+        deviceCacheApi.clearCache(`device_props_${deviceId}`);
+      });
+      persist(merged);
     },
 
     checkAdb: async () => {

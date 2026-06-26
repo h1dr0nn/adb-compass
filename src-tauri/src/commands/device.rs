@@ -64,7 +64,14 @@ pub fn get_binaries() -> Vec<BinaryStatus> {
         Ok(version) => out.push(BinaryStatus {
             name: "ADB".into(),
             ok: true,
-            detail: Some(version.lines().next().unwrap_or(&version).trim().to_string()),
+            detail: Some(
+                version
+                    .lines()
+                    .next()
+                    .unwrap_or(&version)
+                    .trim()
+                    .to_string(),
+            ),
         }),
         Err(e) => out.push(BinaryStatus {
             name: "ADB".into(),
@@ -147,7 +154,9 @@ pub fn kill_adb_server() -> Result<(), AppError> {
 
 /// Check device requirements for APK installation
 #[tauri::command]
-pub async fn check_device_requirements(device_id: String) -> Result<Vec<crate::requirements::RequirementCheck>, String> {
+pub async fn check_device_requirements(
+    device_id: String,
+) -> Result<Vec<crate::requirements::RequirementCheck>, String> {
     tokio::task::spawn_blocking(move || {
         let executor = AdbExecutor::new();
         executor.check_device_requirements(&device_id)
@@ -158,7 +167,9 @@ pub async fn check_device_requirements(device_id: String) -> Result<Vec<crate::r
 
 /// Check advanced requirements for action buttons (Input Text, etc.)
 #[tauri::command]
-pub async fn check_action_requirements(device_id: String) -> Result<Vec<crate::requirements::RequirementCheck>, String> {
+pub async fn check_action_requirements(
+    device_id: String,
+) -> Result<Vec<crate::requirements::RequirementCheck>, String> {
     tokio::task::spawn_blocking(move || {
         let executor = AdbExecutor::new();
         executor.check_action_requirements(&device_id)

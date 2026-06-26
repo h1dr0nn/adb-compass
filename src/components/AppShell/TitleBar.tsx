@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Search } from "lucide-react";
 import { MenuDropdown } from "./MenuDropdown";
 import { BinariesMenu } from "./BinariesMenu";
+import { AppTooltip } from "../ui/Tooltip";
 
 const appWindow = getCurrentWindow();
 
@@ -39,14 +40,15 @@ export function TitleBar({ onSearch, onOpenSettings, onOpenWireless }: TitleBarP
     <div className="titlebar" data-tauri-drag-region>
       <div className="titlebar-cluster">
         <MenuDropdown onOpenSettings={onOpenSettings} onOpenWireless={onOpenWireless} />
-        <button
-          className="titlebar-icon-btn"
-          onClick={onSearch}
-          aria-label="Search"
-          title="Search (Ctrl+K)"
-        >
-          <Search size={16} strokeWidth={1.75} />
-        </button>
+        <AppTooltip content="Search (Ctrl+K)" side="bottom">
+          <button
+            className="titlebar-icon-btn"
+            onClick={onSearch}
+            aria-label="Search"
+          >
+            <Search size={16} strokeWidth={1.75} />
+          </button>
+        </AppTooltip>
       </div>
 
       <div className="titlebar-drag" data-tauri-drag-region />

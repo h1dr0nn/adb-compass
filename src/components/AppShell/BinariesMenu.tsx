@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Package, Loader2 } from "lucide-react";
 import * as tauri from "../../lib/tauri";
 import type { BinaryStatus } from "../../types";
+import { AppTooltip } from "../ui/Tooltip";
 
 /** Titlebar "Binaries" button. Opens a dropdown listing every bundled tool
  * and whether it resolved OK. Lives left of the window controls. */
@@ -32,14 +33,15 @@ export function BinariesMenu() {
 
   return (
     <div ref={ref} className="relative h-full flex items-center">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className="titlebar-icon-btn"
-        aria-label="Binaries"
-        title="Binaries"
-      >
-        <Package size={16} strokeWidth={1.75} />
-      </button>
+      <AppTooltip content="Binaries" side="bottom" disabled={open}>
+        <button
+          onClick={() => setOpen((v) => !v)}
+          className="titlebar-icon-btn"
+          aria-label="Binaries"
+        >
+          <Package size={16} strokeWidth={1.75} />
+        </button>
+      </AppTooltip>
 
       <AnimatePresence>
         {open && (

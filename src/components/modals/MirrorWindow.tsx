@@ -6,6 +6,7 @@ import { getCurrentWindow } from '@tauri-apps/api/window';
 import { StreamPlayer } from '../device/StreamPlayer';
 import { save } from '@tauri-apps/plugin-dialog';
 import { toast } from 'sonner';
+import { AppTooltip } from '../ui/Tooltip';
 
 export function MirrorWindow() {
     const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -332,35 +333,35 @@ export function MirrorWindow() {
 
                 {/* Control Panel (Side) */}
                 <div className="w-12 flex flex-col gap-2 py-2 shrink-0">
-                    <ControlBtn icon={<Triangle size={18} className="-rotate-90" />} onClick={() => handleKeyEvent(4)} title="Back" />
-                    <ControlBtn icon={<Home size={18} />} onClick={() => handleKeyEvent(3)} title="Home" />
-                    <ControlBtn icon={<Square size={18} />} onClick={() => handleKeyEvent(187)} title="Recents" />
+                    <ControlBtn icon={<Triangle size={18} className="-rotate-90" />} onClick={() => handleKeyEvent(4)} tooltip="Back" />
+                    <ControlBtn icon={<Home size={18} />} onClick={() => handleKeyEvent(3)} tooltip="Home" />
+                    <ControlBtn icon={<Square size={18} />} onClick={() => handleKeyEvent(187)} tooltip="Recents" />
 
                     <div className="h-px bg-white/10 my-1" />
 
                     <ControlBtn
                         icon={<Camera size={18} className="text-accent" />}
                         onClick={handleScreenshot}
-                        title="Take Screenshot"
+                        tooltip="Take Screenshot"
                     />
                     <ControlBtn
                         icon={<Video size={18} className={isRecording ? "text-error" : "text-text-secondary"} />}
                         onClick={handleToggleRecording}
-                        title={isRecording ? "Stop Recording" : "Start Recording"}
+                        tooltip={isRecording ? "Stop Recording" : "Start Recording"}
                     />
 
                     <div className="h-px bg-white/10 my-1" />
 
-                    <ControlBtn icon={<Volume2 size={18} />} onClick={() => handleKeyEvent(24)} title="Vol +" />
-                    <ControlBtn icon={<Volume1 size={18} />} onClick={() => handleKeyEvent(25)} title="Vol -" />
-                    <ControlBtn icon={<Power size={18} className="text-error" />} onClick={() => handleKeyEvent(26)} title="Power" />
+                    <ControlBtn icon={<Volume2 size={18} />} onClick={() => handleKeyEvent(24)} tooltip="Vol +" />
+                    <ControlBtn icon={<Volume1 size={18} />} onClick={() => handleKeyEvent(25)} tooltip="Vol -" />
+                    <ControlBtn icon={<Power size={18} className="text-error" />} onClick={() => handleKeyEvent(26)} tooltip="Power" />
 
                     <div className="h-px bg-white/10 my-1" />
 
                     <ControlBtn
                         icon={<Sun size={18} className={allowTouch ? "text-accent" : "opacity-30"} />}
                         onClick={() => setAllowTouch(!allowTouch)}
-                        title="Toggle Touch"
+                        tooltip="Toggle Touch"
                     />
                 </div>
             </div>
@@ -368,14 +369,15 @@ export function MirrorWindow() {
     );
 }
 
-function ControlBtn({ icon, onClick, title, className = "" }: { icon: React.ReactNode, onClick: () => void, title: string, className?: string }) {
+function ControlBtn({ icon, onClick, tooltip, className = "" }: { icon: React.ReactNode, onClick: () => void, tooltip: string, className?: string }) {
     return (
-        <button
-            onClick={onClick}
-            title={title}
-            className={`w-10 h-10 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-all active:scale-95 ${className}`}
-        >
-            {icon}
-        </button>
+        <AppTooltip content={tooltip} side="left">
+            <button
+                onClick={onClick}
+                className={`w-10 h-10 flex items-center justify-center rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 transition-all active:scale-95 ${className}`}
+            >
+                {icon}
+            </button>
+        </AppTooltip>
     );
 }

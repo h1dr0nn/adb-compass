@@ -13,6 +13,7 @@ import { type UnlistenFn } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import { Select } from "./ui/Select";
+import { AppTooltip } from "./ui/Tooltip";
 import { useDeviceStore } from "../stores/deviceStore";
 import * as tauri from "../lib/tauri";
 import { getVersion } from "@tauri-apps/api/app";
@@ -567,15 +568,16 @@ export function LogcatView() {
           </button>
 
           {/* Clear Button */}
-          <button
-            onClick={handleClear}
-            disabled={!selectedDevice}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-all text-sm font-medium disabled:opacity-50 cursor-pointer"
-            title="Clear device buffer"
-          >
-            <Trash2 size={14} />
-            <span>Clear</span>
-          </button>
+          <AppTooltip content="Clear device buffer">
+            <button
+              onClick={handleClear}
+              disabled={!selectedDevice}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-all text-sm font-medium disabled:opacity-50 cursor-pointer"
+            >
+              <Trash2 size={14} />
+              <span>Clear</span>
+            </button>
+          </AppTooltip>
         </div>
 
         <div className="flex-1" />

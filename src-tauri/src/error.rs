@@ -31,7 +31,12 @@ impl AppError {
 
 impl std::fmt::Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "[{}] {}", self.code, self.message)
+        match &self.details {
+            Some(details) if !details.trim().is_empty() => {
+                write!(f, "[{}] {}: {}", self.code, self.message, details.trim())
+            }
+            _ => write!(f, "[{}] {}", self.code, self.message),
+        }
     }
 }
 
@@ -60,25 +65,18 @@ impl From<AdbError> for AppError {
                 "Failed to execute ADB command",
                 &msg,
             ),
-            AdbError::ParseError(msg) => AppError::with_details(
-                "ADB_PARSE_ERROR",
-                "Failed to parse ADB output",
-                &msg,
-            ),
-            AdbError::DeviceNotFound(id) => AppError::with_details(
-                "DEVICE_NOT_FOUND",
-                "Device not found or disconnected",
-                &id,
-            ),
+            AdbError::ParseError(msg) => {
+                AppError::with_details("ADB_PARSE_ERROR", "Failed to parse ADB output", &msg)
+            }
+            AdbError::DeviceNotFound(id) => {
+                AppError::with_details("DEVICE_NOT_FOUND", "Device not found or disconnected", &id)
+            }
             AdbError::Unauthorized(id) => AppError::with_details(
                 "DEVICE_UNAUTHORIZED",
                 "Device requires USB debugging authorization",
                 &id,
             ),
-            AdbError::Timeout => AppError::new(
-                "ADB_TIMEOUT",
-                "ADB command timed out",
-            ),
+            AdbError::Timeout => AppError::new("ADB_TIMEOUT", "ADB command timed out"),
         }
     }
 }

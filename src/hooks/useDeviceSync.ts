@@ -57,6 +57,23 @@ export function useDeviceSync(): void {
     };
   }, []);
 
+  // Safety-net: the tracker only emits on change, so if the frontend ever
+  // misses an event (startup race, StrictMode churn) its list can diverge
+  // from reality with no recovery. Periodically reconcile with the actual
+  // device list; the store skips no-op updates so this causes no churn.
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const fresh = await tauri.getDevices();
+        useDeviceStore.getState().mergeDevices(fresh);
+      } catch {
+        // Ignore transient polling errors.
+      }
+    };
+    const interval = setInterval(poll, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Background reconnect for offline wireless devices.
   useEffect(() => {
     const reconnect = async () => {

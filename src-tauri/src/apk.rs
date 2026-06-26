@@ -21,7 +21,7 @@ fn extract_package_id(apk_path: &str) -> Option<String> {
     let mut manifest_file = archive.by_name("AndroidManifest.xml").ok()?;
     let mut bytes = Vec::new();
     std::io::Read::read_to_end(&mut manifest_file, &mut bytes).ok()?;
-    
+
     let doc = axmldecoder::parse(&bytes).ok()?;
     if let Some(axmldecoder::Node::Element(ref root)) = doc.get_root() {
         if root.get_tag() == "manifest" {

@@ -3,6 +3,7 @@ import { SegmentedTabs } from "./SegmentedTabs";
 import { DevicePicker } from "./DevicePicker";
 import type { Tab } from "./tabs";
 import { useLanguage } from "../../hooks/useLanguage";
+import { AppTooltip } from "../ui/Tooltip";
 
 interface TopNavProps {
   active: Tab;
@@ -39,23 +40,25 @@ export function TopNav({ active, onChange, onSettingsOpen, onOpenWireless }: Top
         <div className="flex items-center gap-1 shrink-0 rounded-[10px] bg-surface-elevated/60 p-1 shadow-[0_0_0_1px_var(--color-border)]">
           <DevicePicker />
 
-          <button
-            onClick={onOpenWireless}
-            aria-label="Wireless connect"
-            title={t.wirelessAdb}
-            className="flex h-8 w-8 items-center justify-center rounded-[6px] text-text-muted hover:text-accent hover:bg-surface-hover/60 transition-colors"
-          >
-            <Wifi size={16} strokeWidth={1.8} />
-          </button>
+          <AppTooltip content={t.wirelessAdb}>
+            <button
+              onClick={onOpenWireless}
+              aria-label="Wireless connect"
+              className="flex h-8 w-8 items-center justify-center rounded-[6px] text-text-muted hover:text-accent hover:bg-surface-hover/60 transition-colors"
+            >
+              <Wifi size={16} strokeWidth={1.8} />
+            </button>
+          </AppTooltip>
 
-          <button
-            onClick={onSettingsOpen}
-            aria-label="Settings"
-            title={t.settings}
-            className="flex h-8 w-8 items-center justify-center rounded-[6px] text-text-muted hover:text-text-primary hover:bg-surface-hover/60 transition-colors"
-          >
-            <SettingsIcon size={16} strokeWidth={1.8} />
-          </button>
+          <AppTooltip content={t.settings}>
+            <button
+              onClick={onSettingsOpen}
+              aria-label="Settings"
+              className="flex h-8 w-8 items-center justify-center rounded-[6px] text-text-muted hover:text-text-primary hover:bg-surface-hover/60 transition-colors"
+            >
+              <SettingsIcon size={16} strokeWidth={1.8} />
+            </button>
+          </AppTooltip>
         </div>
       </div>
     </header>

@@ -6,6 +6,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import type { ApkInfo } from '../types';
 import { useLanguage } from '../hooks/useLanguage';
+import { AppTooltip } from './ui/Tooltip';
 
 interface ApkDropzoneProps {
     apkInfo: ApkInfo | null;
@@ -111,13 +112,14 @@ export function ApkDropzone({ apkInfo, onApkSelected, onApkClear }: ApkDropzoneP
                             </span>
                             {apkInfo.valid && <FileCheck size={14} className="text-success" />}
                         </div>
-                        <button
-                            className="p-1.5 rounded-md hover:bg-error/10 text-text-muted hover:text-error transition-all"
-                            onClick={onApkClear}
-                            title={t.removeApk}
-                        >
-                            <X size={16} />
-                        </button>
+                        <AppTooltip content={t.removeApk}>
+                            <button
+                                className="p-1.5 rounded-md hover:bg-error/10 text-text-muted hover:text-error transition-all"
+                                onClick={onApkClear}
+                            >
+                                <X size={16} />
+                            </button>
+                        </AppTooltip>
                     </motion.div>
                 ) : (
                     <button

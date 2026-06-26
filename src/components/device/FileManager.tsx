@@ -1,5 +1,5 @@
 // File Manager - Browse and manage files on device
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import {
     Folder, File, ChevronRight, Home, RefreshCw, Upload, Download,
@@ -13,6 +13,7 @@ import { DeviceInfo } from '../../types';
 import { listContainer, listItem } from '../../lib/animations';
 import { useDeviceCache } from '../../hooks/useDeviceCache';
 import { useLanguage } from '../../hooks/useLanguage';
+import { AppTooltip } from '../ui/Tooltip';
 
 interface FileManagerProps {
     device: DeviceInfo;
@@ -44,11 +45,20 @@ export function FileManager({ device }: FileManagerProps) {
     const [newFolderMode, setNewFolderMode] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+    const requestIdRef = useRef(0);
 
     const { getCached, setData, clearCache } = useDeviceCache();
     const { t } = useLanguage();
 
     const fetchFiles = async (path: string = currentPath) => {
+        const requestId = ++requestIdRef.current;
+
+        if (device.status !== 'Device') {
+            setLoading(false);
+            setError('Device is not connected.');
+            return;
+        }
+
         const cacheKey = `files_${device.id}_${path}`;
 
         // 1. Try cache
@@ -59,6 +69,7 @@ export function FileManager({ device }: FileManagerProps) {
             setCurrentPath(path);
             if (!isStale) {
                 setLoading(false);
+                setError(null);
                 return;
             }
         }
@@ -71,22 +82,38 @@ export function FileManager({ device }: FileManagerProps) {
 
         try {
             const result = await tauri.listFilesFast(device.id, path);
+            if (requestId !== requestIdRef.current) return;
             setFiles(result);
             setCurrentPath(path);
             setData(cacheKey, result);
+            setError(null);
         } catch (e) {
+            if (requestId !== requestIdRef.current) return;
             setError(String(e));
         } finally {
+            if (requestId !== requestIdRef.current) return;
             // Ensure minimum 500ms spin
             const elapsed = Date.now() - spinStart;
             const remaining = Math.max(0, 500 - elapsed);
-            setTimeout(() => setLoading(false), remaining);
+            setTimeout(() => {
+                if (requestId === requestIdRef.current) setLoading(false);
+            }, remaining);
         }
     };
 
     useEffect(() => {
         fetchFiles();
-    }, [device.id]);
+    }, [device.id, device.status]);
+
+    useEffect(() => {
+        if (device.status !== 'Device' || !error || loading) return;
+
+        const retry = setTimeout(() => {
+            fetchFiles();
+        }, 2000);
+
+        return () => clearTimeout(retry);
+    }, [device.id, device.status, currentPath, error, loading]);
 
     const navigateTo = (path: string) => {
         fetchFiles(path);
@@ -384,18 +411,19 @@ export function FileManager({ device }: FileManagerProps) {
                                         {/* Actions */}
                                         <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                                             {!file.is_directory && (
-                                                <button
-                                                    onClick={() => handleDownload(file)}
-                                                    disabled={actionLoading === file.name}
-                                                    className="p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-accent/10 transition-all"
-                                                    title={t.download}
-                                                >
-                                                    {actionLoading === file.name ? (
-                                                        <Loader2 size={14} className="animate-spin" />
-                                                    ) : (
-                                                        <Download size={14} />
-                                                    )}
-                                                </button>
+                                                <AppTooltip content={t.download}>
+                                                    <button
+                                                        onClick={() => handleDownload(file)}
+                                                        disabled={actionLoading === file.name}
+                                                        className="p-1.5 rounded-lg text-text-muted hover:text-accent hover:bg-accent/10 transition-all"
+                                                    >
+                                                        {actionLoading === file.name ? (
+                                                            <Loader2 size={14} className="animate-spin" />
+                                                        ) : (
+                                                            <Download size={14} />
+                                                        )}
+                                                    </button>
+                                                </AppTooltip>
                                             )}
 
                                             {confirmDelete === file.name ? (
@@ -414,13 +442,14 @@ export function FileManager({ device }: FileManagerProps) {
                                                     </button>
                                                 </div>
                                             ) : (
-                                                <button
-                                                    onClick={() => setConfirmDelete(file.name)}
-                                                    className="p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-error/10 transition-all"
-                                                    title={t.delete}
-                                                >
-                                                    <Trash2 size={14} />
-                                                </button>
+                                                <AppTooltip content={t.delete}>
+                                                    <button
+                                                        onClick={() => setConfirmDelete(file.name)}
+                                                        className="p-1.5 rounded-lg text-text-muted hover:text-error hover:bg-error/10 transition-all"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </AppTooltip>
                                             )}
                                         </div>
                                     </motion.div>

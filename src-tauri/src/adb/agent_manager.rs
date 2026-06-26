@@ -1,10 +1,16 @@
 use crate::adb::executor::AdbExecutor;
 use crate::command_utils::TokioCommandExt;
 use crate::error::AppError;
+use lazy_static::lazy_static;
 use serde_json::{json, Value};
+use std::path::PathBuf;
 use std::time::Duration;
 use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
 use tokio::net::TcpStream;
+
+lazy_static! {
+    static ref AGENT_START_LOCK: tokio::sync::Mutex<()> = tokio::sync::Mutex::new(());
+}
 
 pub struct AgentManager {
     executor: AdbExecutor,
@@ -19,11 +25,51 @@ impl AgentManager {
         }
     }
 
+    fn find_agent_jar(&self) -> Result<PathBuf, AppError> {
+        let adb_path = self.executor.get_adb_path();
+        let bin_dir = adb_path.parent();
+
+        let possible_paths = [
+            bin_dir.map(|p| p.join("agent.jar")),
+            bin_dir.map(|p| p.join("binaries").join("agent.jar")),
+            bin_dir.map(|p| p.join("resources").join("binaries").join("agent.jar")),
+            std::env::current_exe().ok().and_then(|p| {
+                p.parent()?
+                    .parent()?
+                    .parent()?
+                    .join("src-tauri")
+                    .join("binaries")
+                    .join("agent.jar")
+                    .into()
+            }),
+            std::env::current_exe()
+                .ok()
+                .and_then(|p| p.parent()?.join("binaries").join("agent.jar").into()),
+            Some(
+                PathBuf::from("src-tauri")
+                    .join("binaries")
+                    .join("agent.jar"),
+            ),
+            Some(PathBuf::from("binaries").join("agent.jar")),
+            Some(PathBuf::from("android-agent").join("agent.jar")),
+        ];
+
+        possible_paths
+            .into_iter()
+            .flatten()
+            .find(|p| p.exists())
+            .ok_or_else(|| {
+                AppError::new(
+                    "AGENT_NOT_FOUND",
+                    "agent.jar not found in bundled or development paths",
+                )
+            })
+    }
+
     /// Prepare and start the agent on the specified device.
     pub async fn start_agent(&self, device_id: &str) -> Result<(), AppError> {
         // 1. Push the JAR to the device
-        // Assume the jar is in binaries folder
-        let agent_path = "binaries/agent.jar";
+        let agent_path = self.find_agent_jar()?;
 
         let adb_path = self.executor.get_adb_path();
 
@@ -34,7 +80,7 @@ impl AgentManager {
                 "-s",
                 device_id,
                 "push",
-                agent_path,
+                agent_path.to_str().unwrap_or(""),
                 "/data/local/tmp/agent.jar",
             ])
             .output()
@@ -49,7 +95,7 @@ impl AgentManager {
 
         // 2. Start the agent using app_process
         let start_cmd = format!(
-            "CLASSPATH=/data/local/tmp/agent.jar app_process / com.h1dr0n.adbcompass.Main {}",
+            "CLASSPATH=/data/local/tmp/agent.jar app_process / com.h1dr0n.adbcompass.Main {} >/dev/null 2>&1 &",
             self.port
         );
 
@@ -60,14 +106,63 @@ impl AgentManager {
             .spawn()
             .map_err(|e| AppError::from(crate::error::AdbError::ExecutionFailed(e.to_string())))?;
 
-        // 3. Setup port forwarding
+        // Give it a moment to start
+        tokio::time::sleep(Duration::from_millis(1000)).await;
+
+        Ok(())
+    }
+
+    async fn stop_agent(&self, device_id: &str) {
+        let adb_path = self.executor.get_adb_path();
+        let _ = tokio::process::Command::new(adb_path)
+            .hide_window()
+            .args([
+                "-s",
+                device_id,
+                "shell",
+                "pkill",
+                "-f",
+                "com.h1dr0n.adbcompass",
+            ])
+            .output()
+            .await;
+        tokio::time::sleep(Duration::from_millis(300)).await;
+    }
+
+    fn local_port(&self, device_id: &str) -> u16 {
+        let mut hash = 2166136261u32;
+        for byte in device_id.as_bytes() {
+            hash ^= u32::from(*byte);
+            hash = hash.wrapping_mul(16777619);
+        }
+        20000 + (hash % 30000) as u16
+    }
+
+    async fn setup_forward(&self, device_id: &str) -> Result<u16, AppError> {
+        let local_port = self.local_port(device_id);
+        let adb_path = self.executor.get_adb_path();
+
+        // Drop stale host-side forwards first. This is local to the chosen
+        // computed port, so one device cannot poison the next app launch.
+        let _ = tokio::process::Command::new(adb_path.clone())
+            .hide_window()
+            .args([
+                "-s",
+                device_id,
+                "forward",
+                "--remove",
+                &format!("tcp:{}", local_port),
+            ])
+            .output()
+            .await;
+
         let forward_output = tokio::process::Command::new(adb_path)
             .hide_window()
             .args([
                 "-s",
                 device_id,
                 "forward",
-                &format!("tcp:{}", self.port),
+                &format!("tcp:{}", local_port),
                 &format!("tcp:{}", self.port),
             ])
             .output()
@@ -80,39 +175,90 @@ impl AgentManager {
             )));
         }
 
-        // Give it a moment to start
-        tokio::time::sleep(Duration::from_millis(1500)).await;
+        Ok(local_port)
+    }
 
-        Ok(())
+    async fn connect_local(
+        &self,
+        local_port: u16,
+        timeout: Duration,
+    ) -> Result<TcpStream, AppError> {
+        let addr = format!("127.0.0.1:{}", local_port);
+        tokio::time::timeout(timeout, TcpStream::connect(&addr))
+            .await
+            .map_err(|_| {
+                AppError::from(crate::error::AdbError::ExecutionFailed(
+                    "Timed out connecting to agent".to_string(),
+                ))
+            })?
+            .map_err(|e| {
+                AppError::from(crate::error::AdbError::ExecutionFailed(format!(
+                    "Socket connect failed: {}",
+                    e
+                )))
+            })
+    }
+
+    async fn probe_local(&self, local_port: u16) -> bool {
+        let mut stream = match self
+            .connect_local(local_port, Duration::from_millis(800))
+            .await
+        {
+            Ok(stream) => stream,
+            Err(_) => return false,
+        };
+
+        if stream
+            .write_all(b"{\"type\":\"PING\",\"data\":{}}\n")
+            .await
+            .is_err()
+        {
+            return false;
+        }
+
+        let mut reader = BufReader::new(stream);
+        let mut response = String::new();
+        match tokio::time::timeout(Duration::from_millis(800), reader.read_line(&mut response))
+            .await
+        {
+            Ok(Ok(bytes)) if bytes > 0 => response.contains("\"status\":\"PONG\""),
+            _ => false,
+        }
     }
 
     /// Ensures the agent is running and connected. If not, attempts to start it.
     async fn ensure_agent(&self, device_id: &str) -> Result<TcpStream, AppError> {
-        let addr = format!("127.0.0.1:{}", self.port);
+        let local_port = self.setup_forward(device_id).await?;
 
-        // Try to connect first
-        match tokio::time::timeout(Duration::from_secs(1), TcpStream::connect(&addr)).await {
-            Ok(Ok(stream)) => Ok(stream),
-            _ => {
-                // Connection failed, try to start the agent
-                self.start_agent(device_id).await?;
-
-                // Try to connect again after starting
-                tokio::time::timeout(Duration::from_secs(2), TcpStream::connect(&addr))
-                    .await
-                    .map_err(|_| {
-                        AppError::from(crate::error::AdbError::ExecutionFailed(
-                            "Failed to connect to agent after start timeout".to_string(),
-                        ))
-                    })?
-                    .map_err(|e| {
-                        AppError::from(crate::error::AdbError::ExecutionFailed(format!(
-                            "Socket connect failed after agent start: {}",
-                            e
-                        )))
-                    })
-            }
+        if self.probe_local(local_port).await {
+            return self
+                .connect_local(local_port, Duration::from_millis(800))
+                .await;
         }
+
+        let _guard = AGENT_START_LOCK.lock().await;
+        let local_port = self.setup_forward(device_id).await?;
+        if self.probe_local(local_port).await {
+            return self
+                .connect_local(local_port, Duration::from_millis(800))
+                .await;
+        }
+
+        self.stop_agent(device_id).await;
+        self.start_agent(device_id).await?;
+        let local_port = self.setup_forward(device_id).await?;
+        for _ in 0..5 {
+            if self.probe_local(local_port).await {
+                return self
+                    .connect_local(local_port, Duration::from_millis(800))
+                    .await;
+            }
+            tokio::time::sleep(Duration::from_millis(400)).await;
+        }
+
+        Err(AppError::from(crate::error::AdbError::ExecutionFailed(
+            "Agent did not respond to PING after start".to_string(),
+        )))
     }
 
     /// Send a command to the agent and receive a response.

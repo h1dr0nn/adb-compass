@@ -6,6 +6,7 @@ import { useDeviceStore } from '../stores/deviceStore';
 import { QuickActionMenu } from './device/QuickActionMenu';
 import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
+import { AppTooltip } from './ui/Tooltip';
 
 interface CommandHistory {
     command: string;
@@ -191,15 +192,16 @@ export function TerminalView() {
                     </button>
 
                     {/* Clear Button */}
-                    <button
-                        onClick={clearHistory}
-                        disabled={history.length === 0}
-                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-all text-sm font-medium disabled:opacity-50 cursor-pointer"
-                        title="Clear terminal history"
-                    >
-                        <Trash2 size={14} />
-                        <span>Clear</span>
-                    </button>
+                    <AppTooltip content="Clear terminal history">
+                        <button
+                            onClick={clearHistory}
+                            disabled={history.length === 0}
+                            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-all text-sm font-medium disabled:opacity-50 cursor-pointer"
+                        >
+                            <Trash2 size={14} />
+                            <span>Clear</span>
+                        </button>
+                    </AppTooltip>
                 </div>
 
                 <div className="flex-1" />

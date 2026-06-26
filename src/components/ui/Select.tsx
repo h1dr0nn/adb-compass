@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Check, X } from 'lucide-react';
+import { AppTooltip } from './Tooltip';
 
 interface SelectOption {
     value: string;
@@ -101,16 +102,17 @@ export function Select({ options, value, onChange, placeholder = "Select...", cl
                                         <Check size={14} className="shrink-0 ml-2" />
                                     ) : (
                                         option.onRemove && (
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    option.onRemove?.();
-                                                }}
-                                                className="p-0.5 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover shrink-0 transition-colors ml-2 cursor-pointer"
-                                                title="Remove device"
-                                            >
-                                                <X size={13} />
-                                            </button>
+                                            <AppTooltip content="Remove device">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        option.onRemove?.();
+                                                    }}
+                                                    className="p-0.5 rounded text-text-muted hover:text-text-primary hover:bg-surface-hover shrink-0 transition-colors ml-2 cursor-pointer"
+                                                >
+                                                    <X size={13} />
+                                                </button>
+                                            </AppTooltip>
                                         )
                                     )}
                                 </div>
