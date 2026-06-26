@@ -85,24 +85,6 @@ pub fn get_binaries() -> Vec<BinaryStatus> {
         detail: agent_ok.then(|| "Lodestar agent version 1.0.0".to_string()),
     });
 
-    // Native ADB helper DLLs. No version info available, so the UI shows a
-    // uniform status badge.
-    let dlls = [
-        ("AdbWinApi", "AdbWinApi.dll"),
-        ("AdbWinUsbApi", "AdbWinUsbApi.dll"),
-    ];
-    for (label, file) in dlls {
-        let exists = bin_dir
-            .as_ref()
-            .map(|d| d.join(file).exists())
-            .unwrap_or(false);
-        out.push(BinaryStatus {
-            name: label.into(),
-            ok: exists,
-            detail: None,
-        });
-    }
-
     // scrcpy-server.jar lives in the resources dir; probe a few candidates.
     let scrcpy_exists = bin_dir
         .as_ref()
@@ -116,9 +98,9 @@ pub fn get_binaries() -> Vec<BinaryStatus> {
         })
         .unwrap_or(false);
     out.push(BinaryStatus {
-        name: "scrcpy-server".into(),
+        name: "Scrcpy Server".into(),
         ok: scrcpy_exists,
-        detail: None,
+        detail: scrcpy_exists.then(|| "Scrcpy server version 2.7".to_string()),
     });
 
     out

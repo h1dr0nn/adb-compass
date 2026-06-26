@@ -13,6 +13,7 @@ import {
   Power,
 } from "lucide-react";
 import { useDeviceStore } from "../../stores/deviceStore";
+import { useLanguage } from "../../hooks/useLanguage";
 
 interface MenuDropdownProps {
   onOpenSettings: () => void;
@@ -21,6 +22,7 @@ interface MenuDropdownProps {
 
 /** Titlebar hamburger menu with app-level actions. */
 export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownProps) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -28,8 +30,17 @@ export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownPro
     const onClick = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
+    const onBlurOrResize = () => setOpen(false);
+
     document.addEventListener("mousedown", onClick);
-    return () => document.removeEventListener("mousedown", onClick);
+    window.addEventListener("blur", onBlurOrResize);
+    window.addEventListener("resize", onBlurOrResize);
+
+    return () => {
+      document.removeEventListener("mousedown", onClick);
+      window.removeEventListener("blur", onBlurOrResize);
+      window.removeEventListener("resize", onBlurOrResize);
+    };
   }, []);
 
   const close = () => setOpen(false);
@@ -43,7 +54,7 @@ export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownPro
           description: "Open Settings to install.",
         });
       } else {
-        toast.success("You are up to date");
+        toast.success(t.latestVersion || "You are up to date");
       }
     } catch {
       toast.error("Update check failed");
@@ -53,7 +64,7 @@ export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownPro
   const items = [
     {
       icon: <RefreshCw size={15} />,
-      label: "Refresh devices",
+      label: t.refreshDevices || "Refresh devices",
       action: () => {
         close();
         useDeviceStore.getState().refreshDevices();
@@ -61,7 +72,7 @@ export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownPro
     },
     {
       icon: <Wifi size={15} />,
-      label: "Wireless connect",
+      label: t.wirelessAdb || "Wireless connect",
       action: () => {
         close();
         onOpenWireless();
@@ -69,7 +80,7 @@ export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownPro
     },
     {
       icon: <SettingsIcon size={15} />,
-      label: "Settings",
+      label: t.settings || "Settings",
       action: () => {
         close();
         onOpenSettings();
@@ -77,12 +88,12 @@ export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownPro
     },
     {
       icon: <DownloadCloud size={15} />,
-      label: "Check for updates",
+      label: t.checkUpdates || "Check for updates",
       action: checkUpdates,
     },
     {
       icon: <RotateCw size={15} />,
-      label: "Reload window",
+      label: t.reloadWindow || "Reload window",
       action: () => {
         close();
         window.location.reload();
@@ -90,7 +101,7 @@ export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownPro
     },
     {
       icon: <Power size={15} />,
-      label: "Quit",
+      label: t.quit || "Quit",
       action: () => {
         close();
         getCurrentWindow().close();

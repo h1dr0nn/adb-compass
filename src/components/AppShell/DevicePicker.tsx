@@ -12,6 +12,7 @@ export function DevicePicker() {
   const options = devices.map((d) => ({
     value: d.id,
     label: d.model || d.id,
+    disabled: d.status !== "Device",
     icon: (
       <Smartphone
         size={14}
