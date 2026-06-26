@@ -109,6 +109,8 @@ pub async fn get_logcat(
         "-s".to_string(),
         device_id,
         "logcat".to_string(),
+        "-v".to_string(),
+        "threadtime".to_string(),
         "-d".to_string(),
         "-t".to_string(),
         lines.to_string(),

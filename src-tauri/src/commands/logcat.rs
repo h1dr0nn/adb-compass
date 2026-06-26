@@ -46,7 +46,7 @@ pub async fn start_logcat_stream<R: Runtime>(
     }
 
     let mut child = hidden_command(adb_path)
-        .args(["-s", &device_id, "logcat", "-v", "time"])
+        .args(["-s", &device_id, "logcat", "-v", "threadtime", "-T", "10"])
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()

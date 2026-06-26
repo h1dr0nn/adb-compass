@@ -179,10 +179,7 @@ function AppContent() {
         <Toaster
           position="bottom-right"
           theme={resolvedTheme === "dark" ? "dark" : "light"}
-          toastOptions={{
-            className:
-              "bg-surface-card border border-border text-text-primary shadow-xl",
-          }}
+          closeButton
         />
       </div>
     </Tooltip.Provider>

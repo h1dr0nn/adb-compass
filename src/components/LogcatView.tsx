@@ -160,7 +160,7 @@ export function LogcatView() {
   const [foregroundPackage, setForegroundPackage] = useState<string | null>(null);
   const [appPids, setAppPids] = useState<Record<string, string[]>>({});
   const [appLabels, setAppLabels] = useState<Record<string, string>>({});
-  const [selectedApp, setSelectedApp] = useState<string>("foreground");
+  const [selectedApp, setSelectedApp] = useState<string>("all");
   const [appVersion, setAppVersion] = useState("");
 
   useEffect(() => {
@@ -265,6 +265,7 @@ export function LogcatView() {
   const selectedDeviceRef = useRef<string>("");
   const pausedRef = useRef(false);
   const logBufferRef = useRef<LogLine[]>([]);
+  const incomingBufferRef = useRef<LogLine[]>([]);
   const maxLinesRef = useRef(1000);
   const isAtBottomRef = useRef(true);
 
@@ -303,7 +304,26 @@ export function LogcatView() {
   useEffect(() => {
     setLogLines([]);
     logBufferRef.current = [];
+    incomingBufferRef.current = [];
     logCounter.current = 0;
+  }, [selectedDevice]);
+
+  // Periodically flush incoming logs to state (every 250ms) to throttle updates and prevent UI freezing.
+  useEffect(() => {
+    if (!selectedDevice) return;
+
+    const interval = setInterval(() => {
+      if (incomingBufferRef.current.length > 0 && !pausedRef.current) {
+        const buffered = [...incomingBufferRef.current];
+        incomingBufferRef.current = [];
+        setLogLines((prev) => {
+          const updated = [...prev, ...buffered];
+          return updated.slice(-maxLinesRef.current);
+        });
+      }
+    }, 250);
+
+    return () => clearInterval(interval);
   }, [selectedDevice]);
 
   // Streaming logic linked to selectedDevice
@@ -338,10 +358,10 @@ export function LogcatView() {
                 logBufferRef.current = logBufferRef.current.slice(-5000);
               }
             } else {
-              setLogLines((prev) => {
-                const updated = [...prev, ...newLines];
-                return updated.slice(-maxLinesRef.current);
-              });
+              incomingBufferRef.current.push(...newLines);
+              if (incomingBufferRef.current.length > maxLinesRef.current) {
+                incomingBufferRef.current = incomingBufferRef.current.slice(-maxLinesRef.current);
+              }
             }
           }
         );
