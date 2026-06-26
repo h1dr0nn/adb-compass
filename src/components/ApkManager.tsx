@@ -7,30 +7,21 @@ import * as tauri from '../lib/tauri';
 import type { ApkInfo } from '../types';
 import { ApkDropzone } from './ApkDropzone';
 import { useLanguage } from '../hooks/useLanguage';
+import { useApkStore } from '../stores/apkStore';
 
-interface ApkManagerProps {
-    apkInfo: ApkInfo | null;
-    onSelect: (path: string) => void;
-    onClear: () => void;
-    onScan: (path: string) => Promise<ApkInfo[]>;
-    onSelectFromList: (info: ApkInfo) => void;
-}
-
-export function ApkManager({
-    apkInfo,
-    onClear,
-    onScan,
-    onSelectFromList,
-}: ApkManagerProps) {
+export function ApkManager() {
     const { t } = useLanguage();
 
-    // Folder state
-    const [folderPath, setFolderPath] = useState<string | null>(null);
-    const [scannedApks, setScannedApks] = useState<ApkInfo[]>([]);
-    const [scanning, setScanning] = useState(false);
+    const apkInfo = useApkStore((s) => s.apkInfo);
+    const folderPath = useApkStore((s) => s.folderPath);
+    const scannedApks = useApkStore((s) => s.scannedApks);
+    const manualApks = useApkStore((s) => s.manualApks);
+    const clearApk = useApkStore((s) => s.clearApk);
+    const scanFolder = useApkStore((s) => s.scanFolder);
+    const setApkFromList = useApkStore((s) => s.setApkFromList);
+    const setManualApks = useApkStore((s) => s.setManualApks);
 
-    // Manual APK state
-    const [manualApks, setManualApks] = useState<ApkInfo[]>([]);
+    const [scanning, setScanning] = useState(false);
 
     const handleSelectFolder = async () => {
         try {
@@ -39,7 +30,6 @@ export function ApkManager({
                 multiple: false,
             });
             if (selected && typeof selected === 'string') {
-                setFolderPath(selected);
                 handleScan(selected);
             }
         } catch (error) {
@@ -50,11 +40,10 @@ export function ApkManager({
     const handleScan = async (path: string) => {
         setScanning(true);
         try {
-            const [apks] = await Promise.all([
-                onScan(path),
+            await Promise.all([
+                scanFolder(path),
                 new Promise(resolve => setTimeout(resolve, 500))
             ]);
-            setScannedApks(apks);
         } finally {
             setScanning(false);
         }
@@ -65,7 +54,7 @@ export function ApkManager({
             // Check manual list for duplicates
             if (manualApks.some(a => a.path === path)) {
                 const existing = manualApks.find(a => a.path === path);
-                if (existing) onSelectFromList(existing);
+                if (existing) setApkFromList(existing);
                 return;
             }
 
@@ -73,16 +62,13 @@ export function ApkManager({
             const info = await tauri.validateApk(path);
 
             if (info && info.valid) {
-                setManualApks(prev => [...prev, info]);
-                onSelectFromList(info);
+                setManualApks([...manualApks, info]);
+                setApkFromList(info);
             }
         } catch (e) {
             console.error("Failed to add manual apk", e);
         }
     };
-
-    // Derived combined logic or separate? text says: "apk of folder displays below select folder... add manual apk displays below Select Apk"
-    // So distinct lists.
 
     return (
         <div className="flex flex-col h-full overflow-hidden">
@@ -130,9 +116,9 @@ export function ApkManager({
                                             isSelected={apkInfo?.path === apk.path}
                                             onSelect={() => {
                                                 if (apkInfo?.path === apk.path) {
-                                                    onClear();
+                                                    clearApk();
                                                 } else {
-                                                    onSelectFromList(apk);
+                                                    setApkFromList(apk);
                                                 }
                                             }}
                                         />
@@ -159,14 +145,14 @@ export function ApkManager({
                                             isSelected={apkInfo?.path === apk.path}
                                             onSelect={() => {
                                                 if (apkInfo?.path === apk.path) {
-                                                    onClear();
+                                                    clearApk();
                                                 } else {
-                                                    onSelectFromList(apk);
+                                                    setApkFromList(apk);
                                                 }
                                             }}
                                             onRemove={() => {
-                                                setManualApks(prev => prev.filter(a => a.path !== apk.path));
-                                                if (apkInfo?.path === apk.path) onClear();
+                                                setManualApks(manualApks.filter(a => a.path !== apk.path));
+                                                if (apkInfo?.path === apk.path) clearApk();
                                             }}
                                         />
                                     ))}
@@ -227,7 +213,6 @@ function ApkListItem({ apk, isSelected, onSelect, onRemove }: { apk: ApkInfo, is
                     className="absolute right-2 top-2 p-1 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
                     title={t.removeFromList}
                 >
-                    {/* Reuse Lucide X icon properly imported */}
                     <X size={14} />
                 </button>
             )}

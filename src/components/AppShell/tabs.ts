@@ -23,14 +23,14 @@ export const tabs: TabMeta[] = [
     id: "logcat",
     label: "Logcat",
     icon: ScrollText,
-    title: "Live Logcat",
-    subtitle: "Stream, filter and export device logs in real time",
+    title: "",
+    subtitle: "",
   },
   {
     id: "terminal",
     label: "Terminal",
     icon: TerminalSquare,
-    title: "ADB Shell",
-    subtitle: "Run shell commands directly against the selected device",
+    title: "",
+    subtitle: "",
   },
 ];

@@ -250,7 +250,7 @@ code {
   top: calc(32px + 8px);
   left: 8px;
   right: 8px;
-  height: 64px;
+  height: 66px;
   /* visible so the device picker dropdown can escape the bar */
   overflow: visible;
   z-index: 20;
@@ -258,7 +258,7 @@ code {
 
 .app-shell__main {
   position: fixed;
-  top: calc(32px + 8px + 64px + 8px);
+  top: calc(32px + 8px + 66px + 8px);
   left: 8px;
   right: 8px;
   bottom: 8px;

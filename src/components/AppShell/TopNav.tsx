@@ -22,7 +22,7 @@ export function TopNav({ active, onChange, onSettingsOpen, onOpenWireless }: Top
         <SegmentedTabs active={active} onChange={onChange} />
       </div>
 
-      <div className="flex items-center justify-between px-3 h-full gap-6">
+      <div className="flex items-center justify-between p-3 h-full gap-6">
         <div className="flex items-center gap-3 shrink-0">
           <img src="/icon.png" alt="" className="w-9 h-9 rounded-[10px] shadow-md" />
           <div className="flex flex-col leading-tight">
@@ -36,14 +36,14 @@ export function TopNav({ active, onChange, onSettingsOpen, onOpenWireless }: Top
         </div>
 
         {/* Right cluster with its own subtle backing surface */}
-        <div className="flex items-center gap-1 shrink-0 rounded-[12px] bg-surface-elevated/60 p-1 shadow-[0_0_0_1px_var(--color-border)]">
+        <div className="flex items-center gap-1 shrink-0 rounded-[10px] bg-surface-elevated/60 p-1 shadow-[0_0_0_1px_var(--color-border)]">
           <DevicePicker />
 
           <button
             onClick={onOpenWireless}
             aria-label="Wireless connect"
             title={t.wirelessAdb}
-            className="flex h-8 w-8 items-center justify-center rounded-[9px] text-text-muted hover:text-accent hover:bg-surface-hover/60 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-[6px] text-text-muted hover:text-accent hover:bg-surface-hover/60 transition-colors"
           >
             <Wifi size={16} strokeWidth={1.8} />
           </button>
@@ -52,7 +52,7 @@ export function TopNav({ active, onChange, onSettingsOpen, onOpenWireless }: Top
             onClick={onSettingsOpen}
             aria-label="Settings"
             title={t.settings}
-            className="flex h-8 w-8 items-center justify-center rounded-[9px] text-text-muted hover:text-text-primary hover:bg-surface-hover/60 transition-colors"
+            className="flex h-8 w-8 items-center justify-center rounded-[6px] text-text-muted hover:text-text-primary hover:bg-surface-hover/60 transition-colors"
           >
             <SettingsIcon size={16} strokeWidth={1.8} />
           </button>

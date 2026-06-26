@@ -1,9 +1,11 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, Loader2, Trash2, Command, ChevronRight, Sparkles } from 'lucide-react';
+import { Terminal, Loader2, Trash2, Command, ChevronRight, Sparkles, Download } from 'lucide-react';
 import * as tauri from '../lib/tauri';
 import { useDeviceStore } from '../stores/deviceStore';
 import { QuickActionMenu } from './device/QuickActionMenu';
+import { save } from "@tauri-apps/plugin-dialog";
+import { toast } from "sonner";
 
 interface CommandHistory {
     command: string;
@@ -144,6 +146,29 @@ export function TerminalView() {
         setHistory([]);
     };
 
+    const handleExport = async () => {
+        try {
+            const content = history
+                .map((item) => `$ ${item.command}\n${item.output || "(no output)"}`)
+                .join("\n\n");
+            
+            const path = await save({
+                filters: [{ name: "Log", extensions: ["log", "txt"] }],
+                defaultPath: `terminal_history_${selectedDevice}_${new Date().getTime()}.log`,
+            });
+
+            if (path) {
+                await tauri.saveCaptureFile({
+                    path,
+                    content: btoa(unescape(encodeURIComponent(content))),
+                });
+                toast.success("Terminal history exported successfully");
+            }
+        } catch (err) {
+            toast.error("Failed to export terminal history");
+        }
+    };
+
     return (
         <motion.div
             className="flex flex-col h-full"
@@ -153,19 +178,34 @@ export function TerminalView() {
         >
             {/* Controls */}
             <div className="flex items-center gap-3 mb-4">
+                {/* Left Aligned Actions */}
+                <div className="flex items-center gap-2">
+                    {/* Export Button */}
+                    <button
+                        onClick={handleExport}
+                        disabled={history.length === 0}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-text-primary transition-all text-sm font-medium disabled:opacity-50 cursor-pointer"
+                    >
+                        <Download size={14} />
+                        <span>Export</span>
+                    </button>
+
+                    {/* Clear Button */}
+                    <button
+                        onClick={clearHistory}
+                        disabled={history.length === 0}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-all text-sm font-medium disabled:opacity-50 cursor-pointer"
+                        title="Clear terminal history"
+                    >
+                        <Trash2 size={14} />
+                        <span>Clear</span>
+                    </button>
+                </div>
+
                 <div className="flex-1" />
 
-                {selectedDevice && (
-                    <QuickActionMenu deviceId={selectedDevice} />
-                )}
-
-                <button
-                    onClick={clearHistory}
-                    className="p-2 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-all"
-                    title="Clear history"
-                >
-                    <Trash2 size={20} />
-                </button>
+                {/* Right Aligned Quick Actions */}
+                <QuickActionMenu deviceId={selectedDevice} />
             </div>
 
             {/* Output Area */}

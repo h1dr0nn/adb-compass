@@ -5,6 +5,7 @@ import { CheckCircle2, XCircle, ChevronDown, Zap } from 'lucide-react';
 import * as tauri from '../lib/tauri';
 import type { RequirementCheck } from '../types';
 import { useLanguage } from '../hooks/useLanguage';
+import { useDeviceCache } from '../hooks/useDeviceCache';
 
 interface ActionRequirementsChecklistProps {
     deviceId: string;
@@ -18,6 +19,7 @@ export function ActionRequirementsChecklist({ deviceId, isAuthorized, expanded, 
     const [loading, setLoading] = useState(true); // Start true to prevent flash
     const [hasChecked, setHasChecked] = useState(false);
     const { t } = useLanguage();
+    const { getCached, setData } = useDeviceCache();
 
     useEffect(() => {
         if (isAuthorized) {
@@ -26,15 +28,28 @@ export function ActionRequirementsChecklist({ deviceId, isAuthorized, expanded, 
     }, [deviceId, isAuthorized]);
 
     const checkRequirements = async () => {
-        setLoading(true);
+        const cacheKey = `action_requirements_${deviceId}`;
+        const { data, isStale } = getCached<RequirementCheck[]>(cacheKey, 30000); // 30s cache
+
+        if (data) {
+            setRequirements(data);
+            setHasChecked(true);
+            setLoading(false);
+            if (!isStale) {
+                return;
+            }
+        }
+
+        if (!data) setLoading(true);
         try {
             const checks = await tauri.checkActionRequirements(deviceId);
             setRequirements(checks);
+            setData(cacheKey, checks);
+            setHasChecked(true);
         } catch (error) {
             console.error('Failed to check action requirements:', error);
         } finally {
             setLoading(false);
-            setHasChecked(true);
         }
     };
 

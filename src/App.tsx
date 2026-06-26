@@ -5,10 +5,10 @@ import { Toaster } from "sonner";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { MirrorWindow } from "./components/modals/MirrorWindow";
 import { useDevices } from "./hooks/useDevices";
-import { useApk } from "./hooks/useApk";
 import { useTheme } from "./hooks/useTheme";
 import { useThemeSync } from "./hooks/useThemeSync";
 import { useDeviceSync } from "./hooks/useDeviceSync";
+import { useLanguage } from "./hooks/useLanguage";
 import { TitleBar } from "./components/AppShell/TitleBar";
 import { TopNav } from "./components/AppShell/TopNav";
 import { PageHeader } from "./components/AppShell/PageHeader";
@@ -16,14 +16,14 @@ import { CommandPalette } from "./components/AppShell/CommandPalette";
 import type { Tab } from "./components/AppShell/tabs";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
-import { DeviceList } from "./components/DeviceList";
 import { Settings } from "./components/Settings";
 import { LogcatView } from "./components/LogcatView";
 import { TerminalView } from "./components/TerminalView";
 import { DeviceDetailView } from "./components/DeviceDetailView";
 import { ManualConnectModal } from "./components/modals/ManualConnectModal";
 import { WirelessConnectModal } from "./components/modals/WirelessConnectModal";
-import type { DeviceInfo } from "./types";
+import { Smartphone } from "lucide-react";
+import { useDeviceStore } from "./stores/deviceStore";
 import "./components/AppShell/titlebar.css";
 
 const fadeView = {
@@ -34,8 +34,8 @@ const fadeView = {
 };
 
 function AppContent() {
-  const { devices, loading, error, refreshDevices, removeDevice } = useDevices();
-  const { apkInfo, selectApk, clearApk, scanFolder, setApkFromList } = useApk();
+  const { devices } = useDevices();
+  const { t } = useLanguage();
   const { resolvedTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState<Tab>("devices");
@@ -43,7 +43,9 @@ function AppContent() {
   const [showManualConnect, setShowManualConnect] = useState(false);
   const [showWireless, setShowWireless] = useState(false);
   const [showPalette, setShowPalette] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<DeviceInfo | null>(null);
+  
+  const selectedDeviceId = useDeviceStore((s) => s.selectedDeviceId);
+  const activeDevice = devices.find((d) => d.id === selectedDeviceId);
 
   // Mount global side effects once.
   useDeviceSync();
@@ -62,16 +64,10 @@ function AppContent() {
 
   const handleTabChange = (tab: Tab) => {
     setShowSettings(false);
-    setSelectedDevice(null);
     setActiveTab(tab);
   };
 
-  const handleDeviceSelect = (device: DeviceInfo) => {
-    setShowSettings(false);
-    setSelectedDevice(device);
-  };
-
-  const showPageHeader = !showSettings && !selectedDevice;
+  const showPageHeader = !showSettings;
 
   return (
     <Tooltip.Provider delayDuration={300} skipDelayDuration={150}>
@@ -81,7 +77,6 @@ function AppContent() {
       <TitleBar
         onSearch={() => setShowPalette(true)}
         onOpenSettings={() => {
-          setSelectedDevice(null);
           setShowSettings(true);
         }}
         onOpenWireless={() => setShowWireless(true)}
@@ -92,7 +87,6 @@ function AppContent() {
             active={activeTab}
             onChange={handleTabChange}
             onSettingsOpen={() => {
-              setSelectedDevice(null);
               setShowSettings(true);
             }}
             onOpenWireless={() => setShowWireless(true)}
@@ -107,7 +101,7 @@ function AppContent() {
               </div>
             )}
 
-            <div className="flex-1 overflow-hidden px-6 pb-6">
+            <div className="flex-1 overflow-hidden px-3 pb-3">
               <div className="h-full rounded-[12px] overflow-hidden flex flex-col">
                 <AnimatePresence mode="wait">
                   {showSettings ? (
@@ -122,35 +116,28 @@ function AppContent() {
                     <motion.div key="terminal" className="h-full" {...fadeView}>
                       <TerminalView />
                     </motion.div>
-                  ) : selectedDevice ? (
-                    <motion.div key="device-detail" className="h-full" {...fadeView}>
-                      <DeviceDetailView
-                        device={selectedDevice}
-                        onBack={() => setSelectedDevice(null)}
-                      />
-                    </motion.div>
                   ) : (
-                    <motion.div key="devices" className="h-full flex min-h-0" {...fadeView}>
-                      <Sidebar
-                        apkInfo={apkInfo}
-                        onSelectApk={selectApk}
-                        onClearApk={clearApk}
-                        onScanApk={scanFolder}
-                        onSelectApkFromList={setApkFromList}
-                        onOpenSettings={() => setShowSettings(true)}
-                      />
-                      <div className="flex-1 min-w-0 overflow-y-auto custom-scrollbar pl-4">
-                        <DeviceList
-                          devices={devices}
-                          loading={loading}
-                          error={error}
-                          apkInfo={apkInfo}
-                          onRefresh={refreshDevices}
-                          onDeviceSelect={handleDeviceSelect}
-                          onRemove={removeDevice}
-                          onAddDevice={() => setShowManualConnect(true)}
-                        />
-                      </div>
+                    <motion.div key="devices" className="h-full flex gap-3 min-h-0" {...fadeView}>
+                      <Sidebar />
+                      {activeDevice ? (
+                        <div className="flex-1 min-w-0 bg-surface-card border border-border rounded-[12px] p-4 overflow-hidden flex flex-col">
+                          <DeviceDetailView device={activeDevice} />
+                        </div>
+                      ) : (
+                        <div className="flex-1 min-w-0 flex items-center justify-center bg-surface-card border border-border rounded-[12px] p-6">
+                          <div className="flex flex-col items-center justify-center max-w-sm text-center">
+                            <Smartphone size={64} className="text-text-muted opacity-40 animate-pulse mb-4" />
+                            <h3 className="text-lg font-semibold mb-1 text-text-secondary">{t.noDevices}</h3>
+                            <p className="text-text-muted text-sm mb-6">{t.connectDevices || 'Connect a device via USB or Wi-Fi to get started.'}</p>
+                            <button
+                              onClick={() => setShowManualConnect(true)}
+                              className="px-4 py-2 bg-accent text-white hover:bg-accent-secondary rounded-lg transition-colors text-sm font-medium shadow-md cursor-pointer"
+                            >
+                              {t.connectViaIp || 'Connect via IP'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </motion.div>
                   )}
                 </AnimatePresence>

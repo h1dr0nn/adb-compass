@@ -25,8 +25,8 @@ export function Select({ options, value, onChange, placeholder = "Select...", cl
 
     const selectedOption = options.find(opt => opt.value === value);
     // sm matches the 9px header buttons; md matches the 8px modal buttons/inputs.
-    const triggerSize = size === "sm" ? "h-8 px-2.5 text-[13px] rounded-[9px]" : "px-3 py-2 text-sm rounded-lg";
-    const dropdownRadius = size === "sm" ? "rounded-[9px]" : "rounded-lg";
+    const triggerSize = size === "sm" ? "h-8 px-2.5 text-[13px] rounded-[6px]" : "px-3 py-2 text-sm rounded-lg";
+    const dropdownRadius = size === "sm" ? "rounded-[8px]" : "rounded-lg";
     const optionSize = size === "sm" ? "px-2.5 py-2 text-[13px] rounded-[6px]" : "px-3 py-2 text-sm rounded-[6px]";
 
     useEffect(() => {

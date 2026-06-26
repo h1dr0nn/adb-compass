@@ -1,51 +1,108 @@
+import { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { History, X } from 'lucide-react';
 import { ApkManager } from './ApkManager';
 import { useLanguage } from '../hooks/useLanguage';
-import type { ApkInfo } from '../types';
-import { Settings } from 'lucide-react';
+import { useApkStore } from '../stores/apkStore';
 
-interface SidebarProps {
-    apkInfo: ApkInfo | null;
-    onSelectApk: (path: string) => void;
-    onClearApk: () => void;
-    onScanApk: (path: string) => Promise<ApkInfo[]>;
-    onSelectApkFromList: (info: ApkInfo) => void;
-    onOpenSettings: () => void;
-}
-
-export function Sidebar({
-    apkInfo,
-    onSelectApk,
-    onClearApk,
-    onScanApk,
-    onSelectApkFromList,
-    onOpenSettings,
-}: SidebarProps) {
+export function Sidebar() {
     const { t } = useLanguage();
+    const folderHistory = useApkStore((s) => s.folderHistory);
+    const removeFromHistory = useApkStore((s) => s.removeFromHistory);
+    const scanFolder = useApkStore((s) => s.scanFolder);
+
+    const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+    const dropdownRef = useRef<HTMLDivElement>(null);
+
+    // Handle clicking outside to close history dropdown
+    useEffect(() => {
+        if (!isHistoryOpen) return;
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsHistoryOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [isHistoryOpen]);
 
     return (
-        <aside className="w-80 border-r border-border bg-surface-bg flex flex-col z-20">
+        <aside className="w-80 border border-border bg-surface-bg rounded-[12px] overflow-hidden flex flex-col z-20">
             {/* APK Manager Section - Flexible Height */}
-            <div className="flex-1 px-4 py-4 min-h-0 overflow-hidden flex flex-col">
-                <div className="flex items-center justify-between mb-3 px-2">
+            <div className="flex-1 p-3 min-h-0 overflow-hidden flex flex-col">
+                <div className="flex items-center justify-between mb-3 px-1 relative">
                     <div className="text-sm font-bold text-text-muted uppercase tracking-wider">
                         {t.library}
                     </div>
-                    <button
-                        onClick={onOpenSettings}
-                        className="text-text-muted hover:text-text-primary transition-colors p-1.5 rounded-md hover:bg-surface-elevated"
-                        title={t.settings}
-                    >
-                        <Settings size={18} />
-                    </button>
+                    <div className="relative">
+                        <button
+                            onClick={() => setIsHistoryOpen(!isHistoryOpen)}
+                            className="text-text-muted hover:text-text-primary transition-colors p-1.5 rounded-md hover:bg-surface-elevated cursor-pointer"
+                            title="Folder History"
+                        >
+                            <History size={18} />
+                        </button>
+
+                        <AnimatePresence>
+                            {isHistoryOpen && (
+                                <motion.div
+                                    ref={dropdownRef}
+                                    initial={{ opacity: 0, y: -8 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -8 }}
+                                    transition={{ duration: 0.15 }}
+                                    className="absolute right-0 top-10 w-72 bg-surface-card border border-border rounded-xl shadow-xl z-50 p-2 flex flex-col max-h-64 overflow-y-auto custom-scrollbar"
+                                >
+                                    <div className="text-[10px] font-bold text-text-muted uppercase tracking-wider px-2 py-1 border-b border-border/50 mb-1">
+                                        Scanned Folders
+                                    </div>
+                                    {folderHistory.length === 0 ? (
+                                        <div className="text-text-muted text-xs p-3 text-center italic">
+                                            No folder history
+                                        </div>
+                                    ) : (
+                                        <div className="flex flex-col gap-0.5">
+                                            {folderHistory.map((path) => {
+                                                const name = path.split(/[\\/]/).pop() || path;
+                                                return (
+                                                    <div
+                                                        key={path}
+                                                        onClick={() => {
+                                                            scanFolder(path);
+                                                            setIsHistoryOpen(false);
+                                                        }}
+                                                        className="group/item flex items-center justify-between gap-2 p-2 rounded-lg hover:bg-surface-hover/60 transition-colors cursor-pointer text-left"
+                                                    >
+                                                        <div className="flex-1 min-w-0">
+                                                            <div className="text-xs font-semibold text-text-primary truncate">
+                                                                {name}
+                                                            </div>
+                                                            <div className="text-[9px] text-text-muted truncate mt-0.5 font-mono" title={path}>
+                                                                {path}
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                removeFromHistory(path);
+                                                            }}
+                                                            className="shrink-0 p-1 text-text-muted hover:text-error rounded hover:bg-surface-elevated transition-colors cursor-pointer"
+                                                            title="Remove from history"
+                                                        >
+                                                            <X size={12} />
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
                 </div>
                 <div className="flex-1 min-h-0 overflow-hidden">
-                    <ApkManager
-                        apkInfo={apkInfo}
-                        onSelect={onSelectApk}
-                        onClear={onClearApk}
-                        onScan={onScanApk}
-                        onSelectFromList={onSelectApkFromList}
-                    />
+                    <ApkManager />
                 </div>
             </div>
         </aside>

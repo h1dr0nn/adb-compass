@@ -449,7 +449,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     };
 
     return (
-        <div className="h-full flex gap-4">
+        <div className="h-full w-full flex gap-4 overflow-hidden">
             {/* Controls Panel - Expands */}
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
                 {/* Top Row - Capture Actions */}

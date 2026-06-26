@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
     ArrowLeft, Moon, Sun, Monitor, FolderOpen, Globe,
-    FileText, Settings as SettingsIcon, RotateCcw, Github
+    Settings as SettingsIcon, RotateCcw, Github
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { open as openDialog, confirm } from '@tauri-apps/plugin-dialog';
@@ -129,9 +129,6 @@ export function Settings({ onBack }: SettingsProps) {
         }
     };
 
-    const handleViewLogs = async () => {
-        toast.info("Logs unavailable in debug mode");
-    };
 
     const handleCheckUpdates = async () => {
         try {
@@ -164,7 +161,7 @@ export function Settings({ onBack }: SettingsProps) {
             transition={{ duration: 0.2 }}
         >
             {/* Header */}
-            <div className="flex items-center gap-4 mb-4 shrink-0 px-1">
+            <div className="flex items-center gap-4 pt-3 pb-1 mb-2 shrink-0 px-0">
                 <button
                     onClick={onBack}
                     className="p-2.5 rounded-xl hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-all duration-200 border border-transparent hover:border-border"
@@ -182,7 +179,7 @@ export function Settings({ onBack }: SettingsProps) {
                 </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto no-scrollbar pb-8 space-y-6 px-1">
+            <div className="flex-1 overflow-y-auto no-scrollbar pb-8 space-y-6 px-0">
                 {/* Appearance Section */}
                 <section className="bg-surface-card border border-border rounded-2xl p-6 shadow-sm">
                     <h3 className="text-sm font-bold text-text-muted uppercase tracking-wider mb-5 flex items-center gap-2">
@@ -394,15 +391,6 @@ export function Settings({ onBack }: SettingsProps) {
                     </div>
                 </section>
 
-                <div className="flex justify-center pb-4">
-                    <button
-                        onClick={handleViewLogs}
-                        className="flex items-center gap-2 text-[10px] font-bold text-text-muted hover:text-text-secondary transition-colors"
-                    >
-                        <FileText size={12} />
-                        {t.viewLogs}
-                    </button>
-                </div>
             </div>
         </motion.div>
     );
