@@ -280,6 +280,8 @@ export const translations = {
         apk: 'APK',
         apkFiles: 'APK Files',
         removeApk: 'Remove APK',
+        reloadWindow: 'Reload Window',
+        quit: 'Quit',
     },
     vi: {
         // Global
@@ -560,6 +562,8 @@ export const translations = {
         apk: 'APK',
         apkFiles: 'Tệp APK',
         removeApk: 'Gỡ bỏ APK',
+        reloadWindow: 'Tải lại cửa sổ',
+        quit: 'Thoát',
     },
 };
 

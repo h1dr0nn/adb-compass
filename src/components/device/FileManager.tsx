@@ -6,13 +6,13 @@ import {
     Trash2, FolderPlus, Loader2, AlertTriangle, HardDrive,
     Image, Film, Music, DownloadCloud, Camera
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { toast } from 'sonner';
+import * as tauri from '../../lib/tauri';
 import { DeviceInfo } from '../../types';
 import { listContainer, listItem } from '../../lib/animations';
-import { useDeviceCache } from '../../contexts/DeviceCacheContext';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useDeviceCache } from '../../hooks/useDeviceCache';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface FileManagerProps {
     device: DeviceInfo;
@@ -45,7 +45,7 @@ export function FileManager({ device }: FileManagerProps) {
     const [newFolderName, setNewFolderName] = useState('');
     const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
 
-    const { getCached, setData } = useDeviceCache();
+    const { getCached, setData, clearCache } = useDeviceCache();
     const { t } = useLanguage();
 
     const fetchFiles = async (path: string = currentPath) => {
@@ -70,10 +70,7 @@ export function FileManager({ device }: FileManagerProps) {
         const spinStart = Date.now();
 
         try {
-            const result = await invoke<FileInfo[]>('list_files_fast', {
-                deviceId: device.id,
-                path
-            });
+            const result = await tauri.listFilesFast(device.id, path);
             setFiles(result);
             setCurrentPath(path);
             setData(cacheKey, result);
@@ -131,12 +128,9 @@ export function FileManager({ device }: FileManagerProps) {
                 const fileName = selected.split(/[/\\]/).pop() || 'file';
                 const remotePath = `${currentPath}/${fileName}`;
 
-                await invoke('push_file', {
-                    deviceId: device.id,
-                    localPath: selected,
-                    remotePath
-                });
+                await tauri.pushFile(device.id, selected, remotePath);
 
+                clearCache(`files_${device.id}_${currentPath}`);
                 toast.success(t.fileUploaded, { description: fileName });
                 fetchFiles();
             }
@@ -158,11 +152,7 @@ export function FileManager({ device }: FileManagerProps) {
                 setActionLoading(file.name);
                 const remotePath = `${currentPath}/${file.name}`;
 
-                await invoke('pull_file', {
-                    deviceId: device.id,
-                    remotePath,
-                    localPath
-                });
+                await tauri.pullFile(device.id, remotePath, localPath);
 
                 toast.success(t.fileDownloaded, { description: file.name });
             }
@@ -178,10 +168,8 @@ export function FileManager({ device }: FileManagerProps) {
         setConfirmDelete(null);
         try {
             const remotePath = `${currentPath}/${file.name}`;
-            await invoke('delete_remote_file', {
-                deviceId: device.id,
-                remotePath
-            });
+            await tauri.deleteRemoteFile(device.id, remotePath);
+            clearCache(`files_${device.id}_${currentPath}`);
             toast.success(t.deleted, { description: file.name });
             setFiles(prev => prev.filter(f => f.name !== file.name));
         } catch (e) {
@@ -197,10 +185,8 @@ export function FileManager({ device }: FileManagerProps) {
         setActionLoading('newfolder');
         try {
             const remotePath = `${currentPath}/${newFolderName}`;
-            await invoke('create_remote_directory', {
-                deviceId: device.id,
-                remotePath
-            });
+            await tauri.createRemoteDirectory(device.id, remotePath);
+            clearCache(`files_${device.id}_${currentPath}`);
             toast.success(t.folderCreated, { description: newFolderName });
             setNewFolderMode(false);
             setNewFolderName('');
@@ -213,7 +199,7 @@ export function FileManager({ device }: FileManagerProps) {
     };
 
     return (
-        <div className="h-full flex gap-4">
+        <div className="h-full w-full flex gap-4 overflow-hidden">
             {/* Sidebar - Quick Access */}
             <div className="w-48 shrink-0 flex flex-col gap-1 py-1 overflow-y-auto custom-scrollbar">
                 <div className="px-3 py-2 text-xs font-semibold text-text-muted uppercase tracking-wider">
@@ -327,7 +313,7 @@ export function FileManager({ device }: FileManagerProps) {
 
                 {/* File List */}
                 <div className="flex-1 overflow-hidden">
-                    <div className="h-full overflow-y-auto custom-scrollbar pr-2">
+                    <div className="h-full overflow-y-auto custom-scrollbar">
                         {loading ? (
                             <div className="flex items-center justify-center py-16">
                                 <Loader2 size={32} className="animate-spin text-accent" />

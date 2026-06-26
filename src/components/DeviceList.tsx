@@ -14,7 +14,7 @@ import { RebootModal } from './modals/RebootModal';
 import { InputTextModal } from './modals/InputTextModal';
 import { UninstallModal } from './modals/UninstallModal';
 import { FileTransferModal } from './modals/FileTransferModal';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 import { useDeviceStatus } from '../hooks/useDeviceStatus';
 import { listContainer, listItem } from '../lib/animations';
 

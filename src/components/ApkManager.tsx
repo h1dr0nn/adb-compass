@@ -1,41 +1,27 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import {
     FolderOpen, RefreshCw, Package, FileCheck, X
 } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
+import * as tauri from '../lib/tauri';
 import type { ApkInfo } from '../types';
 import { ApkDropzone } from './ApkDropzone';
-import { ToolsPanel, type ActiveToolView } from './ToolsPanel';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
+import { useApkStore } from '../stores/apkStore';
 
-interface ApkManagerProps {
-    apkInfo: ApkInfo | null;
-    onSelect: (path: string) => void;
-    onClear: () => void;
-    onScan: (path: string) => Promise<ApkInfo[]>;
-    onSelectFromList: (info: ApkInfo) => void;
-    onOpenToolView: (view: ActiveToolView) => void;
-}
-
-export function ApkManager({
-    apkInfo,
-    onClear,
-    onScan,
-    onSelectFromList,
-    onOpenToolView
-}: ApkManagerProps) {
-    // unified 'apk' tab vs 'tools' placeholder
-    const [activeTab, setActiveTab] = useState<'apk' | 'tools'>('apk');
+export function ApkManager() {
     const { t } = useLanguage();
 
-    // Folder state
-    const [folderPath, setFolderPath] = useState<string | null>(null);
-    const [scannedApks, setScannedApks] = useState<ApkInfo[]>([]);
-    const [scanning, setScanning] = useState(false);
+    const apkInfo = useApkStore((s) => s.apkInfo);
+    const folderPath = useApkStore((s) => s.folderPath);
+    const scannedApks = useApkStore((s) => s.scannedApks);
+    const manualApks = useApkStore((s) => s.manualApks);
+    const clearApk = useApkStore((s) => s.clearApk);
+    const scanFolder = useApkStore((s) => s.scanFolder);
+    const setApkFromList = useApkStore((s) => s.setApkFromList);
+    const setManualApks = useApkStore((s) => s.setManualApks);
 
-    // Manual APK state
-    const [manualApks, setManualApks] = useState<ApkInfo[]>([]);
+    const [scanning, setScanning] = useState(false);
 
     const handleSelectFolder = async () => {
         try {
@@ -44,7 +30,6 @@ export function ApkManager({
                 multiple: false,
             });
             if (selected && typeof selected === 'string') {
-                setFolderPath(selected);
                 handleScan(selected);
             }
         } catch (error) {
@@ -55,82 +40,55 @@ export function ApkManager({
     const handleScan = async (path: string) => {
         setScanning(true);
         try {
-            const [apks] = await Promise.all([
-                onScan(path),
+            await Promise.all([
+                scanFolder(path),
                 new Promise(resolve => setTimeout(resolve, 500))
             ]);
-            setScannedApks(apks);
         } finally {
             setScanning(false);
         }
     };
+
+    useEffect(() => {
+        if (!folderPath) return;
+
+        const unlistenPromise = tauri.onApkFolderChanged((changedPath) => {
+            if (changedPath === folderPath) {
+                console.log(`[ApkManager] APK folder changed: ${changedPath}, auto-reloading...`);
+                handleScan(changedPath);
+            }
+        });
+
+        return () => {
+            unlistenPromise.then((fn) => fn());
+        };
+    }, [folderPath]);
 
     const handleManualApkSelected = async (path: string) => {
         try {
             // Check manual list for duplicates
             if (manualApks.some(a => a.path === path)) {
                 const existing = manualApks.find(a => a.path === path);
-                if (existing) onSelectFromList(existing);
+                if (existing) setApkFromList(existing);
                 return;
             }
 
             // Invoke validation to get info
-            const { invoke } = await import('@tauri-apps/api/core');
-            const info = await invoke<ApkInfo | null>('validate_apk', { path });
+            const info = await tauri.validateApk(path);
 
             if (info && info.valid) {
-                setManualApks(prev => [...prev, info]);
-                onSelectFromList(info);
+                setManualApks([...manualApks, info]);
+                setApkFromList(info);
             }
         } catch (e) {
             console.error("Failed to add manual apk", e);
         }
     };
 
-    // Derived combined logic or separate? text says: "apk of folder displays below select folder... add manual apk displays below Select Apk"
-    // So distinct lists.
-
     return (
         <div className="flex flex-col h-full overflow-hidden">
-            {/* Tab Switcher with sliding background */}
-            <div className="flex p-1 mb-4 bg-surface-elevated rounded-xl border border-border/50">
-                <button
-                    className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg transition-colors ${activeTab === 'apk'
-                        ? 'text-text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                        }`}
-                    onClick={() => setActiveTab('apk')}
-                >
-                    {activeTab === 'apk' && (
-                        <motion.div
-                            layoutId="sidebarActiveTab"
-                            className="absolute inset-0 bg-surface-card rounded-lg shadow-sm border border-border/50"
-                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                        />
-                    )}
-                    <span className="relative z-10">{t.apk}</span>
-                </button>
-                <button
-                    className={`relative flex-1 flex items-center justify-center gap-2 py-2 text-xs font-medium rounded-lg transition-colors ${activeTab === 'tools'
-                        ? 'text-text-primary'
-                        : 'text-text-secondary hover:text-text-primary'
-                        }`}
-                    onClick={() => setActiveTab('tools')}
-                >
-                    {activeTab === 'tools' && (
-                        <motion.div
-                            layoutId="sidebarActiveTab"
-                            className="absolute inset-0 bg-surface-card rounded-lg shadow-sm border border-border/50"
-                            transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                        />
-                    )}
-                    <span className="relative z-10">{t.tabAdvanced}</span>
-                </button>
-            </div>
-
             <div className="flex-1 overflow-y-auto px-1">
-                {activeTab === 'apk' && (
-                    <div className="flex flex-col gap-6 pb-4">
+                <div className="flex flex-col gap-6 pb-4">
                         {/* Section 1: Folder Selection */}
                         <div className="space-y-3">
                             <div className="flex items-center gap-2">
@@ -173,9 +131,9 @@ export function ApkManager({
                                             isSelected={apkInfo?.path === apk.path}
                                             onSelect={() => {
                                                 if (apkInfo?.path === apk.path) {
-                                                    onClear();
+                                                    clearApk();
                                                 } else {
-                                                    onSelectFromList(apk);
+                                                    setApkFromList(apk);
                                                 }
                                             }}
                                         />
@@ -202,27 +160,23 @@ export function ApkManager({
                                             isSelected={apkInfo?.path === apk.path}
                                             onSelect={() => {
                                                 if (apkInfo?.path === apk.path) {
-                                                    onClear();
+                                                    clearApk();
                                                 } else {
-                                                    onSelectFromList(apk);
+                                                    setApkFromList(apk);
                                                 }
                                             }}
                                             onRemove={() => {
-                                                setManualApks(prev => prev.filter(a => a.path !== apk.path));
-                                                if (apkInfo?.path === apk.path) onClear();
+                                                setManualApks(manualApks.filter(a => a.path !== apk.path));
+                                                if (apkInfo?.path === apk.path) clearApk();
                                             }}
                                         />
                                     ))}
                                 </div>
                             )}
                         </div>
-                    </div>
-                )}
-                {activeTab === 'tools' && (
-                    <ToolsPanel onOpenToolView={onOpenToolView} />
-                )}
+                </div>
             </div>
-        </div >
+        </div>
     );
 }
 
@@ -274,7 +228,6 @@ function ApkListItem({ apk, isSelected, onSelect, onRemove }: { apk: ApkInfo, is
                     className="absolute right-2 top-2 p-1 text-text-muted hover:text-error opacity-0 group-hover:opacity-100 transition-opacity"
                     title={t.removeFromList}
                 >
-                    {/* Reuse Lucide X icon properly imported */}
                     <X size={14} />
                 </button>
             )}

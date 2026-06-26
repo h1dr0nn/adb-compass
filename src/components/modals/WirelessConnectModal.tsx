@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wifi, WifiOff, Loader2, Copy, Check, Smartphone } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
 import { toast } from 'sonner';
+import * as tauri from '../../lib/tauri';
 import { Select } from '../ui/Select';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 import { createPortal } from 'react-dom';
 
@@ -24,7 +24,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
 
     useEffect(() => {
         // Fetch connected devices
-        invoke<Array<{ id: string; model?: string }>>('get_devices')
+        tauri.getDevices<Array<{ id: string; model?: string }>>()
             .then(setDevices)
             .catch(console.error);
     }, []);
@@ -37,10 +37,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
 
         setLoading(true);
         try {
-            const result = await invoke<string>('enable_tcpip', {
-                deviceId: selectedDevice,
-                port,
-            });
+            const result = await tauri.enableTcpip(selectedDevice, port);
             toast.success(result);
 
             // Retry fetching IP for up to 6 seconds (3 attempts x 2s)
@@ -53,7 +50,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                 try {
                     // Wait 2 seconds before each attempt
                     await new Promise(resolve => setTimeout(resolve, 2000));
-                    ip = await invoke<string>('get_device_ip', { deviceId: selectedDevice });
+                    ip = await tauri.getDeviceIp(selectedDevice);
                 } catch (e) {
                     lastError = e;
                     retries--;
@@ -88,7 +85,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
 
         setLoading(true);
         try {
-            const result = await invoke<string>('connect_wireless', { ip, port });
+            const result = await tauri.connectWireless(ip, port);
             toast.success(result);
             onClose();
         } catch (err) {
@@ -103,7 +100,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
 
         setLoading(true);
         try {
-            const result = await invoke<string>('disconnect_wireless', { ip, port });
+            const result = await tauri.disconnectWireless(ip, port);
             toast.info(result);
         } catch (err) {
             toast.error(String(err));
@@ -142,7 +139,7 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
             />
 
             {/* Modal */}
-            <div className="fixed inset-0 flex items-center justify-center z-[100] pointer-events-none p-4">
+            <div className="fixed top-8 left-0 right-0 bottom-0 flex items-center justify-center z-[100] pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto"
                     variants={modalContent}
@@ -179,7 +176,8 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                                         options={deviceOptions}
                                         value={selectedDevice}
                                         onChange={setSelectedDevice}
-                                        placeholder={t.selectUsbDevice}
+                                        placeholder={deviceOptions.length === 0 ? t.noDevices : t.selectUsbDevice}
+                                        disabled={deviceOptions.length === 0}
                                     />
                                 </div>
                                 <button

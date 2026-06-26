@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Power, RotateCcw, HardDrive, Loader2, AlertTriangle } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from "../../lib/tauri";
 import { toast } from 'sonner';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 
 interface RebootModalProps {
@@ -23,7 +23,7 @@ export function RebootModal({ deviceId, onClose }: RebootModalProps) {
         setLoading(true);
         try {
             const modeArg = mode === 'normal' ? null : mode;
-            await invoke('reboot_device', { deviceId, mode: modeArg });
+            await tauri.rebootDevice(deviceId, modeArg);
             toast.success(t.rebootDevice, {
                 description: mode === 'normal' ? t.normalReboot :
                     mode === 'recovery' ? t.recoveryMode : t.bootloaderMode
@@ -77,7 +77,7 @@ export function RebootModal({ deviceId, onClose }: RebootModalProps) {
             />
 
             {/* Modal */}
-            <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+            <div className="fixed top-8 left-0 right-0 bottom-0 flex items-center justify-center z-50 pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto"
                     variants={modalContent}

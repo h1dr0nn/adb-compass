@@ -87,7 +87,9 @@ fn run_tracker(
                 last.iter().any(|d| {
                     matches!(
                         d.status,
-                        DeviceStatus::Unauthorized | DeviceStatus::Unknown(_)
+                        DeviceStatus::Offline
+                            | DeviceStatus::Unauthorized
+                            | DeviceStatus::Unknown(_)
                     )
                 })
             };

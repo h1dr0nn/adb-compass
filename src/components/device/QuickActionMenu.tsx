@@ -5,7 +5,7 @@ import {
     RefreshCcw, Power,
     ChevronRight, Loader2, Sparkles
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from "../../lib/tauri";
 import { toast } from 'sonner';
 
 interface QuickActionMenuProps {
@@ -17,6 +17,7 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
+    const isDisabled = !deviceId;
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -29,6 +30,7 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
     }, []);
 
     const runAction = async (name: string, promise: Promise<any>) => {
+        if (isDisabled) return;
         setLoading(name);
         try {
             await promise;
@@ -43,8 +45,8 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
     const ActionItem = ({ icon, label, onClick, id, color = "text-accent" }: any) => (
         <button
             onClick={() => { onClick(); if (!id.includes('toggle')) setIsOpen(false); }}
-            disabled={loading !== null}
-            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-elevated transition-all group border border-transparent hover:border-border"
+            disabled={loading !== null || isDisabled}
+            className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-surface-elevated transition-all group border border-transparent hover:border-border disabled:opacity-50 disabled:cursor-not-allowed"
         >
             <div className="flex items-center gap-3">
                 <div className={`w-8 h-8 rounded-lg bg-surface-card border border-border flex items-center justify-center group-hover:scale-110 transition-transform ${color}/20 ${color}`}>
@@ -59,11 +61,17 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
     return (
         <div className="relative" ref={menuRef}>
             <button
-                onClick={() => setIsOpen(!isOpen)}
-                className={`p-2 rounded-lg border transition-all ${isOpen ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20' : 'bg-surface-elevated border-border text-text-secondary hover:text-accent hover:border-accent'}`}
-                title="Quick Actions"
+                onClick={() => !isDisabled && setIsOpen(!isOpen)}
+                disabled={isDisabled}
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-sm font-medium ${
+                    isOpen && !isDisabled
+                        ? 'bg-accent text-white border-accent shadow-lg shadow-accent/20'
+                        : 'bg-surface-elevated border-border text-text-secondary hover:text-accent hover:border-accent'
+                } disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
+                title={isDisabled ? "Select a device first" : "Quick Actions"}
             >
-                {triggerIcon || <Zap size={20} className={isOpen ? 'fill-current' : ''} />}
+                {triggerIcon || <Zap size={14} className={isOpen && !isDisabled ? 'fill-current' : ''} />}
+                <span>Action Menu</span>
             </button>
 
             <AnimatePresence>
@@ -83,25 +91,25 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
                                     id="toggle-dark"
                                     icon={<Moon size={16} />}
                                     label="Force Dark Mode"
-                                    onClick={() => runAction('Dark Mode', invoke('set_dark_mode', { deviceId, enabled: true }))}
+                                    onClick={() => runAction('Dark Mode', tauri.setDarkMode(deviceId, true))}
                                 />
                                 <ActionItem
                                     id="toggle-light"
                                     icon={<Sun size={16} />}
                                     label="Force Light Mode"
-                                    onClick={() => runAction('Light Mode', invoke('set_dark_mode', { deviceId, enabled: false }))}
+                                    onClick={() => runAction('Light Mode', tauri.setDarkMode(deviceId, false))}
                                 />
                                 <ActionItem
                                     id="toggle-taps"
                                     icon={<MousePointer2 size={16} />}
                                     label="Toggle Show Taps"
-                                    onClick={() => runAction('Show Taps', invoke('set_show_taps', { deviceId, enabled: true }))}
+                                    onClick={() => runAction('Show Taps', tauri.setShowTaps(deviceId, true))}
                                 />
                                 <ActionItem
                                     id="toggle-anim"
                                     icon={<FastForward size={16} />}
                                     label="Speed up Anims (0.5x)"
-                                    onClick={() => runAction('Animations', invoke('set_animations', { deviceId, scale: 0.5 }))}
+                                    onClick={() => runAction('Animations', tauri.setAnimations(deviceId, 0.5))}
                                 />
                             </div>
 
@@ -115,14 +123,14 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
                                     id="reboot-recovery"
                                     icon={<RefreshCcw size={16} />}
                                     label="Reboot to Recovery"
-                                    onClick={() => runAction('Reboot Recovery', invoke('reboot_device', { deviceId, mode: 'recovery' }))}
+                                    onClick={() => runAction('Reboot Recovery', tauri.rebootDevice(deviceId, 'recovery'))}
                                     color="text-warning"
                                 />
                                 <ActionItem
                                     id="reboot-bootloader"
                                     icon={<Power size={16} />}
                                     label="Reboot to Bootloader"
-                                    onClick={() => runAction('Reboot Bootloader', invoke('reboot_device', { deviceId, mode: 'bootloader' }))}
+                                    onClick={() => runAction('Reboot Bootloader', tauri.rebootDevice(deviceId, 'bootloader'))}
                                     color="text-error"
                                 />
                             </div>

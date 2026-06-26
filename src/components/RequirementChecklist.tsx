@@ -2,9 +2,10 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle2, XCircle, ChevronDown, Info } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from '../lib/tauri';
 import type { RequirementCheck } from '../types';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
+import { useDeviceCache } from '../hooks/useDeviceCache';
 
 interface RequirementChecklistProps {
     deviceId: string;
@@ -17,6 +18,7 @@ export function RequirementChecklist({ deviceId, isAuthorized, expanded, onToggl
     const [requirements, setRequirements] = useState<RequirementCheck[]>([]);
     const [loading, setLoading] = useState(false);
     const { t } = useLanguage();
+    const { getCached, setData } = useDeviceCache();
 
     useEffect(() => {
         if (isAuthorized) {
@@ -25,10 +27,22 @@ export function RequirementChecklist({ deviceId, isAuthorized, expanded, onToggl
     }, [deviceId, isAuthorized]);
 
     const checkRequirements = async () => {
-        setLoading(true);
+        const cacheKey = `requirements_${deviceId}`;
+        const { data, isStale } = getCached<RequirementCheck[]>(cacheKey, 30000); // 30s cache
+
+        if (data) {
+            setRequirements(data);
+            if (!isStale) {
+                setLoading(false);
+                return;
+            }
+        }
+
+        if (!data) setLoading(true);
         try {
-            const checks = await invoke<RequirementCheck[]>('check_device_requirements', { deviceId });
+            const checks = await tauri.checkDeviceRequirements(deviceId);
             setRequirements(checks);
+            setData(cacheKey, checks);
         } catch (error) {
             console.error('Failed to check requirements:', error);
         } finally {
@@ -59,7 +73,7 @@ export function RequirementChecklist({ deviceId, isAuthorized, expanded, onToggl
     };
 
     return (
-        <div className="mt-4 pt-4 pb-1 border-t border-border relative z-20">
+        <div className="relative z-20">
             <button
                 className={`flex items-center justify-between w-full px-3 py-2 
                            ${allPassed

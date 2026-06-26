@@ -5,7 +5,7 @@ import { FileCheck, X, Package, FolderOpen } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import { listen } from '@tauri-apps/api/event';
 import type { ApkInfo } from '../types';
-import { useLanguage } from '../contexts/LanguageContext';
+import { useLanguage } from '../hooks/useLanguage';
 
 interface ApkDropzoneProps {
     apkInfo: ApkInfo | null;

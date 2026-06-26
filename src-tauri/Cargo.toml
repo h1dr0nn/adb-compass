@@ -18,7 +18,7 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["image-png"] }
 tauri-plugin-opener = "2"
 tauri-plugin-dialog = "2"
 tauri-plugin-updater = "2"
@@ -32,5 +32,10 @@ openh264 = "0.6"
 image = "0.25"
 base64 = "0.22"
 tokio = { version = "1", features = ["full"] }
+notify = "6.0"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
+axmldecoder = "0.5"
+
+
 
 

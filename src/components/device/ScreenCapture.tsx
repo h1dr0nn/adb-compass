@@ -7,13 +7,13 @@ import {
     Home, Square, Power, Volume2, Volume1, VolumeX,
     Menu, Sun, Moon, Bell, Play, Triangle
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from "../../lib/tauri";
 import { save } from '@tauri-apps/plugin-dialog';
 import { toast } from 'sonner';
 import { DeviceInfo } from '../../types';
 import { listItem } from '../../lib/animations';
 import { StreamPlayer } from './StreamPlayer';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface ScreenCaptureProps {
     device: DeviceInfo;
@@ -134,7 +134,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     useEffect(() => {
         const fetchProps = async () => {
             try {
-                const props = await invoke<{ screen_resolution: string | null }>('get_device_props', { deviceId: device.id });
+                const props = await tauri.getDeviceProps<{ screen_resolution: string | null }>(device.id);
                 if (props.screen_resolution) {
                     // scrcpy server usually uses physical size (e.g. "Physical size: 1080x2340")
                     const resMatch = props.screen_resolution.match(/(?:Physical|Override) size: (\d+)x(\d+)/);
@@ -209,7 +209,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 customSavePath = selected;
             }
 
-            const result = await invoke<CaptureResult>('take_screenshot', {
+            const result = await tauri.takeScreenshot<CaptureResult>({
                 deviceId: device.id,
                 customSavePath
             });
@@ -252,7 +252,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                     customSavePath = selected;
                 }
 
-                const result = await invoke<CaptureResult>('stop_screen_recording', {
+                const result = await tauri.stopScreenRecording<CaptureResult>({
                     deviceId: device.id,
                     customSavePath
                 });
@@ -273,9 +273,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         } else {
             // Start recording
             try {
-                await invoke('start_screen_recording', {
-                    deviceId: device.id
-                });
+                await tauri.startScreenRecording(device.id);
                 setIsRecording(true);
                 toast.info(t.recordingStarted);
             } catch (error) {
@@ -291,9 +289,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         setIsLoadingPreview(true);
         const startTime = Date.now();
         try {
-            const result = await invoke<number[]>('get_screen_frame', {
-                deviceId: device.id
-            });
+            const result = await tauri.getScreenFrame(device.id);
 
             if (result && result.length > 0) {
                 // Convert to base64
@@ -336,14 +332,14 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
 
         // Fetch real resolution to map coordinates
         try {
-            const props = await invoke<{ screen_resolution: string | null }>('get_device_props', { deviceId: device.id });
+            const props = await tauri.getDeviceProps<{ screen_resolution: string | null }>(device.id);
             if (props.screen_resolution) {
                 const [w, h] = props.screen_resolution.replace('Physical size: ', '').replace('Override size: ', '').split('x').map(Number);
                 if (w && h) {
                     const tapX = Math.round(xPercent * w);
                     const tapY = Math.round(yPercent * h);
 
-                    await invoke('input_tap', { deviceId: device.id, x: tapX, y: tapY });
+                    await tauri.inputTap(device.id, tapX, tapY);
 
                     // Visual feedback
                     toast.success(`Tap: ${tapX}, ${tapY}`, { duration: 500 });
@@ -358,7 +354,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     const handleOpenFolder = async () => {
         try {
             const captureSavePath = localStorage.getItem('captureSavePath');
-            await invoke('open_captures_folder', { customSavePath: captureSavePath });
+            await tauri.openCapturesFolder(captureSavePath);
             toast.success(t.folderOpened);
         } catch (error) {
             toast.error(t.failedToOpenFolder, { description: String(error) });
@@ -373,7 +369,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             const startTime = Date.now();
             try {
                 console.log('Starting scrcpy server for device:', device.id);
-                const status = await invoke<ScrcpyStatus>('start_scrcpy_server', {
+                const status = await tauri.startScrcpyServer<ScrcpyStatus>({
                     deviceId: device.id,
                     maxSize: 1024,
                     bitRate: 4000000,
@@ -396,7 +392,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         } else {
             // Switch back to standard mode
             try {
-                await invoke('stop_scrcpy_server', { deviceId: device.id });
+                await tauri.stopScrcpyServer(device.id);
                 setScrcpyStatus(null);
                 setStreamMode('standard');
                 toast.success(t.switchedToStandardMode);
@@ -411,7 +407,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         if (!allowTouch) return;
         const actionMap = { down: 0, up: 1, move: 2 };
         try {
-            await invoke('scrcpy_touch', {
+            await tauri.scrcpyTouch({
                 deviceId: device.id,
                 action: actionMap[action],
                 x,
@@ -428,7 +424,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     const handleScrcpyScroll = useCallback(async (x: number, y: number, deltaX: number, deltaY: number) => {
         if (!allowTouch) return;
         try {
-            await invoke('scrcpy_scroll', {
+            await tauri.scrcpyScroll({
                 deviceId: device.id,
                 x,
                 y,
@@ -445,10 +441,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     // Handle Quick Actions (Key Events)
     const handleKeyEvent = async (keycode: number) => {
         try {
-            await invoke('execute_shell', {
-                deviceId: device.id,
-                command: `input keyevent ${keycode}`
-            });
+            await tauri.executeShell(device.id, `input keyevent ${keycode}`);
         } catch (error) {
             console.error('Key event failed:', error);
             toast.error(t.failedToKey);
@@ -456,7 +449,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
     };
 
     return (
-        <div className="h-full flex gap-4">
+        <div className="h-full w-full flex gap-4 overflow-hidden">
             {/* Controls Panel - Expands */}
             <div className="flex-1 flex flex-col gap-4 overflow-y-auto custom-scrollbar">
                 {/* Top Row - Capture Actions */}

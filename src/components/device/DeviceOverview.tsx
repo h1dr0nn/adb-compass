@@ -6,12 +6,14 @@ import {
     Wifi, Signal, Monitor, MemoryStick, Building2,
     Shield, Hash, Loader2
 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from "../../lib/tauri";
 import { DeviceInfo } from '../../types';
 import { listContainer, listItem } from '../../lib/animations';
-import { useDeviceCache } from '../../contexts/DeviceCacheContext';
+import { useDeviceCache } from '../../hooks/useDeviceCache';
 import { useDeviceStatus } from '../../hooks/useDeviceStatus';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../hooks/useLanguage';
+import { RequirementChecklist } from '../RequirementChecklist';
+import { ActionRequirementsChecklist } from '../ActionRequirementsChecklist';
 
 interface DeviceOverviewProps {
     device: DeviceInfo;
@@ -86,6 +88,8 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
     const { t } = useLanguage();
     const cacheKey = `device_props_${device.id}`;
 
+    const [expandedChecklist, setExpandedChecklist] = useState<'requirements' | 'actions' | null>(null);
+
     useEffect(() => {
         const loadProps = async () => {
             // 1. Try cache first
@@ -103,7 +107,7 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
             if (!data) setLoading(true);
 
             try {
-                const result = await invoke<DeviceProps>('get_device_props', { deviceId: device.id });
+                const result = await tauri.getDeviceProps<DeviceProps>(device.id);
                 setProps(result);
                 setData(cacheKey, result);
             } catch (e) {
@@ -124,8 +128,26 @@ export function DeviceOverview({ device }: DeviceOverviewProps) {
     };
 
     return (
-        <div className="h-full overflow-hidden">
-            <div className="h-full overflow-y-auto custom-scrollbar pr-2">
+        <div className="h-full w-full overflow-hidden">
+            <div className="h-full w-full overflow-y-auto custom-scrollbar pb-4">
+                {/* Requirements & Action checklists dropdowns */}
+                {device.status === 'Device' && (
+                    <div className="flex flex-col gap-3 mb-6 pb-6 border-b border-border/50">
+                        <RequirementChecklist
+                            deviceId={device.id}
+                            isAuthorized={true}
+                            expanded={expandedChecklist === 'requirements'}
+                            onToggle={() => setExpandedChecklist(expandedChecklist === 'requirements' ? null : 'requirements')}
+                        />
+                        <ActionRequirementsChecklist
+                            deviceId={device.id}
+                            isAuthorized={true}
+                            expanded={expandedChecklist === 'actions'}
+                            onToggle={() => setExpandedChecklist(expandedChecklist === 'actions' ? null : 'actions')}
+                        />
+                    </div>
+                )}
+
                 <motion.div
                     variants={listContainer}
                     initial="initial"

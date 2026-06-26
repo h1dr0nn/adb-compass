@@ -11,6 +11,7 @@ pub mod services;
 
 use adb::{start_device_tracker, AdbExecutor};
 use commands::logcat::LogcatState;
+use commands::apk::ApkWatcherState;
 use commands::{
     build_index,
     check_action_requirements,
@@ -33,6 +34,7 @@ use commands::{
     get_default_media_dir,
     get_device_ip,
     get_device_property,
+    get_binaries,
     get_device_props,
     get_devices,
     get_logcat,
@@ -84,17 +86,39 @@ use commands::{
     uninstall_app,
     validate_apk,
 };
+use tauri::window::{Color, Effect, EffectsBuilder};
 use tauri::{Manager, RunEvent};
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Isolate our ADB commands by using a custom port (50337)
+    // so they don't conflict with other ADB servers (like Unity, Android Studio, etc.)
+    std::env::set_var("ANDROID_ADB_SERVER_PORT", "50337");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
+            // Apply acrylic backdrop to the main window so the frontend's
+            // translucent glass panels read against a blurred dark surface.
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.set_effects(
+                    EffectsBuilder::new()
+                        .effect(Effect::Acrylic)
+                        .color(Color(0, 0, 0, 219))
+                        .build(),
+                );
+                // Set the window/taskbar icon at runtime so the recolored icon
+                // shows regardless of any stale embedded/cached icon.
+                let _ = window.set_icon(tauri::include_image!("icons/128x128.png"));
+            }
+
             // Manage state
             app.manage(LogcatState::new());
+            app.manage(ApkWatcherState {
+                watcher: std::sync::Mutex::new(None),
+            });
 
             // Start real-time device tracking
             start_device_tracker(app.handle().clone());
@@ -103,6 +127,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             check_adb_status,
             get_devices,
+            get_binaries,
             refresh_devices,
             get_device_property,
             start_adb_server,

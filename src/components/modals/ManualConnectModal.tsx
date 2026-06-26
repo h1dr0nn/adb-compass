@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wifi, Loader2, ArrowRight } from 'lucide-react';
 import { modalBackdrop, modalContent } from '../../lib/animations';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../hooks/useLanguage';
 import { useDevices } from '../../hooks/useDevices';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from '../../lib/tauri';
 import { toast } from 'sonner';
 
 interface ManualConnectModalProps {
@@ -39,7 +39,7 @@ export function ManualConnectModal({ onClose }: ManualConnectModalProps) {
             onClose(); // Close immediately to show feedback in list
 
             toast.promise(
-                invoke('connect_wireless', { ip: finalIp, port: finalPort }),
+                tauri.connectWireless(finalIp, finalPort),
                 {
                     loading: `${t.connectingTo} ${targetFull}...`,
                     success: () => {
@@ -62,15 +62,16 @@ export function ManualConnectModal({ onClose }: ManualConnectModalProps) {
     return (
         <AnimatePresence>
             <motion.div
-                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+                className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
                 variants={modalBackdrop}
                 initial="initial"
                 animate="animate"
                 exit="exit"
                 onClick={onClose}
-            >
+            />
+            <div className="fixed top-8 left-0 right-0 bottom-0 z-50 flex items-center justify-center p-4 pointer-events-none">
                 <motion.div
-                    className="bg-surface-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden"
+                    className="bg-surface-card w-full max-w-md rounded-2xl shadow-2xl border border-border overflow-hidden pointer-events-auto"
                     variants={modalContent}
                     onClick={(e) => e.stopPropagation()}
                 >
@@ -138,7 +139,7 @@ export function ManualConnectModal({ onClose }: ManualConnectModalProps) {
                         </form>
                     </div>
                 </motion.div>
-            </motion.div>
+            </div>
         </AnimatePresence>
     );
 }

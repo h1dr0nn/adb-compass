@@ -1,27 +1,21 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  ArrowLeft,
   FileText,
   Trash2,
   Pause,
-  Play,
-  Smartphone,
   Download,
   Search,
   X,
   FastForward,
 } from "lucide-react";
-import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
+import { type UnlistenFn } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
 import { Select } from "./ui/Select";
-import { useDevices } from "../hooks/useDevices";
-
-interface LogcatViewProps {
-  onBack: () => void;
-}
+import { useDeviceStore } from "../stores/deviceStore";
+import * as tauri from "../lib/tauri";
+import { getVersion } from "@tauri-apps/api/app";
 
 type LogLevel = "V" | "D" | "I" | "W" | "E";
 
@@ -31,15 +25,237 @@ interface LogLine {
   level: LogLevel;
 }
 
-export function LogcatView({ onBack }: LogcatViewProps) {
-  const { devices } = useDevices();
+const APP_NAME_MAP: Record<string, string> = {
+  // Social & Messaging
+  "com.facebook.katana": "Facebook",
+  "com.facebook.orca": "Messenger",
+  "com.instagram.android": "Instagram",
+  "com.zhiliaoapp.musically": "TikTok",
+  "com.ss.android.ugc.trill": "TikTok",
+  "com.whatsapp": "WhatsApp",
+  "com.twitter.android": "X (Twitter)",
+  "com.snapchat.android": "Snapchat",
+  "com.linkedin.android": "LinkedIn",
+  "org.telegram.messenger": "Telegram",
+  "com.zing.zalo": "Zalo",
+  "com.discord": "Discord",
+  "com.reddit.frontpage": "Reddit",
+  "com.pinterest": "Pinterest",
+  "com.tumblr": "Tumblr",
+  "jp.naver.line.android": "LINE",
+  "com.viber.voip": "Viber",
+  "com.skype.raider": "Skype",
+  "us.zoom.videomeetings": "Zoom",
+
+  // Google Suite
+  "com.google.android.youtube": "YouTube",
+  "com.google.android.gm": "Gmail",
+  "com.google.android.apps.maps": "Maps",
+  "com.android.chrome": "Chrome",
+  "com.android.vending": "Play Store",
+  "com.google.android.gms": "Google Play Services",
+  "com.google.android.googlequicksearchbox": "Google",
+  "com.google.android.apps.photos": "Photos",
+  "com.google.android.calendar": "Calendar",
+  "com.google.android.deskclock": "Clock",
+  "com.google.android.calculator": "Calculator",
+  "com.google.android.contacts": "Contacts",
+  "com.google.android.apps.messaging": "Messages",
+  "com.google.android.keep": "Keep Notes",
+  "com.google.android.apps.docs": "Drive",
+  "com.google.android.apps.docs.editors.docs": "Docs",
+  "com.google.android.apps.docs.editors.sheets": "Sheets",
+  "com.google.android.apps.docs.editors.slides": "Slides",
+  "com.google.android.focus": "Focus",
+  "com.google.android.apps.translate": "Translate",
+  "com.google.android.music": "Play Music",
+  "com.google.android.videos": "Play Movies",
+  "com.google.android.apps.focus": "Focus",
+  "com.google.android.apps.tachyon": "Duo",
+
+  // Entertainment & Media
+  "com.spotify.music": "Spotify",
+  "com.netflix.mediaclient": "Netflix",
+  "com.amazon.avod.thirdpartyclient": "Prime Video",
+  "com.disney.disneyplus": "Disney+",
+  "tv.twitch.android.app": "Twitch",
+  "com.soundcloud.android": "SoundCloud",
+  "com.shazam.android": "Shazam",
+
+  // Shopping & Tools
+  "com.amazon.mShop.android.shopping": "Amazon Shopping",
+  "com.ebay.mobile": "eBay",
+  "com.alibaba.aliexpresshd": "AliExpress",
+  "com.shopee.vn": "Shopee",
+  "com.shopee.ph": "Shopee",
+  "com.shopee.my": "Shopee",
+  "com.shopee.id": "Shopee",
+  "com.shopee.th": "Shopee",
+  "com.shopee.tw": "Shopee",
+  "com.lazada.android": "Lazada",
+  "com.grabtaxi.passenger": "Grab",
+  "com.ubercab": "Uber",
+  "com.gojek.app": "Gojek",
+  "com.booking": "Booking.com",
+  "com.airbnb.android": "Airbnb",
+
+  // Microsoft
+  "com.microsoft.office.outlook": "Outlook",
+  "com.microsoft.teams": "Teams",
+  "com.microsoft.office.word": "Word",
+  "com.microsoft.office.excel": "Excel",
+  "com.microsoft.office.powerpoint": "PowerPoint",
+  "com.microsoft.emmx": "Edge",
+  "com.microsoft.office.officehubrow": "Office",
+
+  // System
+  "com.android.settings": "Settings",
+  "com.android.camera": "Camera",
+  "com.android.systemui": "System UI",
+  "com.android.phone": "Phone",
+  "com.android.documentsui": "Files",
+  "com.sec.android.app.myfiles": "My Files (Samsung)",
+  "com.mi.android.globalFileexplorer": "File Manager (Xiaomi)",
+};
+
+const formatAppLabel = (pkg: string): string => {
+  if (APP_NAME_MAP[pkg]) return APP_NAME_MAP[pkg];
+  const parts = pkg.split(".");
+  if (parts.length > 0) {
+    if (
+      parts.length > 4 &&
+      parts[0] === "com" &&
+      parts[1] === "google" &&
+      parts[2] === "android" &&
+      parts[3] === "apps"
+    ) {
+      const name = parts[4];
+      return name.charAt(0).toUpperCase() + name.slice(1);
+    }
+    const last = parts[parts.length - 1];
+    if (last === "android" && parts.length > 1) {
+      const prev = parts[parts.length - 2];
+      return prev.charAt(0).toUpperCase() + prev.slice(1);
+    }
+    return last.charAt(0).toUpperCase() + last.slice(1);
+  }
+  return pkg;
+};
+
+const parseLinePid = (text: string): string | null => {
+  const match = text.match(/^\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}\s+(\d+)/);
+  return match ? match[1] : null;
+};
+
+export function LogcatView() {
+  const selectedDevice = useDeviceStore((s) => s.selectedDeviceId) ?? "";
   const [logLines, setLogLines] = useState<LogLine[]>([]);
   const [paused, setPaused] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<string>("");
   const [logLevel, setLogLevel] = useState<LogLevel>("V");
   const [searchQuery, setSearchQuery] = useState("");
   const [maxLines, setMaxLines] = useState(1000);
   const [isAtBottom, setIsAtBottom] = useState(true);
+
+  const [foregroundPackage, setForegroundPackage] = useState<string | null>(null);
+  const [appPids, setAppPids] = useState<Record<string, string[]>>({});
+  const [appLabels, setAppLabels] = useState<Record<string, string>>({});
+  const [selectedApp, setSelectedApp] = useState<string>("foreground");
+  const [appVersion, setAppVersion] = useState("");
+
+  useEffect(() => {
+    getVersion().then(setAppVersion).catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedDevice) {
+      setForegroundPackage(null);
+      setAppPids({});
+      setAppLabels({});
+      return;
+    }
+
+    let isMounted = true;
+
+    const fetchApps = async () => {
+      try {
+        // 1. Get installed packages with labels
+        const apps = await tauri.getAppsFull<{ id: string; label?: string }[]>(selectedDevice, true);
+        if (!isMounted) return;
+
+        const nextLabels: Record<string, string> = {};
+        const pkgSet = new Set<string>();
+        for (const app of apps) {
+          pkgSet.add(app.id);
+          nextLabels[app.id] = app.label || formatAppLabel(app.id);
+        }
+
+        // 2. Get running processes
+        const psOutput = await tauri.executeShell(selectedDevice, "ps -A || ps");
+        if (!isMounted) return;
+
+        const lines = psOutput.split("\n");
+        const nextAppPids: Record<string, string[]> = {};
+
+        for (const line of lines) {
+          const trimmed = line.trim();
+          if (!trimmed) continue;
+          const parts = trimmed.split(/\s+/);
+          if (parts.length < 9) continue;
+          const pid = parts[1];
+          const name = parts[parts.length - 1];
+
+          const basePackage = name.split(":")[0];
+          if (pkgSet.has(basePackage)) {
+            if (!nextAppPids[basePackage]) {
+              nextAppPids[basePackage] = [];
+            }
+            nextAppPids[basePackage].push(pid);
+          }
+        }
+
+        // 3. Get foreground app
+        const focusOutput = await tauri.executeShell(selectedDevice, "dumpsys window | grep -E 'mCurrentFocus|mFocusedApp'");
+        if (!isMounted) return;
+
+        const match = focusOutput.match(/([a-zA-Z0-9._]+)\/([a-zA-Z0-9._]+)/);
+        const fgPackage = match ? match[1] : null;
+
+        // 4. Update state
+        setAppLabels(nextLabels);
+        setAppPids(nextAppPids);
+        setForegroundPackage(fgPackage);
+      } catch (err) {
+        console.error("Failed to fetch running apps for logcat:", err);
+      }
+    };
+
+    fetchApps();
+    const interval = setInterval(fetchApps, 4000); // refresh every 4 seconds
+
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
+  }, [selectedDevice]);
+
+  const appOptions = useMemo(() => {
+    const options = [];
+
+    // Option 1: Foreground
+    const fgLabel = foregroundPackage ? (appLabels[foregroundPackage] || foregroundPackage) : null;
+    options.push({
+      value: "foreground",
+      label: fgLabel ? `Foreground: ${fgLabel}` : "Foreground App (None)",
+    });
+
+    // Option 2: All
+    options.push({
+      value: "all",
+      label: "All Logs",
+    });
+
+    return options;
+  }, [foregroundPackage, appLabels]);
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -82,13 +298,12 @@ export function LogcatView({ onBack }: LogcatViewProps) {
     }
   }, [paused, maxLines]);
 
-  // Set initial device if not set
+  // Reset log buffers when the active device changes.
   useEffect(() => {
-    if (!selectedDevice && devices.length > 0) {
-      const firstAuthorized = devices.find((d) => d.status === "Device");
-      if (firstAuthorized) setSelectedDevice(firstAuthorized.id);
-    }
-  }, [devices, selectedDevice]);
+    setLogLines([]);
+    logBufferRef.current = [];
+    logCounter.current = 0;
+  }, [selectedDevice]);
 
   // Streaming logic linked to selectedDevice
   useEffect(() => {
@@ -98,20 +313,19 @@ export function LogcatView({ onBack }: LogcatViewProps) {
     let currentUnlisten: UnlistenFn | null = null;
 
         const startStream = async () => {
-          const sanitizedId = selectedDevice.replace(/[^a-zA-Z0-9]/g, "_");
           try {
             // 1. Clean up existing stream for THIS device first (just in case)
-            await invoke("stop_logcat_stream", { deviceId: selectedDevice });
+            await tauri.stopLogcatStream(selectedDevice);
 
             if (!isMounted) return;
 
             // 2. Start listening FIRST to avoid missing early logs
-            currentUnlisten = await listen<any>(
-              `logcat-line-${sanitizedId}`,
-              (event) => {
+            currentUnlisten = await tauri.onLogcatLine(
+              selectedDevice,
+              (lines) => {
             if (!isMounted) return;
 
-            const newLines = event.payload.lines.map((text: string) => ({
+            const newLines = lines.map((text: string) => ({
               id: logCounter.current++,
               text,
               level: parseLogLevel(text),
@@ -138,7 +352,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
         unlistenRef.current = currentUnlisten;
 
         // 3. Invoke backend to start streaming
-        await invoke("start_logcat_stream", { deviceId: selectedDevice });
+        await tauri.startLogcatStream(selectedDevice);
       } catch (err) {
         if (isMounted) {
           console.error("Streaming error:", err);
@@ -155,7 +369,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
         currentUnlisten();
         unlistenRef.current = null;
       }
-      invoke("stop_logcat_stream", { deviceId: selectedDevice }).catch(
+      tauri.stopLogcatStream(selectedDevice).catch(
         console.error
       );
     };
@@ -168,11 +382,11 @@ export function LogcatView({ onBack }: LogcatViewProps) {
     const fetchHistory = async () => {
       try {
         const filterStr = logLevel === "V" ? undefined : `*:${logLevel}`;
-        const history = await invoke<string>("get_logcat", {
-          deviceId: selectedDevice,
-          lines: maxLinesRef.current,
-          filter: filterStr,
-        });
+        const history = await tauri.getLogcat(
+          selectedDevice,
+          maxLinesRef.current,
+          filterStr,
+        );
 
         if (history) {
           const processedLines = history
@@ -217,6 +431,19 @@ export function LogcatView({ onBack }: LogcatViewProps) {
     return priorities[level];
   };
 
+  // Resolve selected app to target package
+  const targetPackage = useMemo(() => {
+    if (selectedApp === "all") return null;
+    if (selectedApp === "foreground") return foregroundPackage;
+    return selectedApp;
+  }, [selectedApp, foregroundPackage]);
+
+  // Get active PIDs for the target package
+  const targetPids = useMemo(() => {
+    if (!targetPackage) return null;
+    return appPids[targetPackage] || [];
+  }, [targetPackage, appPids]);
+
   const filteredLogs = useMemo(() => {
     const minPriority = getLogLevelPriority(logLevel);
     return logLines.filter((line) => {
@@ -224,9 +451,15 @@ export function LogcatView({ onBack }: LogcatViewProps) {
       const matchesSearch =
         searchQuery.trim() === "" ||
         line.text.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesLevel && matchesSearch;
+      
+      if (!matchesLevel || !matchesSearch) return false;
+      if (!targetPackage) return true;
+
+      // Filter by PID
+      const linePid = parseLinePid(line.text);
+      return linePid && targetPids ? targetPids.includes(linePid) : false;
     });
-  }, [logLines, logLevel, searchQuery]);
+  }, [logLines, logLevel, searchQuery, targetPackage, targetPids]);
 
   useEffect(() => {
     if (!paused && isAtBottomRef.current && logsEndRef.current) {
@@ -237,7 +470,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
   const handleClear = async () => {
     if (!selectedDevice) return;
     try {
-      await invoke("clear_logcat", { deviceId: selectedDevice });
+      await tauri.clearLogcat(selectedDevice);
       setLogLines([]);
       logBufferRef.current = [];
       toast.success("Logcat buffer cleared");
@@ -255,7 +488,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
       });
 
       if (path) {
-        await invoke("save_capture_file", {
+        await tauri.saveCaptureFile({
           path,
           content: btoa(unescape(encodeURIComponent(content))),
         });
@@ -289,18 +522,6 @@ export function LogcatView({ onBack }: LogcatViewProps) {
     { value: "E", label: "Error", color: "text-error" },
   ];
 
-  const deviceOptions = devices.map((d) => ({
-    value: d.id,
-    label: `${d.model || d.id}${d.status !== "Device" ? ` (${d.status})` : ""}`,
-    icon: (
-      <Smartphone
-        size={14}
-        className={d.status === "Device" ? "text-accent" : "text-text-muted"}
-      />
-    ),
-    disabled: d.status !== "Device",
-  }));
-
   const limitOptions = [
     { value: "500", label: "500 lines" },
     { value: "1000", label: "1000 lines" },
@@ -314,88 +535,68 @@ export function LogcatView({ onBack }: LogcatViewProps) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
     >
-      {/* Header */}
+      {/* Status + actions */}
       <div className="flex items-center gap-4 mb-4">
-        <button
-          onClick={onBack}
-          className="p-2.5 rounded-xl hover:bg-surface-elevated text-text-secondary hover:text-text-primary transition-all duration-200 border border-transparent hover:border-border"
-        >
-          <ArrowLeft size={22} />
-        </button>
-        <div className="flex-1 flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
-            <FileText className="text-accent" size={20} />
-          </div>
-          <div>
-            <h2 className="text-xl font-bold text-text-primary">
-              Logcat Viewer
-            </h2>
-            <div className="flex items-center gap-2">
-              <span
-                className={`flex h-1.5 w-1.5 rounded-full ${
-                  !paused && selectedDevice
-                    ? "bg-success animate-pulse"
-                    : "bg-text-muted"
-                }`}
-              />
-              <p className="text-xs text-text-muted">
-                {!paused && selectedDevice ? "Live Streaming" : "Paused"}
-              </p>
-            </div>
-          </div>
-        </div>
-
         <div className="flex items-center gap-2">
+          {/* Combined Status + Pause/Resume Button */}
           <button
             onClick={() => setPaused(!paused)}
             disabled={!selectedDevice}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-sm font-medium ${
+            className={`flex items-center gap-2 px-3 py-1.5 rounded-lg border transition-all text-sm font-medium cursor-pointer ${
               paused
-                ? "bg-accent text-white border-accent"
-                : "bg-surface-elevated border-border text-text-secondary hover:text-text-primary"
-            } disabled:opacity-50`}
+                ? "bg-surface-elevated border-border text-text-muted hover:text-text-primary"
+                : "bg-success/10 border-success/30 text-success hover:border-success/50"
+            } disabled:opacity-50 disabled:cursor-not-allowed`}
           >
-            {paused ? <Play size={14} /> : <Pause size={14} />}
-            {paused ? "Resume" : "Pause"}
+            <span
+              className={`flex h-2 w-2 rounded-full shrink-0 ${
+                !paused && selectedDevice ? "bg-success animate-pulse" : "bg-text-muted"
+              }`}
+            />
+            <span>{!paused && selectedDevice ? "Live" : "Paused"}</span>
           </button>
 
+          {/* Export Button */}
           <button
             onClick={handleExport}
             disabled={logLines.length === 0}
-            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-text-primary transition-all text-sm font-medium disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-text-primary transition-all text-sm font-medium disabled:opacity-50 cursor-pointer"
           >
             <Download size={14} />
-            Export
+            <span>Export</span>
           </button>
 
+          {/* Clear Button */}
           <button
             onClick={handleClear}
             disabled={!selectedDevice}
-            className="p-2 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-elevated border border-border text-text-secondary hover:text-error transition-all text-sm font-medium disabled:opacity-50 cursor-pointer"
             title="Clear device buffer"
           >
-            <Trash2 size={16} />
+            <Trash2 size={14} />
+            <span>Clear</span>
           </button>
+        </div>
+
+        <div className="flex-1" />
+
+        {/* App selector dropdown */}
+        <div className="flex items-center gap-2">
+          <div className="w-64">
+            <Select
+              options={appOptions}
+              value={selectedApp}
+              onChange={(val) => setSelectedApp(val)}
+              placeholder="Filter by App"
+              disabled={!selectedDevice}
+            />
+          </div>
         </div>
       </div>
 
       {/* Controls */}
       <div className="bg-surface-elevated border border-border rounded-xl p-3 mb-4 space-y-3 shadow-sm">
         <div className="flex items-center gap-3 flex-wrap">
-          <div className="w-56">
-            <Select
-              options={deviceOptions}
-              value={selectedDevice}
-              onChange={(val) => {
-                setSelectedDevice(val);
-                setLogLines([]);
-                logBufferRef.current = [];
-                logCounter.current = 0;
-              }}
-              placeholder="Select device..."
-            />
-          </div>
-
           <div className="flex-1 relative group">
             <Search
               size={14}
@@ -454,7 +655,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
         <div
           ref={containerRef}
           onScroll={handleScroll}
-          className="flex-1 overflow-auto font-mono text-[11px] bg-[#0c0c0c] border border-border rounded-xl p-4 custom-scrollbar selection:bg-accent/30"
+          className="flex-1 overflow-auto font-mono text-[11px] bg-surface-card border border-border rounded-xl p-4 custom-scrollbar selection:bg-accent/30"
         >
         {selectedDevice ? (
           filteredLogs.length > 0 ? (
@@ -464,7 +665,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
                   key={line.id}
                   className={`${getLogColor(
                     line.level
-                  )} hover:bg-white/5 px-1 rounded transition-colors group flex gap-3`}
+                  )} hover:bg-surface-hover/50 px-1 rounded transition-colors group flex gap-3`}
                 >
                   <span className="opacity-20 select-none w-8 text-right shrink-0">
                     {line.id}
@@ -528,7 +729,7 @@ export function LogcatView({ onBack }: LogcatViewProps) {
             </span>
           )}
         </div>
-        <span>ADB Compass v1.0.1</span>
+        <span>ADB Compass {appVersion ? `v${appVersion}` : ""}</span>
       </div>
     </motion.div>
   );

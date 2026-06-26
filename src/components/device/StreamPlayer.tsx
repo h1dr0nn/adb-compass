@@ -1,9 +1,8 @@
 // StreamPlayer - Display H.264 stream using WebCodecs
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { listen } from '@tauri-apps/api/event';
-import { invoke } from '@tauri-apps/api/core';
 import { getCurrentWindow } from '@tauri-apps/api/window';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../hooks/useLanguage';
+import * as tauri from '../../lib/tauri';
 
 interface StreamPlayerProps {
     deviceId: string;
@@ -75,10 +74,7 @@ export function StreamPlayer({
             if (timeSinceLastFrame > 3000) {
                 console.warn(`[StreamPlayer] Stream stalled for ${timeSinceLastFrame}ms for ${deviceId}. Requesting emergency sync.`);
                 const currentLabel = windowLabel || getCurrentWindow().label;
-                invoke('request_scrcpy_sync', {
-                    deviceId,
-                    windowLabel: currentLabel
-                }).catch(console.error);
+                tauri.requestScrcpySync(deviceId, currentLabel).catch(console.error);
                 lastFrameTimeRef.current = Date.now(); // Rate limit sync requests
             }
         }, 1000);
@@ -267,14 +263,14 @@ export function StreamPlayer({
             console.log(`[StreamPlayer] Setting up listeners for ${deviceId} in window ${currentLabel} (sanitized: ${sanitizedId})`);
 
             // 1. Normal frame listener (global for this device)
-            const unlistenFrame = await listen<string>(`scrcpy-frame-${sanitizedId}`, (event) => {
-                handleFrameData(event.payload);
+            const unlistenFrame = await tauri.onScrcpyFrame(deviceId, (payload) => {
+                handleFrameData(payload);
             });
 
             // 2. Private sync listener (unique for this window)
-            const unlistenSync = await listen<string>(`scrcpy-sync-${currentLabel}-${sanitizedId}`, (event) => {
+            const unlistenSync = await tauri.onScrcpySync(currentLabel, deviceId, (payload) => {
                 console.log(`[StreamPlayer] Sync packet received for window ${currentLabel} and device ${deviceId}`);
-                handleFrameData(event.payload);
+                handleFrameData(payload);
             });
 
             if (!active) {
@@ -294,10 +290,7 @@ export function StreamPlayer({
             setTimeout(() => {
                 if (!active) return;
                 console.log(`[StreamPlayer] Window: ${currentLabel} requesting private sync for ${deviceId}`);
-                invoke('request_scrcpy_sync', {
-                    deviceId,
-                    windowLabel: currentLabel
-                }).catch(err => {
+                tauri.requestScrcpySync(deviceId, currentLabel).catch(err => {
                     console.error(`[StreamPlayer] Sync request failed for ${deviceId}:`, err);
                 });
             }, 800);
@@ -361,11 +354,11 @@ export function StreamPlayer({
                 const androidKeycode = ANDROID_KEYMAP[e.key];
                 if (androidKeycode !== undefined) {
                     e.preventDefault();
-                    invoke('scrcpy_key', { deviceId, action: 0, keycode: androidKeycode, metastate: 0 }).catch(console.error);
+                    tauri.scrcpyKey({ deviceId, action: 0, keycode: androidKeycode, metastate: 0 }).catch(console.error);
                 } else if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
                     // It's a printable character, send as text event
                     e.preventDefault();
-                    invoke('scrcpy_text', { deviceId, text: e.key }).catch(console.error);
+                    tauri.scrcpyText(deviceId, e.key).catch(console.error);
                 }
             },
             onKeyUp: (e: React.KeyboardEvent) => {
@@ -374,7 +367,7 @@ export function StreamPlayer({
                 const androidKeycode = ANDROID_KEYMAP[e.key];
                 if (androidKeycode !== undefined) {
                     e.preventDefault();
-                    invoke('scrcpy_key', { deviceId, action: 1, keycode: androidKeycode, metastate: 0 }).catch(console.error);
+                    tauri.scrcpyKey({ deviceId, action: 1, keycode: androidKeycode, metastate: 0 }).catch(console.error);
                 }
             }
         };

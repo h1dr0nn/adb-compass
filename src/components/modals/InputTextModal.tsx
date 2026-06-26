@@ -2,9 +2,9 @@ import { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Keyboard, Send, Loader2 } from 'lucide-react';
-import { invoke } from '@tauri-apps/api/core';
+import * as tauri from "../../lib/tauri";
 import { toast } from 'sonner';
-import { useLanguage } from '../../contexts/LanguageContext';
+import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 
 interface InputTextModalProps {
@@ -22,7 +22,7 @@ export function InputTextModal({ deviceId, onClose }: InputTextModalProps) {
 
         setLoading(true);
         try {
-            await invoke('input_text', { deviceId, text: text.trim() });
+            await tauri.inputText(deviceId, text.trim());
             toast.success(t.textSent);
             setText('');
         } catch (e: unknown) {
@@ -55,7 +55,7 @@ export function InputTextModal({ deviceId, onClose }: InputTextModalProps) {
             />
 
             {/* Modal */}
-            <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none p-4">
+            <div className="fixed top-8 left-0 right-0 bottom-0 flex items-center justify-center z-50 pointer-events-none p-4">
                 <motion.div
                     className="bg-surface-card border border-border rounded-2xl shadow-2xl w-full max-w-md pointer-events-auto"
                     variants={modalContent}
