@@ -5,6 +5,17 @@ use crate::adb::client::AdbClient;
 use crate::adb::command_builder::{AdbCommand, AdbCommandBuilder};
 use crate::adb::executor::{DeviceInfo, DeviceStatus};
 use crate::error::AppError;
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
+
+/// Cache of resolved device display names keyed by device id. A device's model
+/// never changes while connected, so we resolve it via getprop exactly once
+/// instead of spawning 3 `adb getprop` processes on every `list_devices` call
+/// (which the tracker invokes constantly — the source of the adb.exe pileup).
+fn model_cache() -> &'static Mutex<HashMap<String, String>> {
+    static CACHE: OnceLock<Mutex<HashMap<String, String>>> = OnceLock::new();
+    CACHE.get_or_init(|| Mutex::new(HashMap::new()))
+}
 
 /// Handles discovering and identifying connected Android devices.
 pub struct AdbDiscovery<'a> {
@@ -24,10 +35,19 @@ impl<'a> AdbDiscovery<'a> {
 
         let mut devices = self.parse_devices_output(&stdout);
 
-        // Enrich device info for connected devices
+        // Enrich connected devices with a friendly model name, cached per id so
+        // the getprop calls happen once per device rather than on every poll.
         for device in &mut devices {
             if device.status == DeviceStatus::Device {
+                if let Some(cached) = model_cache().lock().unwrap().get(&device.id).cloned() {
+                    device.model = Some(cached);
+                    continue;
+                }
                 if let Some(model_info) = self.get_device_model_info(&device.id) {
+                    model_cache()
+                        .lock()
+                        .unwrap()
+                        .insert(device.id.clone(), model_info.clone());
                     device.model = Some(model_info);
                 }
             }

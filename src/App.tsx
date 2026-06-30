@@ -13,6 +13,8 @@ import { TitleBar } from "./components/AppShell/TitleBar";
 import { TopNav } from "./components/AppShell/TopNav";
 import { PageHeader } from "./components/AppShell/PageHeader";
 import { CommandPalette } from "./components/AppShell/CommandPalette";
+import { LoadingScreen } from "./components/AppShell/LoadingScreen";
+import { onAppReady, isAppReady } from "./lib/tauri";
 import type { Tab } from "./components/AppShell/tabs";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { Sidebar } from "./components/Sidebar";
@@ -188,11 +190,36 @@ function AppContent() {
 
 export default function App() {
   const [windowLabel, setWindowLabel] = useState<string>("");
+  const [ready, setReady] = useState(false);
 
   useThemeSync();
 
   useEffect(() => {
     setWindowLabel(getCurrentWindow().label);
+  }, []);
+
+  // Enter the app once the Rust side signals the ADB daemon + tracker are up.
+  // A fallback timer guarantees we never get stuck on the loading screen.
+  useEffect(() => {
+    let unlisten: (() => void) | undefined;
+    const fallback = setTimeout(() => setReady(true), 12000);
+    const done = () => {
+      clearTimeout(fallback);
+      setReady(true);
+    };
+    onAppReady(done).then((fn) => {
+      unlisten = fn;
+    });
+    // Cover the race where the event fired before the listener attached.
+    isAppReady()
+      .then((r) => {
+        if (r) done();
+      })
+      .catch(() => {});
+    return () => {
+      clearTimeout(fallback);
+      unlisten?.();
+    };
   }, []);
 
   if (windowLabel.startsWith("mirror-")) {
@@ -201,6 +228,10 @@ export default function App() {
         <MirrorWindow />
       </div>
     );
+  }
+
+  if (!ready) {
+    return <LoadingScreen />;
   }
 
   return <AppContent />;

@@ -51,9 +51,19 @@ fn emit_if_changed(
     last_devices: &Arc<Mutex<Vec<DeviceInfo>>>,
 ) {
     if let Ok(devices) = executor.list_devices() {
-        let mut last = last_devices.lock().unwrap();
-        if *last != devices {
-            *last = devices.clone();
+        // Decide under the lock, then DROP it before emitting. Holding the lock
+        // across app.emit() risks poisoning the Mutex if emit panics, which
+        // would permanently kill both tracker threads on their next lock.
+        let changed = {
+            let mut last = last_devices.lock().unwrap_or_else(|e| e.into_inner());
+            if *last != devices {
+                *last = devices.clone();
+                true
+            } else {
+                false
+            }
+        };
+        if changed {
             let _ = app.emit("device-changed", DeviceChangedPayload { devices });
         }
     }
@@ -83,7 +93,9 @@ fn run_tracker(
 
             // Check if we have any "transitional" devices
             let has_transitional = {
-                let last = last_devices_heartbeat.lock().unwrap();
+                let last = last_devices_heartbeat
+                    .lock()
+                    .unwrap_or_else(|e| e.into_inner());
                 last.iter().any(|d| {
                     matches!(
                         d.status,

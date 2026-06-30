@@ -28,6 +28,7 @@ use commands::{
     enable_tcpip,
     execute_shell,
     export_logcat,
+    get_apk_icon,
     get_app_icon,
     get_apps_full,
     get_binaries,
@@ -86,8 +87,20 @@ use commands::{
     uninstall_app,
     validate_apk,
 };
+use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::window::{Color, Effect, EffectsBuilder};
-use tauri::{Manager, RunEvent};
+use tauri::{Emitter, Manager, RunEvent, State};
+
+/// Set true once the ADB daemon + tracker are up. Lets the frontend detect
+/// readiness even if it missed the "app-ready" event (attached its listener
+/// after the event fired).
+struct AppReady(AtomicBool);
+
+/// Whether the backend has finished its ADB bootstrap.
+#[tauri::command]
+fn is_app_ready(state: State<'_, AppReady>) -> bool {
+    state.0.load(Ordering::SeqCst)
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -120,12 +133,27 @@ pub fn run() {
             app.manage(ApkWatcherState {
                 watcher: std::sync::Mutex::new(None),
             });
+            app.manage(AppReady(AtomicBool::new(false)));
 
-            // Start real-time device tracking
-            start_device_tracker(app.handle().clone());
+            // Heavy ADB bootstrap runs OFF the setup thread so the window and a
+            // lightweight loading screen appear instantly. We own the daemon
+            // lifecycle on our isolated port (50337): tear down any stale/wedged
+            // server, start exactly one (so concurrent clients don't each fork
+            // their own and pile up as suspended adb.exe), start the tracker,
+            // then signal the frontend to enter the app.
+            let handle = app.handle().clone();
+            std::thread::spawn(move || {
+                let executor = AdbExecutor::new();
+                let _ = executor.kill_server();
+                let _ = executor.start_server();
+                start_device_tracker(handle.clone());
+                handle.state::<AppReady>().0.store(true, Ordering::SeqCst);
+                let _ = handle.emit("app-ready", ());
+            });
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
+            is_app_ready,
             check_adb_status,
             get_devices,
             get_binaries,
@@ -136,6 +164,7 @@ pub fn run() {
             check_device_requirements,
             check_action_requirements,
             validate_apk,
+            get_apk_icon,
             install_apk,
             scan_apks_in_folder,
             // Device Actions

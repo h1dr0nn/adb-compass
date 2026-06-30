@@ -293,6 +293,14 @@ export const onDeviceChanged = (
     cb(e.payload.devices),
   );
 
+/** Fired once when the Rust-side ADB daemon + device tracker are up. */
+export const onAppReady = (cb: () => void): Promise<UnlistenFn> =>
+  listen("app-ready", () => cb());
+
+/** Synchronous check for readiness, in case the "app-ready" event fired before
+ * the listener attached. */
+export const isAppReady = (): Promise<boolean> => invoke("is_app_ready");
+
 export const onApkFolderChanged = (
   cb: (path: string) => void,
 ): Promise<UnlistenFn> =>

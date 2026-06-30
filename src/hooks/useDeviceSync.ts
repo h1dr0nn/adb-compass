@@ -46,7 +46,13 @@ export function useDeviceSync(): void {
   useEffect(() => {
     const store = useDeviceStore.getState();
     store.checkAdb();
-    store.refreshDevices();
+    // Light initial list: the Rust setup already started a single clean daemon,
+    // so just read it. The manual Refresh button (refreshDevices) is the heavy
+    // recovery path that bounces the daemon — don't bounce on every boot.
+    tauri
+      .getDevices()
+      .then((d) => useDeviceStore.getState().mergeDevices(d))
+      .catch(() => {});
 
     const unlistenPromise = tauri.onDeviceChanged((fresh) => {
       useDeviceStore.getState().mergeDevices(fresh);
@@ -55,23 +61,6 @@ export function useDeviceSync(): void {
     return () => {
       unlistenPromise.then((fn) => fn());
     };
-  }, []);
-
-  // Safety-net: the tracker only emits on change, so if the frontend ever
-  // misses an event (startup race, StrictMode churn) its list can diverge
-  // from reality with no recovery. Periodically reconcile with the actual
-  // device list; the store skips no-op updates so this causes no churn.
-  useEffect(() => {
-    const poll = async () => {
-      try {
-        const fresh = await tauri.getDevices();
-        useDeviceStore.getState().mergeDevices(fresh);
-      } catch {
-        // Ignore transient polling errors.
-      }
-    };
-    const interval = setInterval(poll, 3000);
-    return () => clearInterval(interval);
   }, []);
 
   // Background reconnect for offline wireless devices.

@@ -120,14 +120,16 @@ pub fn get_devices() -> Result<Vec<DeviceInfo>, AppError> {
     executor.list_devices()
 }
 
-/// Refresh device list (same as get_devices, but can trigger server start)
+/// Refresh device list. This is the explicit user "Refresh" action and doubles
+/// as a recovery path: it BOUNCES the adb daemon (kill + start) so a wedged USB
+/// monitor re-enumerates devices. A plain `start-server` is a no-op when a
+/// daemon is already running, which is why a stuck daemon previously could only
+/// be recovered by restarting the whole app.
 #[tauri::command]
 pub fn refresh_devices() -> Result<Vec<DeviceInfo>, AppError> {
     let executor = AdbExecutor::new();
-
-    // Try to start server if needed
+    let _ = executor.kill_server();
     let _ = executor.start_server();
-
     executor.list_devices()
 }
 
