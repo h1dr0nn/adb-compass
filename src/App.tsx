@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { motion, AnimatePresence } from "framer-motion";
-import { Toaster } from "sonner";
+import { ToastViewport } from "./components/ui/AppToast";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { MirrorWindow } from "./components/modals/MirrorWindow";
 import { useDevices } from "./hooks/useDevices";
-import { useTheme } from "./hooks/useTheme";
 import { useThemeSync } from "./hooks/useThemeSync";
 import { useDeviceSync } from "./hooks/useDeviceSync";
 import { useLanguage } from "./hooks/useLanguage";
@@ -38,7 +37,6 @@ const fadeView = {
 function AppContent() {
   const { devices } = useDevices();
   const { t } = useLanguage();
-  const { resolvedTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState<Tab>("devices");
   const [showSettings, setShowSettings] = useState(false);
@@ -178,13 +176,11 @@ function AppContent() {
           onOpenWireless={() => setShowWireless(true)}
         />
 
-        <Toaster
-          position="bottom-right"
-          theme={resolvedTheme === "dark" ? "dark" : "light"}
-          closeButton
-          richColors
-        />
       </div>
+
+      {/* Custom toast stack; portals to <body> so it escapes every stacking
+       * context (titlebar, modals) and stays clickable + animated. */}
+      <ToastViewport />
     </Tooltip.Provider>
   );
 }
