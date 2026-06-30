@@ -1,23 +1,31 @@
 {
-  "version": "2.0.3",
+  "version": "2.1.0",
   "notes": "Initial release with UI improvements and updater support.",
-  "pub_date": "2026-06-26T09:48:28.787Z",
+  "pub_date": "2026-06-30T05:24:44.497Z",
   "platforms": {
+    "windows-x86_64-nsis": {
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.1.0/adbcompass-2.1.0-windows-x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHJBbjdJQlJZN1JBTmJVd3gwNDJKV0p0bXhPRCt1RWtOS0VJdWVQTEM5NEpMK2VBOGhXMGdDTVdDbEhmZ1BBQ3JhenA4L0tJbHZ5QWwwaHRqS2pCUUFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNzk2ODc4CWZpbGU6QURCIENvbXBhc3NfMi4xLjBfeDY0LXNldHVwLmV4ZQpCQUFvVTE3TExoeEVaU1U0VGM0OGJXQUlvTmhTVzZpcWIzVXFQUmFFQklybEU1N1h3ZnFXazhKNGVlM2M1Tm1GUDNYSmVSSWJnUHJSRjhWeUNwek9Ddz09Cg=="
+    },
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaG40QlZmVkx0M3Rtd21pR3huQUNkaUdvK2pCN0E3bUw5RXU4amhkZ2JsVzBvRjU3UWpISy9PdEtFT0kxQU9YcVd0M0VGYzdsb1daTkppTTcrUEFaaWdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDY2NzM0CWZpbGU6QURCIENvbXBhc3NfMi4wLjNfeDY0X2VuLVVTLm1zaQpRd3F5WEVDSTE2Z2UyeXo3K21ic1BBRHQwbGlEeDdoSVRRRWg5eGFqVG05aGlUR1JvTlVEdERBdXdNcG9IdHo5bzZFR0ppOEMrZTlXL1lVeUN6RCtDUT09Cg==",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.3/adbcompass-2.0.3-windows-x64-updater.zip"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.1.0/adbcompass-2.1.0-windows-x64-setup.exe",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHJBbjdJQlJZN1JBTmJVd3gwNDJKV0p0bXhPRCt1RWtOS0VJdWVQTEM5NEpMK2VBOGhXMGdDTVdDbEhmZ1BBQ3JhenA4L0tJbHZ5QWwwaHRqS2pCUUFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNzk2ODc4CWZpbGU6QURCIENvbXBhc3NfMi4xLjBfeDY0LXNldHVwLmV4ZQpCQUFvVTE3TExoeEVaU1U0VGM0OGJXQUlvTmhTVzZpcWIzVXFQUmFFQklybEU1N1h3ZnFXazhKNGVlM2M1Tm1GUDNYSmVSSWJnUHJSRjhWeUNwek9Ddz09Cg=="
+    },
+    "linux-x86_64-appimage": {
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.1.0/adbcompass-2.1.0-linux-x64.AppImage",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHFpZUxBakFuTTNmZ01Tbm5tZE1KMUhmNlQwdWxVa0ZTRU4wN1Y5cE1MRVk2bHNiNGQvaGd0K3E4U0xXWjdQZGRZcUQwemttcmdWdVhSR05NNG13d2dJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNzk2NjY1CWZpbGU6QURCIENvbXBhc3NfMi4xLjBfYW1kNjQuQXBwSW1hZ2UKbHMwb1RXN1Q3a21jZ0hnbkw2OHVubGtJOUp5d1lETGhQSnkrUEpSZHFHSGl6V3dhZGlGY1BwWXl2cUdlSENzektSWmZEamhYNC9lUm9GVE8rSVlHQ0E9PQo="
     },
     "linux-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaGxhemZPYkJwV0dhU28rRHJDcDdXYmNpLzdhM1lWWkxlNjR6ekpOTzQvcU9TOU12dHlZZkxIMjIxbmFQakNNcnRsK01NWTZvYXFMRmpCK0NpWjB0U3dvPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDY2NjM1CWZpbGU6QURCIENvbXBhc3NfMi4wLjNfYW1kNjQuQXBwSW1hZ2UKNGx6M1lIOFNMUlcvbEpQRTM5eWhVWi9FOXVuSGR0S2xJLzF6VTE3U01qeWlTeHRlWTc1dGZrdWFzMTNyS1VPOVl2UnFoMW1NZHE2Y1doMDJ1TlFsQmc9PQo=",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.3/adbcompass-2.0.3-linux-x64-updater.AppImage.tar.gz"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.1.0/adbcompass-2.1.0-linux-x64.AppImage",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHFpZUxBakFuTTNmZ01Tbm5tZE1KMUhmNlQwdWxVa0ZTRU4wN1Y5cE1MRVk2bHNiNGQvaGd0K3E4U0xXWjdQZGRZcUQwemttcmdWdVhSR05NNG13d2dJPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNzk2NjY1CWZpbGU6QURCIENvbXBhc3NfMi4xLjBfYW1kNjQuQXBwSW1hZ2UKbHMwb1RXN1Q3a21jZ0hnbkw2OHVubGtJOUp5d1lETGhQSnkrUEpSZHFHSGl6V3dhZGlGY1BwWXl2cUdlSENzektSWmZEamhYNC9lUm9GVE8rSVlHQ0E9PQo="
     },
     "darwin-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHM5WHpidmFiTW5CcDVuZGxsbER0VVYxVU91SlNhemhERDhxZ1JCZ1dMbVMvZFZIUDRTNFl4TS9ZZ2V6dDNDZDBnNm5ncmJRUmlUSE00aUFyTFBrTkFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDY3Mjc0CWZpbGU6QURCIENvbXBhc3MuYXBwLnRhci5negovV3Nsd2ZNMTVxbUMxT1hlOU4yY3QwekVRVG4wbVpLNXZ5VThJVDV2UnRiYWZaKzAyaXptWGlNaThySHpoQ1YwQlU1d3p5aHU4VmFTNGNnMlZFRnpBdz09Cg==",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.3/adbcompass-2.0.3-macos-x64-updater.app.tar.gz"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.1.0/adbcompass-2.1.0-macos-x64-updater.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaHRWb0NyNDlRMG5tVXRHR3RQeUQ0ZzhTRUY3aHJnenJ4dUYyNWJnVHpCc013Z1prSWE1Uy9xbVJuNVMxRE9va3ZWeklDSXE2UG5hak8xTzRGdXNLYlFNPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNzk2OTkzCWZpbGU6QURCIENvbXBhc3MuYXBwLnRhci5nego5SzB4YUV4eGlCSVkzdTF3ZWhOZU1Ba1RsUGNKdkxleHduMlUySnc0Nm52VVRlTTM5bGxXaTRaOGpSWS84SFFUaUhkTWZmTGlJZlV2VlNENGJLRFhDdz09Cg=="
     },
     "darwin-aarch64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaG02SGdBQU45aFlWOXQ5bnJxblRScDRvcVgwQXFFVW9pU015R21pWVZlQzVrbkNQWDdNTTNQK00yZ0hVajdPMmoraTBoMVJRTjM2WHpsQ0QrRW9YK2d3PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNDY2NTE2CWZpbGU6QURCIENvbXBhc3MuYXBwLnRhci5negpZaHhUWmlnYXQyV2JUL0xCa21EMWhjb1Z2TWIzbGZKSWRpWStoOThmdmdIU3pzL3lucS8rcm90TVJhQnNKTTNXYnNMOVRDZFdFR1NtRWJrdlVuSU5CUT09Cg==",
-      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.0.3/adbcompass-2.0.3-macos-arm64-updater.app.tar.gz"
+      "url": "https://github.com/h1dr0nn/adb-compass/releases/download/release-v2.1.0/adbcompass-2.1.0-macos-arm64-updater.app.tar.gz",
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVSZzF3YThseVZjaGpUOEZCb0NDd2F2MGszTXZadjNNZVp4TnU2bW5GdTh0ZFk2N2IzUUxlOXk1eW5rRmsrcnlaaTU1akErN0pGRDNXcmhhSFpMRlpsb3JQMzErN1BpUVE4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzgyNzk2NjE1CWZpbGU6QURCIENvbXBhc3MuYXBwLnRhci5negpxSVBIV2YwbDhSWnBQRHZESWFiY0NQYmJ2OFBSWW5BZFhOU3gwaG9yOExBdS80dWZ1V2xnMnk0V2FTSDNlU3pvUS9VcC9zQUhBeTlRZ0dEQm1qbDhEZz09Cg=="
     }
   }
 }
