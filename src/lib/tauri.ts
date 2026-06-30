@@ -44,6 +44,10 @@ export const testAgentConnection = (deviceId: string): Promise<unknown> =>
 export const validateApk = (path: string): Promise<ApkInfo | null> =>
   invoke("validate_apk", { path });
 
+/** Best-effort launcher icon of an APK file as a data URL, or null. */
+export const getApkIcon = (path: string): Promise<string | null> =>
+  invoke("get_apk_icon", { path });
+
 export const scanApksInFolder = (path: string): Promise<ApkInfo[]> =>
   invoke("scan_apks_in_folder", { path });
 
