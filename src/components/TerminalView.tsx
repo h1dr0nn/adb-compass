@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, KeyboardEvent } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Terminal, Loader2, Trash2, Command, ChevronRight, Sparkles, Download } from 'lucide-react';
+import { Terminal, Loader2, Trash2, CornerDownLeft, ChevronRight, Sparkles, Download } from 'lucide-react';
 import * as tauri from '../lib/tauri';
 import { useDeviceStore } from '../stores/deviceStore';
+import { useLanguage } from '../hooks/useLanguage';
 import { QuickActionMenu } from './device/QuickActionMenu';
 import { save } from "@tauri-apps/plugin-dialog";
 import { toast } from "sonner";
@@ -15,21 +16,75 @@ interface CommandHistory {
 }
 
 const COMMON_COMMANDS = [
+    // Packages
     { label: 'List Packages', cmd: 'pm list packages' },
-    { label: 'Battery Stats', cmd: 'dumpsys battery' },
-    { label: 'Memory Info', cmd: 'cat /proc/meminfo' },
-    { label: 'Screen Cap', cmd: 'screencap -p /sdcard/screen.png' },
-    { label: 'Process List', cmd: 'top -n 1' },
-    { label: 'IP Address', cmd: 'ip addr show wlan0' },
-    { label: 'Clear Logcat', cmd: 'logcat -c' },
-    { label: 'Install APK', cmd: 'install ' },
-    { label: 'Uninstall Package', cmd: 'uninstall ' },
-    { label: 'Device Properties', cmd: 'getprop' },
+    { label: 'List 3rd-party Packages', cmd: 'pm list packages -3' },
+    { label: 'Package Path', cmd: 'pm path ' },
+    { label: 'Clear App Data', cmd: 'pm clear ' },
+    { label: 'Uninstall Package', cmd: 'pm uninstall ' },
+    { label: 'Grant Permission', cmd: 'pm grant ' },
+    // Activity / App
+    { label: 'Current Activity', cmd: 'dumpsys activity activities | grep mResumedActivity' },
+    { label: 'Start Activity', cmd: 'am start -n ' },
+    { label: 'Force Stop App', cmd: 'am force-stop ' },
     { label: 'Activity Stack', cmd: 'dumpsys activity activities' },
+    // Device info
+    { label: 'Device Properties', cmd: 'getprop' },
+    { label: 'Android Version', cmd: 'getprop ro.build.version.release' },
+    { label: 'Battery Stats', cmd: 'dumpsys battery' },
     { label: 'CPU Info', cmd: 'cat /proc/cpuinfo' },
+    { label: 'Memory Info', cmd: 'cat /proc/meminfo' },
+    { label: 'Disk Usage', cmd: 'df -h' },
+    { label: 'Uptime', cmd: 'uptime' },
+    // Settings
+    { label: 'Get Setting (system)', cmd: 'settings get system ' },
+    { label: 'Get Setting (global)', cmd: 'settings get global ' },
+    { label: 'Put Setting', cmd: 'settings put system ' },
+    // Input
+    { label: 'Input Text', cmd: 'input text ' },
+    { label: 'Input Tap', cmd: 'input tap ' },
+    { label: 'Key Event (Home)', cmd: 'input keyevent KEYCODE_HOME' },
+    { label: 'Key Event (Back)', cmd: 'input keyevent KEYCODE_BACK' },
+    // Display
+    { label: 'Screen Size', cmd: 'wm size' },
+    { label: 'Screen Density', cmd: 'wm density' },
+    { label: 'Screen Capture', cmd: 'screencap -p /sdcard/screen.png' },
+    // Connectivity
+    { label: 'IP Address', cmd: 'ip addr show wlan0' },
+    { label: 'Wi-Fi Status', cmd: 'dumpsys wifi | grep "mWifiInfo"' },
+    { label: 'Toggle Wi-Fi On', cmd: 'svc wifi enable' },
+    { label: 'Toggle Data On', cmd: 'svc data enable' },
+    // Processes / files
+    { label: 'Process List', cmd: 'top -n 1' },
+    { label: 'Running Processes', cmd: 'ps -A' },
+    { label: 'List Files', cmd: 'ls -la ' },
+    { label: 'Read File', cmd: 'cat ' },
+    { label: 'Clear Logcat', cmd: 'logcat -c' },
 ];
 
+// Lightweight terminal-output highlighter: IPs, MACs, hex and numbers get a
+// colour, quoted strings go green; everything else keeps the default colour.
+const TOKEN_RE =
+    /("[^"]*"|'[^']*'|\b\d{1,3}(?:\.\d{1,3}){3}\b|\b[0-9a-f]{2}(?::[0-9a-f]{2}){5}\b|\b0x[0-9a-f]+\b|\b\d+\b)/gi;
+
+function colorizeOutput(text: string) {
+    return text.split(TOKEN_RE).map((part, i) => {
+        if (!part) return null;
+        const c = part[0];
+        if (c === '"' || c === "'")
+            return <span key={i} className="text-success">{part}</span>;
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(part))
+            return <span key={i} className="text-accent">{part}</span>;
+        if (/^[0-9a-f]{2}(:[0-9a-f]{2}){5}$/i.test(part))
+            return <span key={i} className="text-warning">{part}</span>;
+        if (/^0x/i.test(part) || /^\d+$/.test(part))
+            return <span key={i} className="text-sky-400">{part}</span>;
+        return part;
+    });
+}
+
 export function TerminalView() {
+    const { t } = useLanguage();
     const selectedDevice = useDeviceStore((s) => s.selectedDeviceId) ?? '';
     const devicesLoading = useDeviceStore((s) => s.loading);
     const [command, setCommand] = useState('');
@@ -227,10 +282,14 @@ export function TerminalView() {
                                 <span>{item.command}</span>
                             </div>
                             <pre
-                                className={`whitespace-pre-wrap text-xs pl-4 ${item.isError ? 'text-error' : 'text-text-secondary'
+                                className={`whitespace-pre-wrap text-xs pl-4 ${item.isError ? 'text-error' : 'text-text-primary'
                                     }`}
                             >
-                                {item.output || '(no output)'}
+                                {item.output
+                                    ? item.isError
+                                        ? item.output
+                                        : colorizeOutput(item.output)
+                                    : '(no output)'}
                             </pre>
                         </div>
                     ))
@@ -250,7 +309,7 @@ export function TerminalView() {
                         >
                             <div className="p-2 border-b border-border bg-surface-elevated/50 text-[10px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-2">
                                 <Sparkles size={10} className="text-accent" />
-                                Smart Suggestions
+                                {t.suggestions}
                             </div>
                             <div className="p-1 max-h-48 overflow-y-auto custom-scrollbar">
                                 {suggestions.map((s, i) => (
@@ -284,7 +343,7 @@ export function TerminalView() {
                         value={command}
                         onChange={(e) => setCommand(e.target.value)}
                         onKeyDown={handleKeyDown}
-                        placeholder={selectedDevice ? 'Enter command...' : 'Select a device first'}
+                        placeholder={selectedDevice ? t.enterCommand : t.selectDeviceFirstShort}
                         disabled={!selectedDevice || loading}
                         className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none font-mono"
                         autoFocus
@@ -292,8 +351,8 @@ export function TerminalView() {
                     {loading && <Loader2 size={16} className="animate-spin text-accent" />}
                 </div>
                 <p className="text-xs text-text-muted mt-2 ml-1 flex items-center gap-3">
-                    <span className="flex items-center gap-1"><Command size={10} /> Enter to execute</span>
-                    <span className="flex items-center gap-1"><ChevronRight size={10} className="rotate-270" /> Arrow keys for history & suggestions</span>
+                    <span className="flex items-center gap-1"><CornerDownLeft size={10} /> {t.enterToExecute}</span>
+                    <span className="flex items-center gap-1"><ChevronRight size={10} className="rotate-270" /> {t.arrowKeysHint}</span>
                 </p>
             </div>
         </motion.div>

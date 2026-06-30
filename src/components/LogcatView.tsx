@@ -15,6 +15,7 @@ import { toast } from "sonner";
 import { Select } from "./ui/Select";
 import { AppTooltip } from "./ui/Tooltip";
 import { useDeviceStore } from "../stores/deviceStore";
+import { useLanguage } from "../hooks/useLanguage";
 import * as tauri from "../lib/tauri";
 import { getVersion } from "@tauri-apps/api/app";
 
@@ -148,7 +149,37 @@ const parseLinePid = (text: string): string | null => {
   return match ? match[1] : null;
 };
 
+interface ParsedLogLine {
+  time: string;
+  pid: string;
+  tid: string;
+  level: string;
+  tag: string;
+  message: string;
+}
+
+// Parse the standard `threadtime` logcat format into columns for rich display.
+const LOGCAT_RE =
+  /^(\d{2}-\d{2}\s\d{2}:\d{2}:\d{2}\.\d{3})\s+(\d+)\s+(\d+)\s+([VDIWEF])\s+(.+?):\s?(.*)$/;
+
+const parseLogcatLine = (text: string): ParsedLogLine | null => {
+  // Batch history (get_logcat) is split on \n and can retain a trailing \r on
+  // Windows, which breaks the `$` anchor — strip it so parsing is consistent
+  // with the live stream.
+  const m = text.replace(/[\r\n]+$/, "").match(LOGCAT_RE);
+  if (!m) return null;
+  return {
+    time: m[1],
+    pid: m[2],
+    tid: m[3],
+    level: m[4],
+    tag: m[5],
+    message: m[6],
+  };
+};
+
 export function LogcatView() {
+  const { t } = useLanguage();
   const selectedDevice = useDeviceStore((s) => s.selectedDeviceId) ?? "";
   const [logLines, setLogLines] = useState<LogLine[]>([]);
   const [paused, setPaused] = useState(false);
@@ -156,6 +187,9 @@ export function LogcatView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [maxLines, setMaxLines] = useState(1000);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  // Verbose columns (line#, timestamp, pid/tid). Off by default for a clean
+  // level + tag + message view.
+  const [showDetails, setShowDetails] = useState(false);
 
   const [foregroundPackage, setForegroundPackage] = useState<string | null>(null);
   const [appPids, setAppPids] = useState<Record<string, string[]>>({});
@@ -520,19 +554,14 @@ export function LogcatView() {
     }
   };
 
-  const getLogColor = (level: LogLevel) => {
-    switch (level) {
-      case "E":
-        return "text-error";
-      case "W":
-        return "text-warning";
-      case "I":
-        return "text-accent";
-      case "D":
-        return "text-text-secondary";
-      default:
-        return "text-text-muted";
-    }
+  // Per-level styling: a colored badge + a message tint (errors/warnings stand
+  // out, the rest stay readable in the default body color).
+  const levelStyles: Record<LogLevel, { badge: string; msg: string }> = {
+    V: { badge: "bg-text-muted/15 text-text-muted", msg: "text-text-secondary" },
+    D: { badge: "bg-sky-500/15 text-sky-400", msg: "text-text-secondary" },
+    I: { badge: "bg-success/15 text-success", msg: "text-text-primary" },
+    W: { badge: "bg-warning/20 text-warning", msg: "text-warning" },
+    E: { badge: "bg-error/20 text-error", msg: "text-error" },
   };
 
   const logLevels: { value: LogLevel; label: string; color: string }[] = [
@@ -574,7 +603,7 @@ export function LogcatView() {
                 !paused && selectedDevice ? "bg-success animate-pulse" : "bg-text-muted"
               }`}
             />
-            <span>{!paused && selectedDevice ? "Live" : "Paused"}</span>
+            <span>{!paused && selectedDevice ? t.liveStreaming : t.paused}</span>
           </button>
 
           {/* Export Button */}
@@ -628,7 +657,7 @@ export function LogcatView() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search logs..."
+              placeholder={t.searchLogs}
               className="w-full bg-surface-card border border-border rounded-lg pl-9 pr-9 py-2 text-sm focus:outline-none focus:border-accent transition-all"
             />
             {searchQuery && (
@@ -653,7 +682,7 @@ export function LogcatView() {
 
         <div className="flex items-center gap-1">
           <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider mr-2">
-            Minimum Level:
+            {t.minimumLevel}:
           </span>
           {logLevels.map((level) => (
             <button
@@ -668,6 +697,33 @@ export function LogcatView() {
               {level.label}
             </button>
           ))}
+
+          {/* Detailed logcat toggle: shows the line#/time/pid-tid columns. */}
+          <button
+            type="button"
+            role="switch"
+            aria-checked={showDetails}
+            onClick={() => setShowDetails((v) => !v)}
+            className="ml-auto flex items-center gap-2"
+            title="Show timestamp & PID columns"
+          >
+            <span className="text-[10px] font-bold uppercase tracking-wider text-text-muted">
+              {t.details}
+            </span>
+            <span
+              className={`relative h-[18px] w-8 shrink-0 rounded-full transition-colors ${
+                showDetails
+                  ? "bg-accent"
+                  : "bg-surface-elevated border border-border"
+              }`}
+            >
+              <span
+                className={`absolute top-[2px] h-[13px] w-[13px] rounded-full shadow transition-all ${
+                  showDetails ? "left-[16px] bg-white" : "left-[2px] bg-text-muted"
+                }`}
+              />
+            </span>
+          </button>
         </div>
       </div>
 
@@ -681,39 +737,77 @@ export function LogcatView() {
         >
         {selectedDevice ? (
           filteredLogs.length > 0 ? (
-            <div className="space-y-0.5">
-              {filteredLogs.map((line) => (
-                <div
-                  key={line.id}
-                  className={`${getLogColor(
-                    line.level
-                  )} hover:bg-surface-hover/50 px-1 rounded transition-colors group flex gap-3`}
-                >
-                  <span className="opacity-20 select-none w-8 text-right shrink-0">
-                    {line.id}
-                  </span>
-                  <span className="whitespace-pre-wrap break-all">
-                    {line.text}
-                  </span>
-                </div>
-              ))}
+            <div className="space-y-px">
+              {filteredLogs.map((line) => {
+                const p = parseLogcatLine(line.text);
+                const lvl = ((p?.level as LogLevel) ?? line.level) as LogLevel;
+                const st = levelStyles[lvl] ?? levelStyles.V;
+                return (
+                  <div
+                    key={line.id}
+                    className="group flex items-start gap-2 px-1.5 py-[1px] rounded hover:bg-surface-hover/40 transition-colors leading-[1.55]"
+                  >
+                    {showDetails && (
+                      <span className="opacity-20 select-none w-9 text-right shrink-0 tabular-nums">
+                        {line.id}
+                      </span>
+                    )}
+                    {p ? (
+                      <>
+                        {showDetails && (
+                          <span className="shrink-0 w-[126px] whitespace-nowrap text-text-muted/50 tabular-nums">
+                            {p.time}
+                          </span>
+                        )}
+                        {showDetails && (
+                          <span className="shrink-0 w-[88px] whitespace-nowrap text-right text-text-muted/30 tabular-nums hidden md:inline-block">
+                            {p.pid}-{p.tid}
+                          </span>
+                        )}
+                        <span
+                          className={`shrink-0 w-[17px] text-center rounded font-bold ${st.badge}`}
+                        >
+                          {lvl}
+                        </span>
+                        <span
+                          className="shrink-0 max-w-[170px] truncate font-medium text-accent"
+                          title={p.tag}
+                        >
+                          {p.tag}
+                        </span>
+                        <span
+                          className={`min-w-0 flex-1 break-all whitespace-pre-wrap ${st.msg}`}
+                        >
+                          {p.message}
+                        </span>
+                      </>
+                    ) : (
+                      <span
+                        className={`min-w-0 flex-1 break-all whitespace-pre-wrap ${st.msg}`}
+                      >
+                        {line.text}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-text-muted gap-2">
               {!paused ? (
                 <>
                   <Loader size={24} className="animate-spin opacity-20" />
-                  <p className="text-sm">Waiting for logs...</p>
+                  <p className="text-sm">{t.waitingForLogs}</p>
                 </>
               ) : (
-                <p className="text-sm">Stream paused</p>
+                <p className="text-sm">{t.streamPaused}</p>
               )}
             </div>
           )
         ) : (
           <div className="flex flex-col items-center justify-center h-full text-text-muted gap-2">
             <FileText size={48} className="opacity-10" />
-            <p className="text-sm">Select a device to start streaming</p>
+            <p className="text-sm">{t.selectDeviceToStream}</p>
           </div>
         )}
           <div ref={logsEndRef} />
