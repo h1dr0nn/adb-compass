@@ -19,6 +19,11 @@ interface TauriDropPayload {
     position: { x: number; y: number };
 }
 
+// Accepted installable file types: plain APK + split bundles.
+const APK_EXTENSIONS = ['apk', 'xapk', 'apks', 'apkm'];
+const isInstallable = (path: string) =>
+    APK_EXTENSIONS.some((ext) => path.toLowerCase().endsWith(`.${ext}`));
+
 export function ApkDropzone({ apkInfo, onApkSelected, onApkClear }: ApkDropzoneProps) {
     const [isDragging, setIsDragging] = useState(false);
     const { t } = useLanguage();
@@ -33,7 +38,7 @@ export function ApkDropzone({ apkInfo, onApkSelected, onApkClear }: ApkDropzoneP
             const paths = event.payload.paths;
             if (paths && paths.length > 0) {
                 const filePath = paths[0];
-                if (filePath.toLowerCase().endsWith('.apk')) {
+                if (isInstallable(filePath)) {
                     onApkSelected(filePath);
                 }
             }
@@ -59,7 +64,7 @@ export function ApkDropzone({ apkInfo, onApkSelected, onApkClear }: ApkDropzoneP
         try {
             const selected = await open({
                 multiple: false,
-                filters: [{ name: t.apkFiles, extensions: ['apk'] }]
+                filters: [{ name: t.apkFiles, extensions: APK_EXTENSIONS }]
             });
             if (selected && typeof selected === 'string') {
                 onApkSelected(selected);

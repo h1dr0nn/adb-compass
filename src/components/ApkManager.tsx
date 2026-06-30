@@ -1,6 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import {
-    FolderOpen, RefreshCw, Package, FileCheck, X
+    FolderOpen, RefreshCw, Package, X
 } from 'lucide-react';
 import { open } from '@tauri-apps/plugin-dialog';
 import * as tauri from '../lib/tauri';
@@ -9,6 +9,7 @@ import { ApkDropzone } from './ApkDropzone';
 import { useLanguage } from '../hooks/useLanguage';
 import { useApkStore } from '../stores/apkStore';
 import { AppTooltip } from './ui/Tooltip';
+import { appToast } from './ui/AppToast';
 
 export function ApkManager() {
     const { t } = useLanguage();
@@ -81,6 +82,7 @@ export function ApkManager() {
             });
             if (selected && typeof selected === 'string') {
                 handleScan(selected);
+                appToast({ title: t.library, description: selected });
             }
         } catch (error) {
             console.error('Error selecting folder:', error);
@@ -104,7 +106,6 @@ export function ApkManager() {
 
         const unlistenPromise = tauri.onApkFolderChanged((changedPath) => {
             if (changedPath === folderPath) {
-                console.log(`[ApkManager] APK folder changed: ${changedPath}, auto-reloading...`);
                 handleScan(changedPath);
             }
         });
@@ -112,6 +113,17 @@ export function ApkManager() {
         return () => {
             unlistenPromise.then((fn) => fn());
         };
+    }, [folderPath]);
+
+    // The Rust file watcher only exists while scan_apks_in_folder runs, so it is
+    // gone after every app restart even though folderPath is restored from
+    // storage. Re-scan the persisted folder once on mount to rebuild the watcher
+    // and refresh the list, so changes auto-update without a manual reload.
+    const didRearmWatch = useRef(false);
+    useEffect(() => {
+        if (didRearmWatch.current || !folderPath) return;
+        didRearmWatch.current = true;
+        handleScan(folderPath);
     }, [folderPath]);
 
     const handleManualApkSelected = async (path: string) => {
@@ -232,6 +244,48 @@ export function ApkManager() {
 }
 
 // Sub-component for list item
+// Lazy-loaded APK launcher icon, cached per path so re-renders / re-scans don't
+// re-extract from the zip. Falls back to a generic glyph while loading or when
+// the APK has no recognizable launcher icon.
+const apkIconCache = new Map<string, string>();
+
+function ApkIcon({ path }: { path: string }) {
+    const [icon, setIcon] = useState<string | null>(() => apkIconCache.get(path) ?? null);
+
+    useEffect(() => {
+        const cached = apkIconCache.get(path);
+        if (cached) {
+            setIcon(cached);
+            return;
+        }
+        let alive = true;
+        // Only cache successful icons so a transient/empty result can retry on
+        // the next mount instead of sticking as a generic glyph forever.
+        tauri.getApkIcon(path)
+            .then((data) => {
+                if (data) apkIconCache.set(path, data);
+                if (alive) setIcon(data ?? null);
+            })
+            .catch(() => {
+                if (alive) setIcon(null);
+            });
+        return () => { alive = false; };
+    }, [path]);
+
+    if (icon) {
+        return (
+            <div className="w-11 h-11 rounded-[12px] overflow-hidden shrink-0 bg-surface-card">
+                <img src={icon} alt="" className="w-full h-full object-cover" />
+            </div>
+        );
+    }
+    return (
+        <div className="w-11 h-11 rounded-[12px] bg-accent/10 flex items-center justify-center text-accent shrink-0">
+            <Package size={22} strokeWidth={1.8} />
+        </div>
+    );
+}
+
 function ApkListItem({ apk, isSelected, onSelect, onRemove }: { apk: ApkInfo, isSelected: boolean, onSelect: () => void, onRemove?: () => void }) {
     const { t } = useLanguage();
     // Format date modified
@@ -243,19 +297,22 @@ function ApkListItem({ apk, isSelected, onSelect, onRemove }: { apk: ApkInfo, is
         <div className="group relative">
             <button
                 onClick={onSelect}
-                className={`w-full flex items-start gap-3 p-3 rounded-xl border text-left transition-all ${isSelected
+                className={`w-full flex items-center gap-2.5 p-2.5 rounded-xl border text-left transition-all ${isSelected
                     ? 'bg-accent/10 border-accent'
                     : 'bg-surface-elevated border-transparent hover:border-border'
                     }`}
             >
-                <div className="mt-0.5 text-accent">
-                    <Package size={16} />
-                </div>
-                <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-text-primary truncate">
+                <ApkIcon path={apk.path} />
+                <div className="flex-1 min-w-0 flex flex-col gap-1.5">
+                    <div className="text-[13px] font-medium text-text-primary truncate leading-tight">
                         {apk.file_name}
                     </div>
-                    <div className="flex items-center gap-2 mt-1 text-[10px] text-text-muted font-mono">
+                    <div className="flex items-center gap-1.5 text-[10px] text-text-muted font-mono leading-none">
+                        {apk.version_name && (
+                            <span className="bg-surface-card px-1.5 py-0.5 rounded text-accent">
+                                v{apk.version_name}
+                            </span>
+                        )}
                         {dateStr && (
                             <span className="bg-surface-card px-1.5 py-0.5 rounded">
                                 {dateStr}
@@ -266,9 +323,6 @@ function ApkListItem({ apk, isSelected, onSelect, onRemove }: { apk: ApkInfo, is
                         </span>
                     </div>
                 </div>
-                {isSelected && (
-                    <FileCheck size={14} className="text-success mt-0.5" />
-                )}
             </button>
             {onRemove && (
                 <AppTooltip content={t.removeFromList}>
