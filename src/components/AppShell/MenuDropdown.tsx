@@ -11,9 +11,11 @@ import {
   DownloadCloud,
   RotateCw,
   Power,
+  Info,
 } from "lucide-react";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useLanguage } from "../../hooks/useLanguage";
+import { appToast } from "../ui/AppToast";
 
 interface MenuDropdownProps {
   onOpenSettings: () => void;
@@ -50,8 +52,12 @@ export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownPro
     try {
       const update = await check();
       if (update) {
-        toast.info(`Update available: v${update.version}`, {
-          description: "Open Settings to install.",
+        appToast({
+          title: `${t.updateAvailable}: v${update.version}`,
+          description: t.openSettingsToInstall,
+          variant: "info",
+          code: false,
+          icon: <Info size={15} />,
         });
       } else {
         toast.success(t.latestVersion || "You are up to date");

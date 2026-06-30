@@ -290,6 +290,42 @@ export const translations = {
         removeApk: 'Remove APK',
         reloadWindow: 'Reload Window',
         quit: 'Quit',
+
+        // AppShell / Pages
+        pageDeviceControl: 'Device Control',
+        pageDeviceControlDesc: 'Manage connected Android devices, install APKs and inspect status',
+        pageLogcat: 'Live Logcat',
+        pageTerminal: 'ADB Shell',
+        tabDevices: 'Devices',
+        tabLogcat: 'Logcat',
+        tabTerminal: 'Terminal',
+        selectDevicePlaceholder: 'Select device...',
+        noDevicesShort: 'No devices',
+        bundledTools: 'Bundled tools',
+        statusReady: 'Ready',
+        statusMissing: 'Missing',
+        startingDaemon: 'Starting ADB daemon...',
+
+        // Terminal
+        suggestions: 'Suggestions',
+        enterToExecute: 'Enter to execute',
+        arrowKeysHint: 'Arrow keys for history & suggestions',
+        enterCommand: 'Enter command...',
+        selectDeviceFirstShort: 'Select a device first',
+
+        // Logcat
+        minimumLevel: 'Minimum Level',
+        details: 'Details',
+        liveStreaming: 'Live Streaming',
+        paused: 'Paused',
+        searchLogs: 'Search logs...',
+        selectDeviceToStream: 'Select a device to start streaming',
+        waitingForLogs: 'Waiting for logs...',
+        streamPaused: 'Stream paused',
+
+        // Update toast
+        updateAvailable: 'Update available',
+        openSettingsToInstall: 'Open Settings to install.',
     },
     vi: {
         // Global
@@ -580,6 +616,42 @@ export const translations = {
         removeApk: 'Gỡ bỏ APK',
         reloadWindow: 'Tải lại cửa sổ',
         quit: 'Thoát',
+
+        // AppShell / Pages
+        pageDeviceControl: 'Quản lý thiết bị',
+        pageDeviceControlDesc: 'Quản lý thiết bị Android, cài APK và xem trạng thái',
+        pageLogcat: 'Logcat trực tiếp',
+        pageTerminal: 'ADB Shell',
+        tabDevices: 'Thiết bị',
+        tabLogcat: 'Logcat',
+        tabTerminal: 'Terminal',
+        selectDevicePlaceholder: 'Chọn thiết bị...',
+        noDevicesShort: 'Không có thiết bị',
+        bundledTools: 'Công cụ đi kèm',
+        statusReady: 'Sẵn sàng',
+        statusMissing: 'Thiếu',
+        startingDaemon: 'Đang khởi động ADB...',
+
+        // Terminal
+        suggestions: 'Gợi ý',
+        enterToExecute: 'Enter để chạy',
+        arrowKeysHint: 'Phím mũi tên cho lịch sử & gợi ý',
+        enterCommand: 'Nhập lệnh...',
+        selectDeviceFirstShort: 'Chọn thiết bị trước',
+
+        // Logcat
+        minimumLevel: 'Mức tối thiểu',
+        details: 'Chi tiết',
+        liveStreaming: 'Đang truyền',
+        paused: 'Tạm dừng',
+        searchLogs: 'Tìm log...',
+        selectDeviceToStream: 'Chọn thiết bị để xem log',
+        waitingForLogs: 'Đang chờ log...',
+        streamPaused: 'Đã tạm dừng',
+
+        // Update toast
+        updateAvailable: 'Có bản cập nhật',
+        openSettingsToInstall: 'Mở Cài đặt để cài đặt.',
     },
 };
 

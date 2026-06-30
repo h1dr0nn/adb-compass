@@ -1,9 +1,15 @@
 import { motion } from "framer-motion";
-import { tabs, type Tab } from "./tabs";
+import { type Tab } from "./tabs";
+import { useLanguage } from "../../hooks/useLanguage";
 
 export function PageHeader({ tab }: { tab: Tab }) {
-  const meta = tabs.find((t) => t.id === tab)!;
-  const isDevices = tab === "devices";
+  const { t } = useLanguage();
+  const eyebrow =
+    tab === "logcat"
+      ? t.pageLogcat
+      : tab === "terminal"
+        ? t.pageTerminal
+        : t.pageDeviceControl;
 
   return (
     <motion.div
@@ -16,26 +22,10 @@ export function PageHeader({ tab }: { tab: Tab }) {
       <div className="flex flex-col gap-1">
         <div className="flex items-center gap-3">
           <span className="text-[11px] font-semibold uppercase tracking-[0.2em] text-accent">
-            {isDevices
-              ? "Device Control"
-              : tab === "logcat"
-              ? "Live Logcat"
-              : tab === "terminal"
-              ? "ADB Shell"
-              : meta.label}
+            {eyebrow}
           </span>
           <div className="h-px flex-1 bg-border/60" />
         </div>
-        {!isDevices && meta.title && (
-          <h1 className="text-[30px] font-bold text-text-primary tracking-tight leading-tight">
-            {meta.title}
-          </h1>
-        )}
-        {!isDevices && meta.subtitle && (
-          <p className="text-[14px] text-text-secondary/80 max-w-[720px] leading-relaxed">
-            {meta.subtitle}.
-          </p>
-        )}
       </div>
     </motion.div>
   );

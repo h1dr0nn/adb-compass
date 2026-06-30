@@ -182,6 +182,7 @@ function AppContent() {
           position="bottom-right"
           theme={resolvedTheme === "dark" ? "dark" : "light"}
           closeButton
+          richColors
         />
       </div>
     </Tooltip.Provider>

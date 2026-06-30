@@ -4,10 +4,12 @@ import { Package, Loader2 } from "lucide-react";
 import * as tauri from "../../lib/tauri";
 import type { BinaryStatus } from "../../types";
 import { AppTooltip } from "../ui/Tooltip";
+import { useLanguage } from "../../hooks/useLanguage";
 
 /** Titlebar "Binaries" button. Opens a dropdown listing every bundled tool
  * and whether it resolved OK. Lives left of the window controls. */
 export function BinariesMenu() {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [binaries, setBinaries] = useState<BinaryStatus[]>([]);
@@ -53,11 +55,11 @@ export function BinariesMenu() {
             className="absolute right-0 top-[34px] z-[5600] w-72 rounded-xl border border-border bg-surface-card p-2 shadow-2xl"
           >
             <div className="px-2 py-1.5 text-[10px] font-bold uppercase tracking-wider text-text-muted">
-              Bundled tools
+              {t.bundledTools}
             </div>
             {loading ? (
               <div className="flex items-center gap-2 px-2 py-3 text-sm text-text-muted">
-                <Loader2 size={14} className="animate-spin" /> Checking...
+                <Loader2 size={14} className="animate-spin" /> {t.checking}
               </div>
             ) : (
               <div className="flex flex-col gap-0.5">
@@ -83,7 +85,7 @@ export function BinariesMenu() {
                           : "bg-error/15 text-error"
                       }`}
                     >
-                      {b.ok ? "Ready" : "Missing"}
+                      {b.ok ? t.statusReady : t.statusMissing}
                     </span>
                   </div>
                 ))}
