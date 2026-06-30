@@ -6,7 +6,7 @@ import { useDeviceStore } from '../stores/deviceStore';
 import { useLanguage } from '../hooks/useLanguage';
 import { QuickActionMenu } from './device/QuickActionMenu';
 import { save } from "@tauri-apps/plugin-dialog";
-import { toast } from "sonner";
+import { appToast } from "./ui/AppToast";
 import { AppTooltip } from './ui/Tooltip';
 
 interface CommandHistory {
@@ -218,10 +218,10 @@ export function TerminalView() {
                     path,
                     content: btoa(unescape(encodeURIComponent(content))),
                 });
-                toast.success("Terminal history exported successfully");
+                appToast({ title: t.toastTerminal, description: t.msgHistoryExported, variant: "success" });
             }
         } catch (err) {
-            toast.error("Failed to export terminal history");
+            appToast({ title: t.toastTerminal, description: t.msgExportHistoryFailed, variant: "error", copyable: false });
         }
     };
 

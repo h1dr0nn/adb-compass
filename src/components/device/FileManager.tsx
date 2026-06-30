@@ -7,7 +7,7 @@ import {
     Image, Film, Music, DownloadCloud, Camera
 } from 'lucide-react';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { toast } from 'sonner';
+import { appToast } from "../ui/AppToast";
 import * as tauri from '../../lib/tauri';
 import { DeviceInfo } from '../../types';
 import { listContainer, listItem } from '../../lib/animations';
@@ -158,11 +158,11 @@ export function FileManager({ device }: FileManagerProps) {
                 await tauri.pushFile(device.id, selected, remotePath);
 
                 clearCache(`files_${device.id}_${currentPath}`);
-                toast.success(t.fileUploaded, { description: fileName });
+                appToast({ title: t.toastFile, description: `${t.msgUploaded}: ${fileName}`, variant: "success" });
                 fetchFiles();
             }
         } catch (e) {
-            toast.error(t.uploadFailed, { description: String(e) });
+            appToast({ title: t.toastFile, description: String(e), variant: "error" });
         } finally {
             setActionLoading(null);
         }
@@ -181,10 +181,10 @@ export function FileManager({ device }: FileManagerProps) {
 
                 await tauri.pullFile(device.id, remotePath, localPath);
 
-                toast.success(t.fileDownloaded, { description: file.name });
+                appToast({ title: t.toastFile, description: `${t.msgDownloaded}: ${file.name}`, variant: "success" });
             }
         } catch (e) {
-            toast.error(t.downloadFailed, { description: String(e) });
+            appToast({ title: t.toastFile, description: String(e), variant: "error" });
         } finally {
             setActionLoading(null);
         }
@@ -197,10 +197,10 @@ export function FileManager({ device }: FileManagerProps) {
             const remotePath = `${currentPath}/${file.name}`;
             await tauri.deleteRemoteFile(device.id, remotePath);
             clearCache(`files_${device.id}_${currentPath}`);
-            toast.success(t.deleted, { description: file.name });
+            appToast({ title: t.toastFile, description: `${t.msgDeleted}: ${file.name}`, variant: "success" });
             setFiles(prev => prev.filter(f => f.name !== file.name));
         } catch (e) {
-            toast.error(t.deleteFailed, { description: String(e) });
+            appToast({ title: t.toastFile, description: String(e), variant: "error" });
         } finally {
             setActionLoading(null);
         }
@@ -214,12 +214,12 @@ export function FileManager({ device }: FileManagerProps) {
             const remotePath = `${currentPath}/${newFolderName}`;
             await tauri.createRemoteDirectory(device.id, remotePath);
             clearCache(`files_${device.id}_${currentPath}`);
-            toast.success(t.folderCreated, { description: newFolderName });
+            appToast({ title: t.toastFile, description: `${t.msgFolderCreated}: ${newFolderName}`, variant: "success" });
             setNewFolderMode(false);
             setNewFolderName('');
             fetchFiles();
         } catch (e) {
-            toast.error(t.createFolderFailed, { description: String(e) });
+            appToast({ title: t.toastFile, description: String(e), variant: "error" });
         } finally {
             setActionLoading(null);
         }

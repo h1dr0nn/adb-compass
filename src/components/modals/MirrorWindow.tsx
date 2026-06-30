@@ -5,8 +5,9 @@ import * as tauri from "../../lib/tauri";
 import { getCurrentWindow } from '@tauri-apps/api/window';
 import { StreamPlayer } from '../device/StreamPlayer';
 import { save } from '@tauri-apps/plugin-dialog';
-import { toast } from 'sonner';
+import { appToast } from "../ui/AppToast";
 import { AppTooltip } from '../ui/Tooltip';
+import { useLanguage } from '../../hooks/useLanguage';
 
 export function MirrorWindow() {
     const [deviceId, setDeviceId] = useState<string | null>(null);
@@ -15,7 +16,7 @@ export function MirrorWindow() {
     const [allowTouch, setAllowTouch] = useState(true);
     const [isLoadingRes, setIsLoadingRes] = useState(true);
     const [currentFps, setCurrentFps] = useState(0);
-    // const { t } = useLanguage(); // Unused here
+    const { t } = useLanguage();
 
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [isFlashActive, setIsFlashActive] = useState(false);
@@ -68,7 +69,7 @@ export function MirrorWindow() {
                 }
             } catch (e) {
                 console.error('Failed to init mirror window:', e);
-                toast.error("Failed to start mirror: " + String(e));
+                appToast({ title: t.toastScreen, description: String(e), variant: "error" });
             }
         };
 
@@ -128,13 +129,13 @@ export function MirrorWindow() {
             });
 
             if (result.success) {
-                toast.success("Screenshot saved", { description: result.path });
+                appToast({ title: t.toastScreen, description: result.path, variant: "success", copyable: true });
             } else {
                 throw new Error(result.error);
             }
         } catch (e) {
             console.error("Screenshot failed:", e);
-            toast.error("Failed to save screenshot: " + String(e));
+            appToast({ title: t.toastScreen, description: String(e), variant: "error" });
         }
     }, [deviceId]);
 
@@ -182,12 +183,12 @@ export function MirrorWindow() {
                         });
 
                         if (result.success) {
-                            toast.success("Recording saved", { description: result.path });
+                            appToast({ title: t.toastScreen, description: result.path, variant: "success", copyable: true });
                         } else {
-                            toast.error("Failed to save recording: " + result.error);
+                            appToast({ title: t.toastScreen, description: result.error, variant: "error" });
                         }
                     } catch (err) {
-                        toast.error("Failed to save recording: " + String(err));
+                        appToast({ title: t.toastScreen, description: String(err), variant: "error" });
                     }
                 };
                 reader.readAsDataURL(blob);

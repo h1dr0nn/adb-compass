@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { check } from "@tauri-apps/plugin-updater";
-import { toast } from "sonner";
 import {
   Menu,
   RefreshCw,
@@ -11,7 +10,6 @@ import {
   DownloadCloud,
   RotateCw,
   Power,
-  Info,
 } from "lucide-react";
 import { useDeviceStore } from "../../stores/deviceStore";
 import { useLanguage } from "../../hooks/useLanguage";
@@ -53,17 +51,16 @@ export function MenuDropdown({ onOpenSettings, onOpenWireless }: MenuDropdownPro
       const update = await check();
       if (update) {
         appToast({
-          title: `${t.updateAvailable}: v${update.version}`,
-          description: t.openSettingsToInstall,
+          title: t.toastUpdate,
+          description: `${t.updateAvailable}: v${update.version}`,
           variant: "info",
-          code: false,
-          icon: <Info size={15} />,
+          action: { label: t.settings, onClick: onOpenSettings },
         });
       } else {
-        toast.success(t.latestVersion || "You are up to date");
+        appToast({ title: t.toastUpdate, description: t.latestVersion, variant: "success" });
       }
     } catch {
-      toast.error("Update check failed");
+      appToast({ title: t.toastUpdate, description: t.msgUpdateCheckFailed, variant: "error", copyable: false });
     }
   };
 

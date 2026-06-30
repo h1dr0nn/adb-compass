@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Download, Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import * as tauri from '../lib/tauri';
-import { toast } from 'sonner';
+import { appToast } from './ui/AppToast';
 import { useLanguage } from '../hooks/useLanguage';
 import { useDeviceCache } from '../hooks/useDeviceCache';
 
@@ -30,16 +30,16 @@ export function InstallButton({ deviceId, apkPath, disabled, customRender }: Ins
             if (installResult.success) {
                 clearCache(`packages_${deviceId}`);
                 setResult('success');
-                toast.success(t.apkInstalled, { description: installResult.message });
+                appToast({ title: t.toastInstall, description: installResult.message || t.apkInstalled, variant: "success" });
             } else {
                 setResult('error');
-                toast.error(t.apkInstallFailed, { description: installResult.message });
+                appToast({ title: t.toastInstall, description: installResult.message, variant: "error" });
             }
 
             setTimeout(() => setResult(null), 3000);
         } catch (error) {
             setResult('error');
-            toast.error(t.apkInstallFailed, { description: 'An unexpected error occurred' });
+            appToast({ title: t.toastInstall, description: t.apkInstallFailed, variant: "error", copyable: false });
             setTimeout(() => setResult(null), 3000);
         } finally {
             setInstalling(false);

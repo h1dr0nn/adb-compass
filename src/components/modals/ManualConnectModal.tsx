@@ -5,7 +5,7 @@ import { modalBackdrop, modalContent } from '../../lib/animations';
 import { useLanguage } from '../../hooks/useLanguage';
 import { useDevices } from '../../hooks/useDevices';
 import * as tauri from '../../lib/tauri';
-import { toast } from 'sonner';
+import { appToast } from '../ui/AppToast';
 
 interface ManualConnectModalProps {
     onClose: () => void;
@@ -38,19 +38,24 @@ export function ManualConnectModal({ onClose }: ManualConnectModalProps) {
             addManualDevice(targetFull);
             onClose(); // Close immediately to show feedback in list
 
-            toast.promise(
-                tauri.connectWireless(finalIp, finalPort),
-                {
-                    loading: `${t.connectingTo} ${targetFull}...`,
-                    success: () => {
-                        refreshDevices(); // Refresh to get the real status
-                        return `${t.connectedTo} ${targetFull}`;
-                    },
-                    error: (err: any) => {
-                        return `${t.failedToConnect}: ${err}`;
-                    }
-                }
-            );
+            // Fire-and-forget: the modal is already closed, so update a single
+            // toast (by id) from loading -> success/error as the connection resolves.
+            const toastId = `manual-connect-${targetFull}`;
+            appToast({
+                title: t.toastWireless,
+                description: `${t.connectingTo} ${targetFull}`,
+                variant: "loading",
+                id: toastId,
+                duration: Infinity,
+            });
+            tauri.connectWireless(finalIp, finalPort)
+                .then(() => {
+                    refreshDevices(); // Refresh to get the real status
+                    appToast({ title: t.toastWireless, description: `${t.connectedTo} ${targetFull}`, variant: "success", id: toastId });
+                })
+                .catch((err) => {
+                    appToast({ title: t.toastWireless, description: String(err), variant: "error", id: toastId });
+                });
 
         } catch (err) {
             console.error(err);

@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import * as tauri from "../../lib/tauri";
 import { save } from '@tauri-apps/plugin-dialog';
-import { toast } from 'sonner';
+import { appToast } from "../ui/AppToast";
 import { DeviceInfo } from '../../types';
 import { listItem } from '../../lib/animations';
 import { StreamPlayer } from './StreamPlayer';
@@ -111,12 +111,12 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
 
             webview.once('tauri://created', () => {
                 setIsMirroring(true);
-                toast.success("Mirror window opened");
+                appToast({ title: t.toastScreen, description: t.msgMirrorOpened, variant: "success" });
             });
 
             webview.once('tauri://error', (e) => {
                 console.error("Window error:", e);
-                toast.error("Failed to create window");
+                appToast({ title: t.toastScreen, description: t.msgMirrorCreateFailed, variant: "error", copyable: false });
             });
 
             // Handle window close to restore UI
@@ -132,7 +132,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
 
         } catch (e) {
             console.error('Failed to open mirror window:', e);
-            toast.error("Failed to open mirror window");
+            appToast({ title: t.toastScreen, description: t.msgMirrorOpenFailed, variant: "error", copyable: false });
         }
     };
 
@@ -228,18 +228,12 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             });
 
             if (result.success && result.path) {
-                toast.success(t.screenshotSaved, {
-                    description: result.path
-                });
+                appToast({ title: t.toastScreen, description: result.path, variant: "success", copyable: true });
             } else {
-                toast.error(t.screenshotFailed, {
-                    description: result.error || t.unknown
-                });
+                appToast({ title: t.toastScreen, description: result.error || t.unknown, variant: "error" });
             }
         } catch (error) {
-            toast.error(t.screenshotFailed, {
-                description: String(error)
-            });
+            appToast({ title: t.toastScreen, description: String(error), variant: "error" });
         } finally {
             setIsCapturing(false);
         }
@@ -274,25 +268,19 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 setRecordingTime(0);
 
                 if (result.success && result.path) {
-                    toast.success(t.recordingSaved, {
-                        description: result.path
-                    });
+                    appToast({ title: t.toastScreen, description: result.path, variant: "success", copyable: true });
                 }
             } catch (error) {
-                toast.error(t.failedToStopRecording, {
-                    description: String(error)
-                });
+                appToast({ title: t.toastScreen, description: String(error), variant: "error" });
             }
         } else {
             // Start recording
             try {
                 await tauri.startScreenRecording(device.id);
                 setIsRecording(true);
-                toast.info(t.recordingStarted);
+                appToast({ title: t.toastScreen, description: t.recordingStarted, variant: "info" });
             } catch (error) {
-                toast.error(t.failedToStartRecording, {
-                    description: String(error)
-                });
+                appToast({ title: t.toastScreen, description: String(error), variant: "error" });
             }
         }
     };
@@ -312,9 +300,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 setPreviewImage(url);
             }
         } catch (error) {
-            toast.error(t.failedToGetScreenPreview, {
-                description: String(error)
-            });
+            appToast({ title: t.toastScreen, description: String(error), variant: "error" });
         } finally {
             const elapsed = Date.now() - startTime;
             const remaining = Math.max(0, 500 - elapsed);
@@ -353,9 +339,6 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                     const tapY = Math.round(yPercent * h);
 
                     await tauri.inputTap(device.id, tapX, tapY);
-
-                    // Visual feedback
-                    toast.success(`Tap: ${tapX}, ${tapY}`, { duration: 500 });
                 }
             }
         } catch (error) {
@@ -368,9 +351,9 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
         try {
             const captureSavePath = localStorage.getItem('captureSavePath');
             await tauri.openCapturesFolder(captureSavePath);
-            toast.success(t.folderOpened);
+            appToast({ title: t.toastScreen, description: t.folderOpened, variant: "success" });
         } catch (error) {
-            toast.error(t.failedToOpenFolder, { description: String(error) });
+            appToast({ title: t.toastScreen, description: String(error), variant: "error" });
         }
     };
 
@@ -392,11 +375,11 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 setScrcpyStatus(status);
                 setStreamMode('high-perf');
                 setIsLive(false); // Disable standard live mode
-                toast.success(t.highPerfModeEnabled, { description: `Streaming on port ${status.port}` });
+                appToast({ title: t.toastScreen, description: `${t.highPerfModeEnabled} (Port: ${status.port})`, variant: "success" });
             } catch (error) {
                 console.error('Scrcpy start error:', error);
                 const errorMessage = (error as any)?.message || String(error);
-                toast.error(t.failedToStartHighPerf, { description: errorMessage });
+                appToast({ title: t.toastScreen, description: errorMessage, variant: "error" });
             } finally {
                 const elapsed = Date.now() - startTime;
                 const remaining = Math.max(0, 500 - elapsed);
@@ -408,9 +391,9 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
                 await tauri.stopScrcpyServer(device.id);
                 setScrcpyStatus(null);
                 setStreamMode('standard');
-                toast.success(t.switchedToStandardMode);
+                appToast({ title: t.toastScreen, description: t.switchedToStandardMode, variant: "success" });
             } catch (error) {
-                toast.error(t.failedToStopHighPerf, { description: String(error) });
+                appToast({ title: t.toastScreen, description: String(error), variant: "error" });
             }
         }
     };
@@ -457,7 +440,7 @@ export function ScreenCapture({ device }: ScreenCaptureProps) {
             await tauri.executeShell(device.id, `input keyevent ${keycode}`);
         } catch (error) {
             console.error('Key event failed:', error);
-            toast.error(t.failedToKey);
+            appToast({ title: t.toastScreen, description: t.failedToKey, variant: "error", copyable: false });
         }
     };
 

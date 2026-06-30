@@ -5,7 +5,7 @@ import {
     ArrowLeft, Moon, Sun, Monitor, FolderOpen, Globe,
     Settings as SettingsIcon, RotateCcw, Github, Download
 } from 'lucide-react';
-import { toast } from 'sonner';
+import { appToast } from './ui/AppToast';
 import { open as openDialog } from '@tauri-apps/plugin-dialog';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import * as tauri from '../lib/tauri';
@@ -86,11 +86,11 @@ export function Settings({ onBack }: SettingsProps) {
         const newState = !notifications;
         setNotifications(newState);
         localStorage.setItem('notifications', String(newState));
-        toast.success(`Notifications ${newState ? 'Enabled' : 'Disabled'}`);
+        appToast({ title: t.settings, description: `${t.msgNotifications}: ${newState ? t.msgEnabled : t.msgDisabled}`, variant: "success" });
     };
 
     const handleBrowseAdb = async () => {
-        toast.info("Browser unavailable in debug mode");
+        appToast({ title: t.settings, description: t.msgBrowserDebug, variant: "info" });
     };
 
     const handleBrowseCapturePath = async () => {
@@ -104,11 +104,11 @@ export function Settings({ onBack }: SettingsProps) {
             if (selected && typeof selected === 'string') {
                 setCaptureSavePath(selected);
                 localStorage.setItem('captureSavePath', selected);
-                toast.success('Capture save path updated');
+                appToast({ title: t.settings, description: t.msgPathUpdated, variant: "success" });
             }
         } catch (err) {
             console.error('Failed to browse', err);
-            toast.info("Browser feature not available");
+            appToast({ title: t.settings, description: t.msgBrowserUnavailable, variant: "info" });
         }
     };
 
@@ -116,7 +116,7 @@ export function Settings({ onBack }: SettingsProps) {
         const newState = !askBeforeSave;
         setAskBeforeSave(newState);
         localStorage.setItem('askBeforeSave', String(newState));
-        toast.success(`Ask before save ${newState ? 'Enabled' : 'Disabled'}`);
+        appToast({ title: t.settings, description: `${t.msgAskBeforeSave}: ${newState ? t.msgEnabled : t.msgDisabled}`, variant: "success" });
     };
 
     const resetDefaults = () => {
@@ -125,7 +125,7 @@ export function Settings({ onBack }: SettingsProps) {
         setLanguage('en');
         loadSettings();
         setShowResetConfirm(false);
-        toast.success(t.resetSuccess);
+        appToast({ title: t.settings, description: t.resetSuccess, variant: "success" });
     };
 
 
@@ -135,11 +135,11 @@ export function Settings({ onBack }: SettingsProps) {
             if (update) {
                 setPendingUpdate(update);
             } else {
-                toast.success(t.latestVersion || 'You are on the latest version!');
+                appToast({ title: t.toastUpdate, description: t.latestVersion, variant: "success" });
             }
         } catch (err) {
             console.error('Failed to check for updates', err);
-            toast.error('Failed to check for updates. Make sure you have an internet connection.');
+            appToast({ title: t.toastUpdate, description: t.msgUpdateCheckFailedConn, variant: "error", copyable: false });
         }
     };
 
@@ -148,13 +148,13 @@ export function Settings({ onBack }: SettingsProps) {
 
         setInstallingUpdate(true);
         try {
-            toast.info('Downloading update...');
+            appToast({ title: t.toastUpdate, description: t.msgDownloadingUpdate, variant: "info" });
             await pendingUpdate.downloadAndInstall();
             setPendingUpdate(null);
-            toast.success('Update installed! Please restart the app.');
+            appToast({ title: t.toastUpdate, description: t.msgUpdateInstalled, variant: "success" });
         } catch (err) {
             console.error('Failed to install update', err);
-            toast.error('Failed to install update.');
+            appToast({ title: t.toastUpdate, description: t.msgUpdateInstallFailed, variant: "error", copyable: false });
         } finally {
             setInstallingUpdate(false);
         }

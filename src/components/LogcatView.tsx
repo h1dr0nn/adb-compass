@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { type UnlistenFn } from "@tauri-apps/api/event";
 import { save } from "@tauri-apps/plugin-dialog";
-import { toast } from "sonner";
+import { appToast } from "./ui/AppToast";
 import { Select } from "./ui/Select";
 import { AppTooltip } from "./ui/Tooltip";
 import { useDeviceStore } from "../stores/deviceStore";
@@ -411,7 +411,7 @@ export function LogcatView() {
       } catch (err) {
         if (isMounted) {
           console.error("Streaming error:", err);
-          toast.error(`Failed to stream Logcat: ${err}`);
+          appToast({ title: t.toastLogcat, description: String(err), variant: "error" });
         }
       }
     };
@@ -528,9 +528,9 @@ export function LogcatView() {
       await tauri.clearLogcat(selectedDevice);
       setLogLines([]);
       logBufferRef.current = [];
-      toast.success("Logcat buffer cleared");
+      appToast({ title: t.toastLogcat, description: t.msgBufferCleared, variant: "success" });
     } catch (err) {
-      toast.error(String(err));
+      appToast({ title: t.toastLogcat, description: String(err), variant: "error" });
     }
   };
 
@@ -547,10 +547,10 @@ export function LogcatView() {
           path,
           content: btoa(unescape(encodeURIComponent(content))),
         });
-        toast.success("Logs exported successfully");
+        appToast({ title: t.toastLogcat, description: t.msgLogsExported, variant: "success" });
       }
     } catch (err) {
-      toast.error("Failed to export logs");
+      appToast({ title: t.toastLogcat, description: t.msgExportLogsFailed, variant: "error", copyable: false });
     }
   };
 

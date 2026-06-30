@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Keyboard, Send, Loader2 } from 'lucide-react';
 import * as tauri from "../../lib/tauri";
-import { toast } from 'sonner';
+import { appToast } from "../ui/AppToast";
 import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 
@@ -23,13 +23,13 @@ export function InputTextModal({ deviceId, onClose }: InputTextModalProps) {
         setLoading(true);
         try {
             await tauri.inputText(deviceId, text.trim());
-            toast.success(t.textSent);
+            appToast({ title: t.toastInput, description: t.textSent, variant: "success" });
             setText('');
         } catch (e: unknown) {
             const errorMessage = typeof e === 'object' && e !== null && 'message' in e
                 ? (e as { message: string }).message
                 : String(e);
-            toast.error(t.textFailed, { description: errorMessage });
+            appToast({ title: t.toastInput, description: errorMessage, variant: "error" });
         } finally {
             setLoading(false);
         }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Wifi, WifiOff, Loader2, Copy, Check, Smartphone } from 'lucide-react';
-import { toast } from 'sonner';
+import { appToast } from '../ui/AppToast';
 import * as tauri from '../../lib/tauri';
 import { Select } from '../ui/Select';
 import { useLanguage } from '../../hooks/useLanguage';
@@ -31,14 +31,15 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
 
     const handleEnableTcpip = async () => {
         if (!selectedDevice) {
-            toast.error(t.selectDeviceFirst);
+            appToast({ title: t.toastWireless, description: t.selectDeviceFirst, variant: "error", copyable: false });
             return;
         }
 
+        const waitToastId = "wireless-wait-ip";
         setLoading(true);
         try {
             const result = await tauri.enableTcpip(selectedDevice, port);
-            toast.success(result);
+            appToast({ title: t.toastWireless, description: result, variant: "success" });
 
             // Retry fetching IP for up to 6 seconds (3 attempts x 2s)
             // ADB restart can cause temporary disconnect
@@ -55,23 +56,23 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
                     lastError = e;
                     retries--;
                     if (retries > 0) {
-                        toast.loading(`${t.waitingForDevice} (${retries})`);
+                        appToast({ title: t.toastWireless, description: `${t.waitingForDevice} (${retries})`, variant: "loading", id: waitToastId, duration: Infinity });
                     }
                 }
             }
 
-            toast.dismiss(); // dismiss loading toast
+            appToast.dismiss(waitToastId); // dismiss loading toast
 
             if (ip) {
                 setDeviceIp(ip);
                 setIp(ip);
-                toast.success(`${t.foundIp}: ${ip}`);
+                appToast({ title: t.toastWireless, description: `${t.foundIp}: ${ip}`, variant: "success" });
             } else {
-                toast.error(`${t.couldNotGetIp}: ${lastError}`);
+                appToast({ title: t.toastWireless, description: String(lastError), variant: "error" });
             }
 
         } catch (err) {
-            toast.error(String(err));
+            appToast({ title: t.toastWireless, description: String(err), variant: "error" });
         } finally {
             setLoading(false);
         }
@@ -79,17 +80,17 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
 
     const handleConnect = async () => {
         if (!ip) {
-            toast.error(t.enterIpAddress);
+            appToast({ title: t.toastWireless, description: t.enterIpAddress, variant: "error", copyable: false });
             return;
         }
 
         setLoading(true);
         try {
             const result = await tauri.connectWireless(ip, port);
-            toast.success(result);
+            appToast({ title: t.toastWireless, description: result, variant: "success" });
             onClose();
         } catch (err) {
-            toast.error(String(err));
+            appToast({ title: t.toastWireless, description: String(err), variant: "error" });
         } finally {
             setLoading(false);
         }
@@ -101,9 +102,9 @@ export function WirelessConnectModal({ onClose }: WirelessConnectModalProps) {
         setLoading(true);
         try {
             const result = await tauri.disconnectWireless(ip, port);
-            toast.info(result);
+            appToast({ title: t.toastWireless, description: result, variant: "info" });
         } catch (err) {
-            toast.error(String(err));
+            appToast({ title: t.toastWireless, description: String(err), variant: "error" });
         } finally {
             setLoading(false);
         }

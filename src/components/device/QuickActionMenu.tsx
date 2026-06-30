@@ -6,8 +6,9 @@ import {
     ChevronRight, Loader2, Sparkles
 } from 'lucide-react';
 import * as tauri from "../../lib/tauri";
-import { toast } from 'sonner';
+import { appToast } from "../ui/AppToast";
 import { AppTooltip } from '../ui/Tooltip';
+import { useLanguage } from '../../hooks/useLanguage';
 
 interface QuickActionMenuProps {
     deviceId: string;
@@ -15,6 +16,7 @@ interface QuickActionMenuProps {
 }
 
 export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps) {
+    const { t } = useLanguage();
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState<string | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -35,9 +37,9 @@ export function QuickActionMenu({ deviceId, triggerIcon }: QuickActionMenuProps)
         setLoading(name);
         try {
             await promise;
-            toast.success(`${name} completed`);
+            appToast({ title: name, description: t.msgCompleted, variant: "success" });
         } catch (err) {
-            toast.error(`${name} failed: ${String(err)}`);
+            appToast({ title: name, description: String(err), variant: "error" });
         } finally {
             setLoading(null);
         }

@@ -82,7 +82,7 @@ export function ApkManager() {
             });
             if (selected && typeof selected === 'string') {
                 handleScan(selected);
-                appToast({ title: t.library, description: selected });
+                appToast({ title: t.library, description: selected, variant: "success", copyable: true });
             }
         } catch (error) {
             console.error('Error selecting folder:', error);

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Power, RotateCcw, HardDrive, Loader2, AlertTriangle } from 'lucide-react';
 import * as tauri from "../../lib/tauri";
-import { toast } from 'sonner';
+import { appToast } from "../ui/AppToast";
 import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 
@@ -24,13 +24,15 @@ export function RebootModal({ deviceId, onClose }: RebootModalProps) {
         try {
             const modeArg = mode === 'normal' ? null : mode;
             await tauri.rebootDevice(deviceId, modeArg);
-            toast.success(t.rebootDevice, {
+            appToast({
+                title: t.toastDevice,
                 description: mode === 'normal' ? t.normalReboot :
-                    mode === 'recovery' ? t.recoveryMode : t.bootloaderMode
+                    mode === 'recovery' ? t.recoveryMode : t.bootloaderMode,
+                variant: "success"
             });
             onClose();
         } catch (e) {
-            toast.error(String(e));
+            appToast({ title: t.toastDevice, description: String(e), variant: "error" });
         } finally {
             setLoading(false);
             setConfirmMode(null);

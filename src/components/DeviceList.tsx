@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Smartphone, Loader2, AlertTriangle, RefreshCw,
     Info, Trash2, Power, Keyboard, FileInput, Package, Plus
 } from 'lucide-react';
-import { toast } from 'sonner';
 import { DeviceInfo, ApkInfo } from '../types';
 import { RequirementChecklist } from './RequirementChecklist';
 import { ActionRequirementsChecklist } from './ActionRequirementsChecklist';
@@ -31,29 +30,7 @@ interface DeviceListProps {
 }
 
 export function DeviceList({ devices, loading, error, apkInfo, onRefresh, onDeviceSelect, onRemove, onAddDevice }: DeviceListProps) {
-    const prevDevicesRef = useRef<DeviceInfo[]>([]);
     const { t } = useLanguage();
-
-    useEffect(() => {
-        const prevIds = new Set(prevDevicesRef.current.map(d => d.id));
-        const currentIds = new Set(devices.filter(d => d.status === 'Device').map(d => d.id));
-
-        devices.forEach(device => {
-            if (device.status === 'Device' && !prevIds.has(device.id)) {
-                toast.success(t.deviceConnected, { description: device.model || device.id });
-            }
-        });
-
-        // Only notify disconnect if it was previously connected and now it's not in the connected set
-        prevDevicesRef.current.forEach(device => {
-            if (device.status === 'Device' && !currentIds.has(device.id)) {
-                // It might be still in 'devices' but as 'Offline'
-                toast.info(t.deviceDisconnected, { description: device.model || device.id });
-            }
-        });
-
-        prevDevicesRef.current = devices;
-    }, [devices, t]);
 
     if (error) {
         return (

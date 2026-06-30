@@ -6,7 +6,7 @@ import {
     Upload, Download, Trash2, FolderPlus, Loader2, AlertTriangle
 } from 'lucide-react';
 import { open, save } from '@tauri-apps/plugin-dialog';
-import { toast } from 'sonner';
+import { appToast } from "../ui/AppToast";
 import * as tauri from '../../lib/tauri';
 import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
@@ -54,7 +54,7 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
             const errorMessage = typeof e === 'object' && e !== null && 'message' in e
                 ? (e as { message: string }).message
                 : String(e);
-            toast.error(errorMessage);
+            appToast({ title: t.toastFile, description: errorMessage, variant: "error" });
         } finally {
             setLoading(false);
         }
@@ -89,10 +89,10 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
             const remotePath = `${currentPath}/${fileName}`;
 
             await tauri.pushFile(deviceId, localPath, remotePath);
-            toast.success(t.uploadFile, { description: fileName });
+            appToast({ title: t.toastFile, description: `${t.msgUploaded}: ${fileName}`, variant: "success" });
             loadFiles();
         } catch (e) {
-            toast.error(String(e));
+            appToast({ title: t.toastFile, description: String(e), variant: "error" });
         } finally {
             setActionLoading(null);
         }
@@ -111,9 +111,9 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
             const remotePath = `${currentPath}/${selectedFile.name}`;
 
             await tauri.pullFile(deviceId, remotePath, localPath);
-            toast.success(t.downloadFile, { description: selectedFile.name });
+            appToast({ title: t.toastFile, description: `${t.msgDownloaded}: ${selectedFile.name}`, variant: "success" });
         } catch (e) {
-            toast.error(String(e));
+            appToast({ title: t.toastFile, description: String(e), variant: "error" });
         } finally {
             setActionLoading(null);
         }
@@ -126,11 +126,11 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
         try {
             const remotePath = `${currentPath}/${selectedFile.name}`;
             await tauri.deleteRemoteFile(deviceId, remotePath);
-            toast.success(t.deleteFile, { description: selectedFile.name });
+            appToast({ title: t.toastFile, description: `${t.msgDeleted}: ${selectedFile.name}`, variant: "success" });
             setSelectedFile(null);
             loadFiles();
         } catch (e) {
-            toast.error(String(e));
+            appToast({ title: t.toastFile, description: String(e), variant: "error" });
         } finally {
             setActionLoading(null);
             setShowDeleteConfirm(false);
@@ -144,12 +144,12 @@ export function FileTransferModal({ deviceId, onClose }: FileTransferModalProps)
         try {
             const remotePath = `${currentPath}/${newFolderName.trim()}`;
             await tauri.createRemoteDirectory(deviceId, remotePath);
-            toast.success(t.createFolder, { description: newFolderName });
+            appToast({ title: t.toastFile, description: `${t.msgFolderCreated}: ${newFolderName}`, variant: "success" });
             setNewFolderName('');
             setShowNewFolderDialog(false);
             loadFiles();
         } catch (e) {
-            toast.error(String(e));
+            appToast({ title: t.toastFile, description: String(e), variant: "error" });
         } finally {
             setActionLoading(null);
         }

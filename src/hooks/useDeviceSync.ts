@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { toast } from "sonner";
+import { appToast } from "../components/ui/AppToast";
 import { useDeviceStore } from "../stores/deviceStore";
 import { useLangStore } from "../stores/langStore";
 import * as tauri from "../lib/tauri";
@@ -27,12 +27,12 @@ export function useDeviceSync(): void {
 
     devices.forEach((d) => {
       if (d.status === "Device" && !prevConnected.has(d.id)) {
-        toast.success(t.deviceConnected, { description: d.model || d.id });
+        appToast({ title: t.toastDevice, description: `${d.model || d.id}: ${t.msgConnected}`, variant: "success" });
       }
     });
     prevDevicesRef.current.forEach((prev) => {
       if (prev.status === "Device" && !currentConnected.has(prev.id)) {
-        toast.info(t.deviceDisconnected, { description: prev.model || prev.id });
+        appToast({ title: t.toastDevice, description: `${prev.model || prev.id}: ${t.msgDisconnected}`, variant: "info" });
       }
     });
 

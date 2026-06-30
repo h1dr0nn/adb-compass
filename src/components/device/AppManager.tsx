@@ -14,7 +14,7 @@ import {
   ArrowLeft,
 } from "lucide-react";
 import * as tauri from "../../lib/tauri";
-import { toast } from "sonner";
+import { appToast } from "../ui/AppToast";
 import { DeviceInfo } from "../../types";
 import { useDeviceCache } from "../../hooks/useDeviceCache";
 import { useLanguage } from "../../hooks/useLanguage";
@@ -369,10 +369,10 @@ export function AppManager({ device }: AppManagerProps) {
     try {
       await tauri.uninstallApp(device.id, packageName);
       clearCache(`packages_${device.id}`);
-      toast.success(t.appUninstalled, { description: packageName });
+      appToast({ title: t.toastApp, description: `${t.msgUninstalled}: ${packageName}`, variant: "success" });
       setPackages((prev) => prev.filter((p) => p.id !== packageName));
     } catch (e) {
-      toast.error(t.uninstallFailed, { description: String(e) });
+      appToast({ title: t.toastApp, description: String(e), variant: "error" });
     } finally {
       setUninstalling(null);
     }

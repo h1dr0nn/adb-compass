@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Search, Package, Loader2, AlertTriangle, ToggleLeft, ToggleRight } from 'lucide-react';
 import * as tauri from "../../lib/tauri";
-import { toast } from 'sonner';
+import { appToast } from "../ui/AppToast";
 import { useLanguage } from '../../hooks/useLanguage';
 import { modalBackdrop, modalContent } from '../../lib/animations';
 import { AppTooltip } from '../ui/Tooltip';
@@ -32,7 +32,7 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
             const result = await tauri.listPackages(deviceId, showSystemApps);
             setPackages(result.sort());
         } catch (e) {
-            toast.error(String(e));
+            appToast({ title: t.toastApp, description: String(e), variant: "error" });
         } finally {
             setLoading(false);
         }
@@ -48,10 +48,10 @@ export function UninstallModal({ deviceId, onClose }: UninstallModalProps) {
         setUninstalling(packageName);
         try {
             await tauri.uninstallApp(deviceId, packageName);
-            toast.success(t.uninstallSuccess, { description: packageName });
+            appToast({ title: t.toastApp, description: `${t.msgUninstalled}: ${packageName}`, variant: "success" });
             setPackages(prev => prev.filter(p => p !== packageName));
         } catch (e) {
-            toast.error(t.uninstallFailed, { description: String(e) });
+            appToast({ title: t.toastApp, description: String(e), variant: "error" });
         } finally {
             setUninstalling(null);
             setConfirmPackage(null);
